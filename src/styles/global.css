@@ -745,3 +745,21 @@ section[id] {
   content-visibility: auto;
   contain-intrinsic-size: auto 680px;
 }
+
+/* Nav: conference link + scroll-active state */
+.nav-links a[data-active] {
+  border-bottom-color: var(--accent);
+}
+
+.nav-links .nav-special a {
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  padding: 0.15rem 0.7rem;
+  font-weight: 700;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-links .nav-special a:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}

@@ -42,6 +42,7 @@ const nav = [
       <nav class="nav wrap" aria-label="التنقل الرئيسي">
         <a class="brand" href="/">التحالف السوداني للإنتان</a>
         <ul class="nav-links">
+          <li class="nav-special"><a href="/conference">مؤتمر كسلا</a></li>
           {
             nav.map((item) => (
               <li>
@@ -79,5 +80,46 @@ const nav = [
         <span>جميع الحقوق محفوظة</span>
       </div>
     </footer>
+
+    <script>
+      const links = Array.from(
+        document.querySelectorAll<HTMLAnchorElement>(".nav-links a[href^='/#']"),
+      );
+      const sections = Array.from(
+        document.querySelectorAll<HTMLElement>("main section[id]"),
+      );
+
+      const mark = (id: string) => {
+        for (const link of links) {
+          link.toggleAttribute(
+            "data-active",
+            link.getAttribute("href") === `/#${id}`,
+          );
+        }
+      };
+
+      let ticking = false;
+      const update = () => {
+        ticking = false;
+        const probe = window.scrollY + window.innerHeight * 0.35;
+        let current = "";
+        for (const section of sections) {
+          if (section.offsetTop <= probe) current = section.id;
+        }
+        mark(current);
+      };
+
+      addEventListener(
+        "scroll",
+        () => {
+          if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(update);
+          }
+        },
+        { passive: true },
+      );
+      update();
+    </script>
   </body>
 </html>
