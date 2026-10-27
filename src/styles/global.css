@@ -681,3 +681,57 @@ img {
   border-top: 1px solid color-mix(in srgb, var(--accent-ink) 30%, transparent);
   padding-top: 1rem;
 }
+
+/* Conference band (homepage) */
+.conf-band {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.conf-band-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-block: 0.8rem;
+}
+
+.conf-band-title {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  line-height: 1.4;
+}
+
+.conf-band-title strong {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.conf-band-title span {
+  font-size: 0.8125rem;
+  opacity: 0.9;
+}
+
+.conf-band-count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.conf-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  opacity: 0.85;
+}
+
+.conf-band .btn {
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+  border-width: 1px;
+}

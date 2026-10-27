@@ -1,7 +1,5 @@
 <script lang="ts">
-  // Africa/Khartoum is UTC+2 with no DST.
-  const EVENT = new Date("2026-11-16T09:00:00+02:00").getTime();
-  const DEADLINE = new Date("2026-11-03T23:59:59+02:00").getTime();
+  import { EVENT, DEADLINE } from "../lib/event";
 
   let now = $state(Date.now());
 

@@ -1,5 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
+import ConferenceBand from "../components/ConferenceBand.svelte";
 import { supabase } from "../lib/supabase";
 
 const { data: activities } = supabase
@@ -18,6 +19,8 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
 ---
 
 <Base>
+  <ConferenceBand client:load />
+
   <section class="hero wrap">
     <div>
       <p class="kicker">التحالف السوداني للإنتان</p>
