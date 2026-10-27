@@ -26,6 +26,10 @@ Project ref `dzruizrqvzrxrjaucyie`. Tables: `activities` (public read),
 Use migrations via the Supabase MCP `apply_migration`, never ad-hoc dashboard edits.
 Pages fetch at build time, so content changes require a rebuild.
 
+Email: inserts on the three tables fire `public.notify_email()` → Edge Function
+`notify` (`supabase/functions/notify/`) → Resend. Secrets live in Supabase Vault
+(`resend_api_key`, `webhook_secret`), never in the repo or client code.
+
 ## Design rules
 
 Modern-minimal NGO: off-white `--paper`, ink `--ink`, one accent (`--accent` is a
