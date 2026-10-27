@@ -1,0 +1,153 @@
+---
+import Base from "../layouts/Base.astro";
+import { supabase } from "../lib/supabase";
+
+const { data: activities } = supabase
+  ? await supabase
+      .from("activities")
+      .select("id, title, excerpt, published_at")
+      .order("published_at", { ascending: false })
+      .limit(3)
+  : { data: [] };
+
+const dateFmt = new Intl.DateTimeFormat("ar-SD", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+---
+
+<Base>
+  <section class="hero wrap">
+    <div>
+      <p class="kicker">التحالف السوداني للإنتان</p>
+      <h1>كل ساعة<br />تفرق.</h1>
+      <p class="lede">
+        الإنتان — المعروف بتعفن الدم — يقتل أكثر من أي مرض آخر يمكن الوقاية منه.
+        المعرفة هي أول خط دفاع.
+      </p>
+      <div class="actions">
+        <a class="btn" href="/symptoms">تعرّف على علامات الخطر</a>
+        <a class="btn btn--ghost" href="/sepsis">ما هو الإنتان؟</a>
+      </div>
+    </div>
+    <aside class="hero-fact" aria-label="إحصاءة رئيسية">
+      <span class="num">11</span>
+      <p>
+        مليون وفاة سنوياً بسبب الإنتان حول العالم — واحدة من كل خمس وفيات.
+      </p>
+    </aside>
+  </section>
+
+  <section aria-label="أرقام عن الإنتان">
+    <div class="stats wrap">
+      <div class="stat">
+        <span class="num">49 <small>مليون</small></span>
+        <p>حالة إنتان تُسجَّل سنوياً في العالم.</p>
+      </div>
+      <div class="stat">
+        <span class="num">11 <small>مليون</small></span>
+        <p>وفاة سنوياً، كثير منها كان يمكن منعه.</p>
+      </div>
+      <div class="stat">
+        <span class="num">20<small>%</small></span>
+        <p>من إجمالي الوفيات في العالم مرتبطة بالإنتان.</p>
+      </div>
+    </div>
+    <div class="wrap source">
+      المصدر: منظمة الصحة العالمية، دراسة العبء العالمي للأمراض 2020.
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="split">
+      <h2>ما هو الإنتان؟</h2>
+      <p>
+        الإنتان استجابة خطيرة للجسم تجاه عدوى. بدلاً من أن يهاجم الجهاز المناعي
+        الميكروب فقط، يبدأ بمهاجمة أنسجة الجسم نفسه، ما قد يؤدي إلى فشل أعضاء
+        متعددة والوفاة خلال ساعات. لا يفرّق بين صغير أو كبير، ولا بين مدينة
+        وريف — لكن سرعة التصرف تصنع الفرق كله.
+      </p>
+    </div>
+    <div class="rows">
+      <a class="row" href="/sepsis">
+        <span class="idx">01</span>
+        <h3>عدوى تتحول إلى خطر</h3>
+        <p>غالباً يبدأ الإنتان بعدوى بسيطة في الرئة أو البطن أو المسالك البولية.</p>
+      </a>
+      <a class="row" href="/sepsis">
+        <span class="idx">02</span>
+        <h3>الوقت هو العضو</h3>
+        <p>كل ساعة تأخير في العلاج ترفع خطر الوفاة. التشخيص المبكر ينقذ الأرواح.</p>
+      </a>
+      <a class="row" href="/symptoms">
+        <span class="idx">03</span>
+        <h3>الوعي مسؤولية الجميع</h3>
+        <p>الأسرة، الممرض، الطبيب، وصانع القرار — كلهم جزء من خط الدفاع الأول.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="section wrap">
+    <div class="split">
+      <h2>علامات الخطر</h2>
+      <p>
+        إذا ظهرت علامة واحدة أو أكثر مع عدوى معروفة أو مشتبهة، اطلب الرعاية
+        الطبية العاجلة فوراً. لا تنتظر أن تتحسن الحالة من تلقاء نفسها.
+      </p>
+    </div>
+    <div class="rows">
+      {[
+        ["حرارة عالية أو منخفضة جداً", "مع قشعريرة أو رجفة غير معتادة."],
+        ["تسارع التنفس", "أكثر من 22 نفساً في الدقيقة للبالغين."],
+        ["تسارع ضربات القلب", "أو خفقان غير مبرر."],
+        ["تشوش أو ارتباك", "أو نعاس غير معتاد وصعوبة في الاستيقاظ."],
+        ["بشرة شاحبة أو مزرقة", "أو طفح جلدي لا يزول عند الضغط عليه."],
+        ["قلة التبول", "أو ألم شديد وانزعاج عام غير مبرر."],
+      ].map(([title, desc], i) => (
+        <a class="row" href="/symptoms">
+          <span class="idx">{String(i + 1).padStart(2, "0")}</span>
+          <h3>{title}</h3>
+          <p>{desc}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  {
+    activities && activities.length > 0 && (
+      <section class="section wrap">
+        <div class="split">
+          <h2>آخر الأنشطة</h2>
+          <p>
+            ورش تدريبية، حملات توعية مجتمعية، وشراكات — تابع ما يقوم به
+            التحالف.
+          </p>
+        </div>
+        <div class="activity-grid">
+          {activities.map((a) => (
+            <a class="activity" href="/activities">
+              <time datetime={a.published_at}>
+                {dateFmt.format(new Date(a.published_at))}
+              </time>
+              <h3>{a.title}</h3>
+              <p>{a.excerpt}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <section class="cta">
+    <div class="wrap">
+      <div>
+        <h2>كن جزءاً من الحل.</h2>
+        <p>
+          دعمك يساعدنا على تدريب الكوادر الصحية وتوعية المجتمعات في السودان.
+        </p>
+      </div>
+      <a class="btn btn--light" href="/support">ادعم التحالف</a>
+    </div>
+  </section>
+</Base>

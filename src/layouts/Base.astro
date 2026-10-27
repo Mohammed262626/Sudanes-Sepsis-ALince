@@ -1,0 +1,91 @@
+---
+import "@fontsource-variable/cairo";
+import "@fontsource/tajawal/400.css";
+import "@fontsource/tajawal/500.css";
+import "@fontsource/tajawal/700.css";
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "التحالف السوداني للإنتان",
+  description = "التحالف السوداني للإنتان: التوعية والتعليم والوقاية من الإنتان (تعفن الدم) في السودان.",
+} = Astro.props;
+
+const path = Astro.url.pathname;
+const nav = [
+  { href: "/", label: "الرئيسية" },
+  { href: "/sepsis", label: "ما هو الإنتان" },
+  { href: "/symptoms", label: "الأعراض والوقاية" },
+  { href: "/activities", label: "أنشطتنا" },
+  { href: "/about", label: "من نحن" },
+  { href: "/contact", label: "اتصل بنا" },
+];
+const isActive = (href: string) =>
+  href === "/" ? path === "/" : path.startsWith(href);
+---
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f7f5f0" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <a class="skip" href="#main">تجاوز إلى المحتوى</a>
+
+    <header class="site-header">
+      <nav class="nav wrap" aria-label="التنقل الرئيسي">
+        <a class="brand" href="/">التحالف السوداني للإنتان</a>
+        <ul class="nav-links">
+          {
+            nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={isActive(item.href) ? "page" : undefined}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <a class="btn" href="/support">ادعمنا</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="footer wrap">
+      <div class="footer-top">
+        <div>
+          <a class="brand" href="/">التحالف السوداني للإنتان</a>
+          <p style="margin-top: .75rem; max-width: 34ch;">
+            نعمل على خفض الوفيات الناتجة عن الإنتان في السودان من خلال
+            التوعية، التدريب، والمناصرة.
+          </p>
+        </div>
+        <ul class="footer-links">
+          {nav.map((item) => (
+            <li><a href={item.href}>{item.label}</a></li>
+          ))}
+          <li><a href="/support">ادعمنا</a></li>
+        </ul>
+      </div>
+      <div class="footer-bottom">
+        <span>© {new Date().getFullYear()} التحالف السوداني للإنتان</span>
+        <span>جميع الحقوق محفوظة</span>
+      </div>
+    </footer>
+  </body>
+</html>
