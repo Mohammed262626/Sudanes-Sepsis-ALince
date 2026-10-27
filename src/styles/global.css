@@ -631,3 +631,53 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* Conference countdown */
+.count {
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.count-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.count-days {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(3.5rem, 7vw, 5.5rem);
+  line-height: 0.95;
+}
+
+.count-days span,
+.count-clock {
+  font-variant-numeric: tabular-nums;
+}
+
+.count-clock {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.125rem, 2.2vw, 1.5rem);
+  letter-spacing: 0.08em;
+}
+
+.count-live {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.count-deadline {
+  font-size: 0.875rem;
+  border-top: 1px solid color-mix(in srgb, var(--accent-ink) 30%, transparent);
+  padding-top: 1rem;
+}
