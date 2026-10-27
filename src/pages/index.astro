@@ -1,6 +1,10 @@
 ---
 import Base from "../layouts/Base.astro";
 import ConferenceBand from "../components/ConferenceBand.svelte";
+import Countdown from "../components/Countdown.svelte";
+import ConferenceForm from "../components/ConferenceForm.svelte";
+import ContactForm from "../components/ContactForm.svelte";
+import SupportForm from "../components/SupportForm.svelte";
 import { supabase } from "../lib/supabase";
 
 const { data: activities } = supabase
@@ -8,7 +12,7 @@ const { data: activities } = supabase
       .from("activities")
       .select("id, title, excerpt, published_at")
       .order("published_at", { ascending: false })
-      .limit(3)
+      .limit(6)
   : { data: [] };
 
 const dateFmt = new Intl.DateTimeFormat("ar-SD", {
@@ -21,7 +25,7 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
 <Base>
   <ConferenceBand client:load />
 
-  <section class="hero wrap">
+  <section class="hero wrap" id="top">
     <div>
       <p class="kicker">التحالف السوداني للإنتان</p>
       <h1>كل ساعة<br />تفرق.</h1>
@@ -30,8 +34,8 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
         المعرفة هي أول خط دفاع.
       </p>
       <div class="actions">
-        <a class="btn" href="/symptoms">تعرّف على علامات الخطر</a>
-        <a class="btn btn--ghost" href="/sepsis">ما هو الإنتان؟</a>
+        <a class="btn" href="#symptoms">تعرّف على علامات الخطر</a>
+        <a class="btn btn--ghost" href="#sepsis">ما هو الإنتان؟</a>
       </div>
     </div>
     <aside class="hero-fact" aria-label="إحصاءة رئيسية">
@@ -62,7 +66,7 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
     </div>
   </section>
 
-  <section class="section wrap">
+  <section class="section wrap lazy" id="sepsis">
     <div class="split">
       <h2>ما هو الإنتان؟</h2>
       <p>
@@ -72,54 +76,172 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
         وريف — لكن سرعة التصرف تصنع الفرق كله.
       </p>
     </div>
-    <div class="rows">
-      <a class="row" href="/sepsis">
-        <span class="idx">01</span>
-        <h3>عدوى تتحول إلى خطر</h3>
-        <p>غالباً يبدأ الإنتان بعدوى بسيطة في الرئة أو البطن أو المسالك البولية.</p>
-      </a>
-      <a class="row" href="/sepsis">
-        <span class="idx">02</span>
-        <h3>الوقت هو العضو</h3>
-        <p>كل ساعة تأخير في العلاج ترفع خطر الوفاة. التشخيص المبكر ينقذ الأرواح.</p>
-      </a>
-      <a class="row" href="/symptoms">
-        <span class="idx">03</span>
-        <h3>الوعي مسؤولية الجميع</h3>
-        <p>الأسرة، الممرض، الطبيب، وصانع القرار — كلهم جزء من خط الدفاع الأول.</p>
-      </a>
+    <div class="prose">
+      <h3>كيف يحدث؟</h3>
+      <p>
+        غالباً يبدأ الإنتان بعدوى بكتيرية، وأحياناً فيروسية أو فطرية. أكثر
+        مصادر العدوى شيوعاً هي الرئة، المسالك البولية، البطن، والجلد. عند دخول
+        الميكروب إلى الدم أو انتشاره في الجسم، تطلق الاستجابة المناعية مواد
+        التهابية تؤثر على الأوعية الدموية وضغط الدم ووظائف الأعضاء.
+      </p>
+      <div class="callout">
+        <p>
+          الإنتان حالة طارئة. كل ساعة تأخير في التشخيص والعلاج ترفع خطر الوفاة.
+        </p>
+      </div>
+      <h3>من هم الأكثر عرضة للخطر؟</h3>
+      <ul>
+        <li>الأطفال حديثو الولادة والرضّع.</li>
+        <li>كبار السن، خاصة من تجاوزوا 65 عاماً.</li>
+        <li>الحوامل والنفاس.</li>
+        <li>من يعانون من ضعف المناعة أو يتلقون علاجاً مثبطاً للمناعة.</li>
+        <li>المصابون بأمراض مزمنة كالسكري وأمراض الكلى والكبد.</li>
+        <li>من خضعوا لجراحة حديثة أو لديهم قسطار أو خطوط وريدية.</li>
+      </ul>
+      <h3>لماذا يهمنا في السودان؟</h3>
+      <p>
+        يواجه نظامنا الصحي تحديات في الوصول المبكر إلى الرعاية، ونقصاً في أسرّة
+        العناية المركزة والمضادات الحيوية المناسبة، إضافة إلى ضعف الوعي
+        المجتمعي بعلامات الخطر. هذه العوامل تجعل سرعة التعرّف على الإنتان
+        والتصرف حياله أمراً حاسماً.
+      </p>
     </div>
   </section>
 
-  <section class="section wrap">
+  <section class="section wrap lazy" id="symptoms">
     <div class="split">
-      <h2>علامات الخطر</h2>
+      <h2>اعرف العلامات. تصرّف بسرعة.</h2>
       <p>
         إذا ظهرت علامة واحدة أو أكثر مع عدوى معروفة أو مشتبهة، اطلب الرعاية
-        الطبية العاجلة فوراً. لا تنتظر أن تتحسن الحالة من تلقاء نفسها.
+        الطبية العاجلة فوراً — لا تنتظر أن تتحسن الحالة من تلقاء نفسها.
       </p>
     </div>
     <div class="rows">
       {[
         ["حرارة عالية أو منخفضة جداً", "مع قشعريرة أو رجفة غير معتادة."],
-        ["تسارع التنفس", "أكثر من 22 نفساً في الدقيقة للبالغين."],
+        ["تسارع التنفس", "أكثر من 22 نفساً في الدقيقة."],
         ["تسارع ضربات القلب", "أو خفقان غير مبرر."],
         ["تشوش أو ارتباك", "أو نعاس غير معتاد وصعوبة في الاستيقاظ."],
-        ["بشرة شاحبة أو مزرقة", "أو طفح جلدي لا يزول عند الضغط عليه."],
+        ["انخفاض ضغط الدم", "أو دوخة شديدة عند الوقوف."],
+        ["بشرة شاحبة أو مزرقة", "أو طفح لا يزول عند الضغط عليه."],
         ["قلة التبول", "أو ألم شديد وانزعاج عام غير مبرر."],
       ].map(([title, desc], i) => (
-        <a class="row" href="/symptoms">
+        <div class="row">
           <span class="idx">{String(i + 1).padStart(2, "0")}</span>
           <h3>{title}</h3>
           <p>{desc}</p>
-        </a>
+        </div>
       ))}
+    </div>
+
+    <div class="split" style="margin-top: clamp(2.5rem, 6vw, 4rem);">
+      <h2>عند الأطفال</h2>
+      <p>
+        الأطفال قد لا يستطيعون وصف ما يشعرون به. راقب هذه العلامات، خاصة عند
+        الرضّع وصغار الأطفال.
+      </p>
+    </div>
+    <div class="prose">
+      <ul>
+        <li>صعوبة في التنفس أو تنفس سريع جداً.</li>
+        <li>عدم الاستجابة أو صعوبة في إيقاظ الطفل.</li>
+        <li>بشرة شاحبة أو مزرقة أو باردة عند اللمس.</li>
+        <li>عدم التبول أو جفاف الفم وقلة الدموع عند البكاء.</li>
+        <li>بكاء مستمر لا يهدأ أو ضعف في الرضاعة.</li>
+        <li>طفح جلدي لا يزول عند الضغط عليه.</li>
+      </ul>
+    </div>
+
+    <div class="split" style="margin-top: clamp(2.5rem, 6vw, 4rem);">
+      <h2>الوقاية</h2>
+      <p>
+        لا يوجد لقاح للإنتان نفسه، لكن الوقاية من العدوى والتصرف السريع عند
+        ظهورها يقللان الخطر بشكل كبير.
+      </p>
+    </div>
+    <div class="prose">
+      <h3>1. عالج العدوى مبكراً</h3>
+      <p>
+        لا تهمل الحمى أو السعال أو التهابات المسالك البولية أو الجروح. راجع
+        الطبيب في وقتها.
+      </p>
+      <h3>2. حافظ على النظافة</h3>
+      <p>
+        اغسل يديك بانتظام، واعتنِ بتنظيف الجروح، واحرص على نظافة الطعام
+        والماء.
+      </p>
+      <h3>3. أكمل العلاج الموصوف</h3>
+      <p>
+        لا تتوقف عن المضادات الحيوية قبل انتهاء المدة المحددة، حتى لو تحسنت
+        الأعراض.
+      </p>
+      <h3>4. التطعيمات</h3>
+      <p>
+        احرص على تطعيمات الأطفال والحوامل الموصى بها، فهي تقلل من العدوى التي
+        قد تؤدي إلى الإنتان.
+      </p>
+      <h3>5. راقب الفئات الأكثر عرضة</h3>
+      <p>
+        إذا كان في العائلة رضيع أو مسنّ أو شخص بضعف المناعة، فكن أكثر حذراً
+        وأسرع في طلب المساعدة.
+      </p>
+      <div class="callout">
+        <p>
+          عند الشك في الإنتان، اذهب إلى أقرب مستشفى أو مركز طوارئ فوراً. لا
+          تنتظر موعداً عادياً.
+        </p>
+      </div>
+      <p style="font-size: .875rem; color: var(--muted);">
+        هذه المعلومات للتوعية العامة ولا تغني عن استشارة الطبيب.
+      </p>
+    </div>
+  </section>
+
+  <section class="section wrap lazy" id="conference">
+    <div class="split">
+      <h2>مؤتمر كسلا للإنتان</h2>
+      <p>
+        لقاء وطني يجمع الكوادر الصحية وصنّاع القرار لمناقشة الكشف المبكر عن
+        الإنتان والاستجابة السريعة له في السودان.
+      </p>
+    </div>
+    <div class="contact-grid">
+      <div>
+        <div class="rows">
+          <div class="row" style="grid-template-columns: 8rem 1fr;">
+            <span class="idx">التاريخ</span>
+            <h3>الاثنين 16 نوفمبر 2026</h3>
+          </div>
+          <div class="row" style="grid-template-columns: 8rem 1fr;">
+            <span class="idx">الوقت</span>
+            <h3>9:00 صباحاً بتوقيت الخرطوم</h3>
+          </div>
+          <div class="row" style="grid-template-columns: 8rem 1fr;">
+            <span class="idx">المكان</span>
+            <h3>كسلا — يُعلن الموقع الدقيق قريباً</h3>
+          </div>
+          <div class="row" style="grid-template-columns: 8rem 1fr;">
+            <span class="idx">التسجيل</span>
+            <h3>مفتوح حتى 3 نوفمبر 2026</h3>
+          </div>
+        </div>
+        <div style="margin-top: 1.5rem;">
+          <Countdown client:visible />
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size: 1.25rem; margin-bottom: .75rem;">سجّل حضورك</h3>
+        <p style="color: var(--muted); margin-bottom: 1.5rem;">
+          بعد إتمام التسجيل سنرسل تفاصيل الحضور والبرنامج إلى بريدك الإلكتروني.
+        </p>
+        <ConferenceForm client:visible />
+      </div>
     </div>
   </section>
 
   {
     activities && activities.length > 0 && (
-      <section class="section wrap">
+      <section class="section wrap lazy" id="activities">
         <div class="split">
           <h2>آخر الأنشطة</h2>
           <p>
@@ -129,28 +251,95 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
         </div>
         <div class="activity-grid">
           {activities.map((a) => (
-            <a class="activity" href="/activities">
+            <article class="activity">
               <time datetime={a.published_at}>
                 {dateFmt.format(new Date(a.published_at))}
               </time>
               <h3>{a.title}</h3>
               <p>{a.excerpt}</p>
-            </a>
+            </article>
           ))}
         </div>
       </section>
     )
   }
 
-  <section class="cta">
-    <div class="wrap">
-      <div>
-        <h2>كن جزءاً من الحل.</h2>
+  <section class="section wrap lazy" id="about">
+    <div class="split">
+      <h2>من نحن</h2>
+      <p>
+        التحالف السوداني للإنتان تجمّع تطوعي من الأطباء والممرضين والصيادلة
+        والباحثين والناشطين الصحيين، يجمعهم هدف واحد: أن لا يموت أحد في السودان
+        بسبب إنتان كان يمكن الوقاية منه أو علاجه.
+      </p>
+    </div>
+    <div class="split">
+      <h3 style="font-size: 1.25rem;">رسالتنا</h3>
+      <p>
+        خفض الوفيات والإعاقات الناتجة عن الإنتان في السودان من خلال التوعية
+        المجتمعية، تدريب الكوادر الصحية، دعم السياسات المستندة إلى الأدلة،
+        وبناء شبكة وطنية للاستجابة السريعة.
+      </p>
+    </div>
+    <div class="split">
+      <h3 style="font-size: 1.25rem;">رؤيتنا</h3>
+      <p>
+        سودان يعرف فيه كل فرد علامات الإنتان، ويجد فيه كل مريض رعاية عاجلة
+        وفعّالة، أينما كان.
+      </p>
+    </div>
+    <div class="split">
+      <h3 style="font-size: 1.25rem;">قيمنا</h3>
+      <p>
+        العلم والدليل في كل مادة ننشرها، السرعة في كل خطوة، العدالة في الوصول
+        إلى المدينة والريف، والشراكة مع المؤسسات الصحية والمجتمعية.
+      </p>
+    </div>
+  </section>
+
+  <section class="section wrap lazy" id="support">
+    <div class="contact-grid">
+      <div class="prose">
+        <h2>ادعمنا</h2>
         <p>
-          دعمك يساعدنا على تدريب الكوادر الصحية وتوعية المجتمعات في السودان.
+          نعمل حالياً على تفعيل قنوات التبرع الرسمية. سجّل اهتمامك بالدعم
+          وسنرسل لك التفاصيل مباشرة فور جاهزيتها — أو تواصل معنا لبحث شراكة.
+        </p>
+        <ul>
+          <li>طباعة وتوزيع مواد التوعية في المراكز الصحية والمجتمعات.</li>
+          <li>تدريب الكوادر الصحية على الكشف المبكر والتدخل السريع.</li>
+          <li>حملات إعلامية للتعريف بعلامات الخطر.</li>
+          <li>دعم جمع البيانات الوطنية عن الإنتان.</li>
+        </ul>
+        <div class="callout">
+          <p>
+            لم نُعلن بعد عن تفاصيل الحسابات البنكية أو قنوات الدفع. أي تفاصيل
+            رسمية ستُنشر هنا فقط.
+          </p>
+        </div>
+      </div>
+      <SupportForm client:visible />
+    </div>
+  </section>
+
+  <section class="section wrap lazy" id="contact">
+    <div class="contact-grid">
+      <div class="prose">
+        <h2>اتصل بنا</h2>
+        <p>
+          استفسار، فكرة شراكة، أو رغبة في الانضمام؟ اترك رسالتك وسنعود إليك في
+          أقرب وقت. نرحب بالتواصل من الكوادر الصحية، المؤسسات، الطلاب،
+          والإعلام.
+        </p>
+        <p>
+          ملاحظة: هذه الصفحة ليست قناة طوارئ طبية. إذا كنت تشك في إصابة شخص
+          بالإنتان، فاتجه فوراً إلى أقرب مستشفى.
+        </p>
+        <p>
+          تفاصيل المؤتمر على <a href="/conference">صفحة مؤتمر كسلا</a>.
         </p>
       </div>
-      <a class="btn btn--light" href="/support">ادعم التحالف</a>
+      <ContactForm client:visible />
     </div>
   </section>
 </Base>

@@ -735,3 +735,13 @@ img {
   font-size: 0.875rem;
   border-width: 1px;
 }
+
+/* One-page anchors and offscreen rendering skip */
+section[id] {
+  scroll-margin-top: 88px;
+}
+
+.lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 680px;
+}

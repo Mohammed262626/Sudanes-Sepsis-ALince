@@ -15,18 +15,14 @@ const {
   description = "التحالف السوداني للإنتان: التوعية والتعليم والوقاية من الإنتان (تعفن الدم) في السودان.",
 } = Astro.props;
 
-const path = Astro.url.pathname;
 const nav = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/conference", label: "مؤتمر كسلا" },
-  { href: "/sepsis", label: "ما هو الإنتان" },
-  { href: "/symptoms", label: "الأعراض والوقاية" },
-  { href: "/activities", label: "أنشطتنا" },
-  { href: "/about", label: "من نحن" },
-  { href: "/contact", label: "اتصل بنا" },
+  { href: "/#sepsis", label: "ما هو الإنتان" },
+  { href: "/#symptoms", label: "الأعراض والوقاية" },
+  { href: "/#conference", label: "المؤتمر" },
+  { href: "/#activities", label: "أنشطتنا" },
+  { href: "/#about", label: "من نحن" },
+  { href: "/#contact", label: "اتصل بنا" },
 ];
-const isActive = (href: string) =>
-  href === "/" ? path === "/" : path.startsWith(href);
 ---
 
 <!doctype html>
@@ -49,17 +45,12 @@ const isActive = (href: string) =>
           {
             nav.map((item) => (
               <li>
-                <a
-                  href={item.href}
-                  aria-current={isActive(item.href) ? "page" : undefined}
-                >
-                  {item.label}
-                </a>
+                <a href={item.href}>{item.label}</a>
               </li>
             ))
           }
         </ul>
-        <a class="btn" href="/support">ادعمنا</a>
+        <a class="btn" href="/#support">ادعمنا</a>
       </nav>
     </header>
 
@@ -80,7 +71,7 @@ const isActive = (href: string) =>
           {nav.map((item) => (
             <li><a href={item.href}>{item.label}</a></li>
           ))}
-          <li><a href="/support">ادعمنا</a></li>
+          <li><a href="/#support">ادعمنا</a></li>
         </ul>
       </div>
       <div class="footer-bottom">
