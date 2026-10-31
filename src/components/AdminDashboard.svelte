@@ -118,7 +118,7 @@
 
   // Admin-only: RLS lets only allowlisted emails update; the DB trigger sends the
   // approval message with the ticket QR (or the rejection message).
-  async function decide(id: number, status: "approved" | "rejected") {
+  async function decide(id: number, status: "approved" | "rejected" | "pending") {
     if (!supabase || busyId) return;
     busyId = id;
     actionError = "";
@@ -166,6 +166,51 @@
     }
     data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
       r.id === id ? { ...r, attended_at: null } : r,
+    );
+    data = { ...data };
+    flash(id);
+  }
+
+  // Withdraws an approval: back to pending, and the decline is cleared so the row
+// does not keep the «اعتذر» badge. Silent — the status trigger sends nothing for
+// pending, and the guest's QR page starts refusing him at once.
+  async function revoke(id: number) {
+    if (!supabase || busyId || !confirm("إلغاء قبول هذا التسجيل وإعادته إلى الانتظار؟")) return;
+    busyId = id;
+    actionError = "";
+    const { error } = await supabase
+      .from("conference_registrations")
+      .update({ status: "pending", declined_at: null })
+      .eq("id", id);
+    busyId = 0;
+    if (error) {
+      actionError = "تعذّر إلغاء القبول. حاول مرة أخرى.";
+      return;
+    }
+    data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
+      r.id === id ? { ...r, status: "pending", declined_at: null } : r,
+    );
+    data = { ...data };
+    flash(id);
+  }
+
+  // Reverses a decline; the decline trigger only fires null -> value, so this
+  // sends nothing.
+  async function clearDecline(id: number) {
+    if (!supabase || busyId || !confirm("إلغاء اعتذار هذا الضيف وإعادته إلى قائمة الحضور؟")) return;
+    busyId = id;
+    actionError = "";
+    const { error } = await supabase
+      .from("conference_registrations")
+      .update({ declined_at: null })
+      .eq("id", id);
+    busyId = 0;
+    if (error) {
+      actionError = "تعذّر إلغاء الاعتذار. حاول مرة أخرى.";
+      return;
+    }
+    data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
+      r.id === id ? { ...r, declined_at: null } : r,
     );
     data = { ...data };
     flash(id);
@@ -932,17 +977,28 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
                           </button>
                         {:else if row.status === "approved"}
-                          <button
-                            class="btn btn--ghost btn--icon"
-                            type="button"
-                            title="إعادة إرسال التذكرة"
-                            aria-label="إعادة إرسال التذكرة"
-                            disabled={busyId === row.id}
-                            onclick={() => resend(row.id)}
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
-                          </button>
-                          {#if !row.attended_at}
+                          {#if row.declined_at}
+                            <button
+                              class="btn btn--icon"
+                              type="button"
+                              title="إلغاء الاعتذار"
+                              aria-label="إلغاء الاعتذار"
+                              disabled={busyId === row.id}
+                              onclick={() => clearDecline(row.id)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+                            </button>
+                          {:else if !row.attended_at}
+                            <button
+                              class="btn btn--ghost btn--icon"
+                              type="button"
+                              title="إعادة إرسال التذكرة"
+                              aria-label="إعادة إرسال التذكرة"
+                              disabled={busyId === row.id}
+                              onclick={() => resend(row.id)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
+                            </button>
                             <button
                               class="btn btn--icon"
                               type="button"
@@ -953,6 +1009,29 @@
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="m17 11 2 2 4-4" /></svg>
                             </button>
                           {/if}
+                          {#if !row.attended_at}
+                            <button
+                              class="btn btn--ghost btn--icon"
+                              type="button"
+                              title="إلغاء القبول"
+                              aria-label="إلغاء القبول"
+                              disabled={busyId === row.id}
+                              onclick={() => revoke(row.id)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" /></svg>
+                            </button>
+                          {/if}
+                        {:else if row.status === "rejected"}
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            title="إعادة إلى الانتظار"
+                            aria-label="إعادة إلى الانتظار"
+                            disabled={busyId === row.id}
+                            onclick={() => decide(row.id, "pending")}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                          </button>
                         {/if}
                         {#if row.attended_at}
                           <button
