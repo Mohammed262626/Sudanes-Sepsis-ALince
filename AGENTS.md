@@ -28,6 +28,9 @@ submissions dashboard (Supabase Auth email+password, data access gated by RLS).
 Use migrations via the Supabase MCP `apply_migration`, never ad-hoc dashboard edits.
 Pages fetch at build time, so content changes require a rebuild.
 
+`.env` must be UTF-8 **without BOM** — a BOM silently breaks the first variable and
+the built site ships a null Supabase client.
+
 Email: inserts on the three tables fire `public.notify_email()` → Edge Function
 `notify` (`supabase/functions/notify/`) → Resend. Secrets live in Supabase Vault
 (`resend_api_key`, `webhook_secret`), never in the repo or client code.
