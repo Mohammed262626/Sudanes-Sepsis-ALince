@@ -65,9 +65,19 @@ async function sendWhats(chatId: string, message: string): Promise<number> {
   return res.status;
 }
 
-// Sends the ticket QR as an image; the code itself is the only data in the QR.
+// The QR points at the guest's own check-in page. The pass (checkin_token) is
+// what opens it; the readable code rides along for the door scanner.
+const SITE = "https://mohammed262626.github.io/Sudanes-Sepsis-ALince";
+
+const checkinUrl = (code: string, pass: string) =>
+  `${SITE}/checkin/?${pass ? "k=" + encodeURIComponent(pass) + "&" : ""}t=${encodeURIComponent(code)}`;
+
+const qrImageUrl = (target: string) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=8B0000&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(target)}`;
+
+// Sends the ticket QR as an image.
 // Brand colours: dark red on white keeps scanner contrast high.
-async function sendTicketQr(chatId: string, code: string, caption: string): Promise<number> {
+async function sendTicketQr(chatId: string, code: string, target: string, caption: string): Promise<number> {
   const id = await getSecret("green_api_instance");
   const token = await getSecret("green_api_token");
   if (!id || !token) return 0;
@@ -76,11 +86,38 @@ async function sendTicketQr(chatId: string, code: string, caption: string): Prom
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chatId,
-      urlFile: `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=8B0000&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(code)}`,
+      urlFile: qrImageUrl(target),
       fileName: `ticket-${code}.png`,
       caption,
     }),
   });
+  return res.status;
+}
+
+// Two link buttons: the check-in page, and the raw 1000px QR to print.
+async function sendTicketButtons(chatId: string, code: string, target: string): Promise<number> {
+  const id = await getSecret("green_api_instance");
+  const token = await getSecret("green_api_token");
+  if (!id || !token) return 0;
+  const res = await fetch(
+    `https://api.green-api.com/waInstance${id}/sendInteractiveButtons/${token}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chatId,
+        header: "مؤتمر كسلا للإنتان",
+        body:
+          `تذكرتك ${code} جاهزة.\n` +
+          "اضغط «تأكيد الحضور» يوم المؤتمر لعرض بياناتك وتسجيل حضورك، أو حمّل رمز QR بجودة كاملة للطباعة.",
+        footer: "الاثنين 16 نوفمبر 2026",
+        buttons: [
+          { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
+          { type: "url", buttonId: "2", buttonText: "تحميل رمز QR", url: qrImageUrl(target) },
+        ],
+      }),
+    },
+  );
   return res.status;
 }
 
@@ -241,7 +278,13 @@ Deno.serve(async (req) => {
       whatsapp.ticket = await sendTicketQr(
         chatId,
         payload.record.ticket_code,
+        checkinUrl(payload.record.ticket_code, String(payload.record.checkin_token ?? "")),
         "مؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026\nرقم تذكرتك: " + payload.record.ticket_code
+      );
+      whatsapp.buttons = await sendTicketButtons(
+        chatId,
+        payload.record.ticket_code,
+        checkinUrl(payload.record.ticket_code, String(payload.record.checkin_token ?? ""))
       );
     } else if (payload.record.status === "rejected") {
       whatsapp.rejection = await sendWhats(
