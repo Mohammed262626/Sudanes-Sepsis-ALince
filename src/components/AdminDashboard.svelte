@@ -154,6 +154,8 @@
   let scanResult = $state<{ ok: boolean; title: string; note: string } | null>(null);
   let stream: MediaStream | null = null;
   let loop = 0;
+  let scanHint = $state(false);
+  let hintTimer = 0;
 
   const parseCode = (raw: string) =>
     (raw.match(/SX-[A-Z0-9]+/i)?.[0] ?? raw).trim().toUpperCase();
@@ -182,13 +184,15 @@
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     return async (v) => {
       if (!ctx || !v.videoWidth) return null;
-      // Downscale: full-resolution frames make jsQR crawl on phones.
-      const scale = Math.min(1, 640 / v.videoWidth);
+      // Downscale for speed, but keep enough detail for a photo of a screen.
+      const scale = Math.min(1, 800 / v.videoWidth);
       canvas!.width = Math.round(v.videoWidth * scale);
       canvas!.height = Math.round(v.videoHeight * scale);
       ctx.drawImage(v, 0, 0, canvas!.width, canvas!.height);
       const img = ctx.getImageData(0, 0, canvas!.width, canvas!.height);
-      return jsQR(img.data, img.width, img.height)?.data ?? null;
+      return jsQR(img.data, img.width, img.height, {
+        inversionAttempts: "attemptBoth",
+      })?.data ?? null;
     };
   }
 
@@ -242,11 +246,18 @@
       return;
     }
     scanning = true;
+    scanHint = false;
     await tick();
     if (video) {
       video.srcObject = stream;
       await video.play().catch(() => {});
     }
+    // If nothing decodes in 8s, say so instead of a silent live preview.
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => {
+      if (scanning && !pending) scanHint = true;
+    }, 8000);
+
     let fails = 0;
     const poll = async () => {
       if (!scanning || !video) return;
@@ -255,24 +266,33 @@
         loop = requestAnimationFrame(() => void poll());
         return;
       }
+      // A hung detect() would freeze the loop forever on some Androids, so
+      // every read is raced against a 1.2s timeout.
+      let timer = 0;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = window.setTimeout(() => reject(new Error("timeout")), 1200);
+      });
       try {
-        const raw = await decode(video);
+        const raw = await Promise.race([decode(video), timeout]);
         fails = 0;
         if (raw) {
-          checkIn(raw, true);
+          clearTimeout(hintTimer);
+          scanHint = false;
+          checkIn(raw);
           return;
         }
       } catch {
-        // Some Androids ship a BarcodeDetector that throws on camera frames:
-        // after a run of failures, switch to jsQR instead of retrying forever.
-        if (++fails === 20) {
+        // Stuck or throwing native detector: switch to the bundled jsQR decoder.
+        if (++fails >= 2) {
           fails = 0;
           try {
             decode = await jsQrDecoder();
           } catch {
-            // keeps the native decoder; frames before play() also throw
+            // keeps the current decoder; frames before play() also fail
           }
         }
+      } finally {
+        clearTimeout(timer);
       }
       loop = requestAnimationFrame(() => void poll());
     };
@@ -282,16 +302,19 @@
   function stopScan() {
     scanning = false;
     pending = null;
+    scanHint = false;
+    clearTimeout(hintTimer);
     cancelAnimationFrame(loop);
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
   }
 
-  // Camera reads ask for confirmation (misreads are common at a busy door);
-  // typing a code is already deliberate, so it marks straight away.
-  function checkIn(raw: string, ask = false) {
+  // Camera and typed/USB codes both land here: nothing is written yet, the card
+  // shows who it is and the confirm button records attendance.
+  function checkIn(raw: string) {
     const code = parseCode(raw);
     if (!code || !supabase) return;
+    pending = null;
     const row = registrations.find(
       (r) => String(r.ticket_code ?? "").toUpperCase() === code,
     );
@@ -311,12 +334,14 @@
       scanResult = { ok: false, title: `${row.name} — لم يُقبل بعد`, note: code };
       return;
     }
-    if (ask) {
-      scanResult = null;
-      pending = row;
-      return;
-    }
-    void markAttended(row);
+    scanResult = null;
+    pending = row;
+  }
+
+  function cancelPending() {
+    pending = null;
+    manualCode = "";
+    input?.focus();
   }
 
   function confirmAttend() {
@@ -504,11 +529,20 @@
           <button class="btn" type="button" onclick={startScan}>افتح الكاميرا</button>
         {/if}
       </div>
+      {#if scanning && scanHint && !pending}
+        <p class="scan-hint" role="status">
+          لم يُقرأ الرمز — قرّب الكاميرا أكثر، أو استخدم الرقم أدناه.
+        </p>
+      {/if}
       {#if pending}
         <div class="scan-confirm">
           <strong>{pending.name}</strong>
           <span dir="ltr">{pending.ticket_code}</span>
           <span>{pending.phone}</span>
+          <span class="scan-confirm-state">
+            <span class="badge" data-status="approved">مقبول</span>
+            لم يُسجّل حضوره بعد
+          </span>
           <div class="scan-actions">
             <button
               class="btn"
@@ -518,12 +552,8 @@
             >
               تأكيد الحضور
             </button>
-            <button
-              class="btn btn--ghost"
-              type="button"
-              onclick={() => (pending = null)}
-            >
-              إعادة المسح
+            <button class="btn btn--ghost" type="button" onclick={cancelPending}>
+              إلغاء
             </button>
           </div>
         </div>
@@ -547,7 +577,7 @@
           />
         </label>
         <button class="btn" type="button" onclick={() => checkIn(manualCode)}>
-          تأكيد
+          تحقق
         </button>
       </div>
     </div>

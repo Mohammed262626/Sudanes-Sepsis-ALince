@@ -1225,6 +1225,29 @@ section[id] {
   margin-top: 0.6rem;
 }
 
+.scan-hint {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 2px dashed var(--line);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.scan-confirm-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.scan-confirm .badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--ink);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
 /* Tablet & phone: the dashboard runs at the door, so keep targets big and drop
    the columns nobody reads on a small screen. */
 @media (max-width: 900px) {
@@ -1358,6 +1381,7 @@ section[id] {
 .admin-empty,
 .form-status,
 .scan-result,
+.scan-hint,
 .scan-confirm,
 .admin-note {
   animation: rise 0.22s ease-out both;

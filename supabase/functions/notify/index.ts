@@ -66,6 +66,7 @@ async function sendWhats(chatId: string, message: string): Promise<number> {
 }
 
 // Sends the ticket QR as an image; the code itself is the only data in the QR.
+// Brand colours: dark red on white keeps scanner contrast high.
 async function sendTicketQr(chatId: string, code: string, caption: string): Promise<number> {
   const id = await getSecret("green_api_instance");
   const token = await getSecret("green_api_token");
@@ -75,7 +76,7 @@ async function sendTicketQr(chatId: string, code: string, caption: string): Prom
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chatId,
-      urlFile: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=10&data=${encodeURIComponent(code)}`,
+      urlFile: `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=8B0000&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(code)}`,
       fileName: `ticket-${code}.png`,
       caption,
     }),
@@ -240,7 +241,7 @@ Deno.serve(async (req) => {
       whatsapp.ticket = await sendTicketQr(
         chatId,
         payload.record.ticket_code,
-        "تذكرتك — مؤتمر كسلا للإنتان"
+        "مؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026\nرقم تذكرتك: " + payload.record.ticket_code
       );
     } else if (payload.record.status === "rejected") {
       whatsapp.rejection = await sendWhats(
