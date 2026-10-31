@@ -25,7 +25,6 @@
       { key: "email", label: "البريد", cls: "ltr wrap hide-xs" },
       { key: "phone", label: "الهاتف", cls: "nw hide-xs" },
       { key: "role", label: "الصفة", cls: "nw hide-sm" },
-      { key: "organization", label: "الجهة", cls: "wrap hide-sm" },
       { key: "actions", label: "إجراء", cls: "nw" },
     ],
     contact_messages: [
@@ -983,14 +982,13 @@
                         <button
                           class="code-copy"
                           type="button"
+                          dir="ltr"
                           title="نسخ رمز التذكرة"
                           aria-label={`نسخ رمز التذكرة ${row.ticket_code}`}
+                          data-copied={copiedCode === row.ticket_code ? "1" : undefined}
                           onclick={() => copyCode(String(row.ticket_code))}
                         >
-                          <span dir="ltr">{row.ticket_code}</span>
-                          <span class="copy-note" data-copied={copiedCode === row.ticket_code ? "1" : undefined}>
-                            {copiedCode === row.ticket_code ? "تم النسخ" : "نسخ"}
-                          </span>
+                          {row.ticket_code}
                         </button>
                       {:else}
                         —
