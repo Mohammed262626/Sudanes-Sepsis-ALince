@@ -689,7 +689,14 @@
     const hit = (v: unknown) => String(v ?? "").toLowerCase().includes(q);
     const phoneHit = (v: unknown) =>
       digits.length >= 3 && String(v ?? "").replace(/\D/g, "").includes(digits);
-    return rows.filter((r) => hit(r.name) || hit(r.email) || hit(r.phone) || phoneHit(r.phone));
+    return rows.filter(
+      (r) =>
+        hit(r.name) ||
+        hit(r.email) ||
+        hit(r.phone) ||
+        hit(r.ticket_code) ||
+        phoneHit(r.phone),
+    );
   });
   // From the registrations table: jump to the attendance tab with that guest's
   // card already open, so one tap confirms.
@@ -732,21 +739,21 @@
       <button
         class="btn btn--ghost btn--icon"
         type="button"
+        title="تحديث"
+        aria-label="تحديث"
+        onclick={load}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.7-6.4" /><path d="M21 3v6h-6" /></svg>
+      </button>
+      <button
+        class="btn btn--ghost btn--icon"
+        type="button"
         title="تنزيل CSV"
         aria-label="تنزيل CSV"
         disabled={shown.length === 0}
         onclick={exportCsv}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 19h16" /></svg>
-      </button>
-      <button
-        class="btn btn--ghost btn--icon"
-        type="button"
-        title="تحديث"
-        aria-label="تحديث"
-        onclick={load}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.7-6.4" /><path d="M21 3v6h-6" /></svg>
       </button>
       <button
         class="btn btn--ghost btn--icon"
@@ -766,8 +773,19 @@
 {/if}
 
 {#if loading}
-  <div class="admin-loading" aria-busy="true" aria-label="جارٍ التحميل">
-    <span></span><span></span><span></span><span></span>
+  <div
+    class="admin-loading"
+    data-shape={tab === "scan" ? "scan" : tab === "templates" ? "templates" : "table"}
+    aria-busy="true"
+    aria-label="جارٍ التحميل"
+  >
+    {#if tab === "scan"}
+      <span></span><span></span>
+    {:else if tab === "templates"}
+      {#each [0, 1, 2, 3] as i (i)}<span></span>{/each}
+    {:else}
+      {#each [0, 1, 2, 3, 4, 5] as i (i)}<span></span>{/each}
+    {/if}
   </div>
 {:else if failed}
   <p class="form-status" data-state="error">
@@ -916,8 +934,8 @@
           class="admin-search"
           type="search"
           bind:value={query}
-          placeholder="ابحث بالاسم أو الهاتف أو البريد"
-          aria-label="ابحث بالاسم أو الهاتف أو البريد"
+          placeholder="ابحث بالاسم أو الهاتف أو البريد أو رمز التذكرة"
+          aria-label="ابحث بالاسم أو الهاتف أو البريد أو رمز التذكرة"
           onkeydown={(e) => e.key === "Enter" && openMatch()}
         />
         <div class="filters">
@@ -1009,6 +1027,7 @@
                           <button
                             class="btn btn--ghost btn--icon"
                             type="button"
+                            data-act="danger"
                             title="رفض"
                             aria-label="رفض"
                             disabled={busyId === row.id}
@@ -1053,6 +1072,7 @@
                             <button
                               class="btn btn--ghost btn--icon"
                               type="button"
+                              data-act="danger"
                               title="إلغاء القبول"
                               aria-label="إلغاء القبول"
                               disabled={busyId === row.id}
@@ -1065,6 +1085,7 @@
                           <button
                             class="btn btn--ghost btn--icon"
                             type="button"
+                            data-act="ok"
                             title="إعادة إلى الانتظار"
                             aria-label="إعادة إلى الانتظار"
                             disabled={busyId === row.id}
@@ -1088,6 +1109,7 @@
                         <button
                           class="btn btn--ghost btn--icon"
                           type="button"
+                          data-act="danger"
                           title="حذف"
                           aria-label="حذف"
                           disabled={busyId === row.id}

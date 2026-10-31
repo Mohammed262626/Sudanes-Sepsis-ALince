@@ -6,6 +6,8 @@
   --line: #ddd8cf;
   --accent: #c0392b;
   --accent-ink: #fff;
+  --ok: #2e6b3e;
+  --danger: var(--accent);
   --max: 1160px;
   --font-display: "Cairo Variable", system-ui, sans-serif;
   --font-body: "Tajawal", system-ui, sans-serif;
@@ -1045,11 +1047,31 @@ section[id] {
   text-decoration: underline solid;
 }
 
-/* Every column shares the width evenly; the actions need room for four icons. */
+/* Scoped to the desktop table: the phone card layout is left alone. */
 @media (min-width: 721px) {
+  .admin-table th,
+  .admin-table td {
+    text-align: center;
+  }
+
+  /* .ltr outranks .admin-table td on specificity, so it needs saying again. */
+  .admin-table .ltr {
+    text-align: center;
+  }
+
   .admin-table th[data-col="actions"],
   .admin-table td[data-col="actions"] {
     inline-size: 11rem;
+  }
+
+  /* The header stays centred; only the buttons move left. */
+  .admin-table td[data-col="actions"] {
+    text-align: left;
+  }
+
+  /* text-align does nothing to a flex row; in RTL flex-end is the left edge. */
+  .admin-table td[data-col="actions"] .row-actions {
+    justify-content: flex-end;
   }
 }
 
@@ -1069,6 +1091,40 @@ section[id] {
   align-items: center;
   gap: 0.3rem;
   white-space: nowrap;
+}
+
+/* Row actions are coloured by what they do: filled green is the affirmative
+   move, outlined ink is neutral, outlined red is destructive. */
+.admin-table td[data-col="actions"] .btn {
+  --act: var(--ok);
+  border-color: var(--act);
+  background: var(--act);
+  color: var(--paper);
+}
+
+.admin-table td[data-col="actions"] .btn--ghost {
+  --act: var(--ink);
+  background: transparent;
+  color: var(--act);
+}
+
+.admin-table td[data-col="actions"] .btn[data-act="danger"] {
+  --act: var(--danger);
+}
+
+.admin-table td[data-col="actions"] .btn[data-act="ok"] {
+  --act: var(--ok);
+}
+
+.admin-table td[data-col="actions"] .btn:hover {
+  border-color: var(--act);
+  background: transparent;
+  color: var(--act);
+}
+
+.admin-table td[data-col="actions"] .btn--ghost:hover {
+  background: var(--act);
+  color: var(--paper);
 }
 
 .admin-actions {
@@ -1229,7 +1285,7 @@ section[id] {
 
 .scan-status[data-state="live"] .dot {
   background: var(--accent);
-  animation: blink 1.6s ease-in-out infinite;
+  animation: blink 2s ease-in-out infinite;
 }
 
 .scan-status[data-state="wait"] .dot {
@@ -1661,69 +1717,65 @@ section[id] {
 
 .admin-loading span {
   display: block;
-  height: 3rem;
+  block-size: 3rem;
   background: rgba(21, 19, 15, 0.06);
-  animation: skeleton 1.3s ease-in-out infinite;
+  animation: skeleton 1.6s ease-in-out infinite;
 }
 
-.admin-loading span:nth-child(2) {
-  animation-delay: 0.12s;
+/* The placeholder copies the shape of the tab it stands in for: a table with a
+   dark header bar, the scanner's camera frame, or template cards. */
+.admin-loading[data-shape="table"] span {
+  block-size: 2.6rem;
 }
 
-.admin-loading span:nth-child(3) {
-  animation-delay: 0.24s;
+.admin-loading[data-shape="table"] span:first-child {
+  block-size: 2.9rem;
+  background: rgba(21, 19, 15, 0.16);
 }
 
-.admin-loading span:nth-child(4) {
-  animation-delay: 0.36s;
+.admin-loading[data-shape="scan"] span:first-child {
+  block-size: 11rem;
 }
 
-/* Feedback motion: content fades in on tab/filter changes, an acted-on row
-   flashes, screens sit still otherwise. */
-@keyframes rise {
+.admin-loading[data-shape="scan"] span:last-child {
+  block-size: 1.8rem;
+}
+
+.admin-loading[data-shape="templates"] span {
+  block-size: 5.5rem;
+}
+
+/* Feedback motion is opacity only: no slides, no scale, no shake. Content fades
+   in on tab/filter changes, an acted-on row tints and fades, screens sit still. */
+@keyframes fade {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
 }
 
 @keyframes skeleton {
   50% {
-    opacity: 0.45;
+    opacity: 0.62;
   }
 }
 
 @keyframes blink {
   50% {
-    opacity: 0.3;
+    opacity: 0.45;
   }
 }
 
 @keyframes flashed {
-  from {
-    background: rgba(21, 19, 15, 0.14);
+  0%,
+  100% {
+    background: rgba(21, 19, 15, 0);
+  }
+  15% {
+    background: rgba(21, 19, 15, 0.12);
   }
 }
 
-/* A read pops the confirmation card in rather than fading it: nothing appears
-   from nothing, so it starts at 0.96, never 0. */
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(0.25rem);
-  }
-}
-
-@keyframes shake {
-  25% {
-    transform: translateX(0.3rem);
-  }
-  75% {
-    transform: translateX(-0.3rem);
-  }
-}
-
-/* Settles instantly; the frame tints for a quarter second after a read. */
+/* Settles instantly; the frame tints briefly after a read. */
 @keyframes hit {
   from {
     box-shadow: inset 0 0 0 4px var(--accent);
@@ -1731,15 +1783,11 @@ section[id] {
 }
 
 .scan-confirm {
-  animation: pop 0.18s cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-.scan-result[data-ok="false"] {
-  animation: shake 0.24s ease-in-out both;
+  animation: fade 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .scan video.hit {
-  animation: hit 0.26s ease-out;
+  animation: hit 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .table-wrap,
@@ -1749,15 +1797,15 @@ section[id] {
 .scan-result,
 .scan-hint,
 .admin-note {
-  animation: rise 0.22s ease-out both;
+  animation: fade 0.24s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .admin-table tbody tr {
-  animation: rise 0.18s ease-out both;
+  animation: fade 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .admin-table tr[data-flash] td {
-  animation: flashed 0.9s ease-out;
+  animation: flashed 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn--icon:active:not(:disabled),

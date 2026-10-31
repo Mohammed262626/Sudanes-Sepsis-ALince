@@ -514,7 +514,7 @@
   .block {
     display: grid;
     gap: 0.85rem;
-    animation: rise 0.22s ease-out both;
+    animation: fade 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 
   h1 {
@@ -601,7 +601,7 @@
   }
 
   .go {
-    animation: pop 0.18s cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation: fade 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 
   .link {
@@ -739,7 +739,7 @@
     background: var(--ink);
     color: var(--paper);
     font-size: 0.8rem;
-    animation: pop 0.18s cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation: fade 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 
   .done {
@@ -756,14 +756,14 @@
     border: 2px solid var(--ink);
     border-radius: 50%;
     font-size: 1.4rem;
-    animation: pop 0.22s cubic-bezier(0.23, 1, 0.32, 1) both;
+    animation: fade 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 
   .error {
     margin: 0;
     font-size: 0.875rem;
     color: var(--accent);
-    animation: shake 0.24s ease-in-out both;
+    animation: fade 0.24s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
 
   .brand {
