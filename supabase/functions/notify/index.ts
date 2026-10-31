@@ -113,7 +113,7 @@ async function sendTicketButtons(chatId: string, code: string, target: string): 
         footer: "الاثنين 16 نوفمبر 2026",
         buttons: [
           { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
-          { type: "url", buttonId: "2", buttonText: "أضف إلى التقويم", url: `${SITE}/conference.ics` },
+          { type: "url", buttonId: "2", buttonText: "أضف إلى التقويم", url: `${SITE}/calendar/` },
           { type: "url", buttonId: "3", buttonText: "لا أستطيع الحضور", url: target + "&d=1" },
         ],
       }),
