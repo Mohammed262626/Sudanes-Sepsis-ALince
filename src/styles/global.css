@@ -969,7 +969,13 @@ section[id] {
   border-bottom: 0;
 }
 
-.admin-table .nw {
+.admin-table td.nw {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-table th.nw {
   white-space: nowrap;
 }
 
@@ -1041,7 +1047,7 @@ section[id] {
 
 .admin-search {
   flex: 1 1 16rem;
-  max-inline-size: 24rem;
+  max-inline-size: 20rem;
   block-size: 2.75rem;
   padding: 0 0.7rem;
   border: 2px solid var(--ink);
@@ -1294,6 +1300,19 @@ section[id] {
 
 /* Tablet & phone: the dashboard runs at the door, so keep targets big and drop
    the columns nobody reads on a small screen. */
+/* Nine columns need ~1100px; below that the date, role and organisation go,
+   and the six that matter share the width evenly. */
+@media (max-width: 1100px) {
+  .admin-table th,
+  .admin-table td {
+    padding: 0.7rem 0.65rem;
+  }
+
+  .admin-table .hide-sm {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .admin-table {
     min-width: 0;
@@ -1302,10 +1321,6 @@ section[id] {
   .admin-table th,
   .admin-table td {
     padding: 0.7rem 0.65rem;
-  }
-
-  .admin-table .hide-sm {
-    display: none;
   }
 
   .admin-top .sha {
@@ -1331,10 +1346,38 @@ section[id] {
     margin-block: 1.5rem 1.25rem;
   }
 
-  /* Equal tabs no longer fit: scroll them instead of squeezing the labels. */
+  /* Equal columns would squeeze the action buttons below a thumb width, so on
+     phones the table sizes to its content and scrolls inside its wrapper. */
+  .admin-table {
+    table-layout: auto;
+  }
+
+  /* Equal tabs no longer fit: two rows of three, no horizontal scroll. */
   .tabs {
-    grid-auto-columns: max-content;
-    overflow-x: auto;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-columns: auto;
+  }
+
+  .tabs button {
+    white-space: normal;
+    line-height: 1.2;
+    padding: 0.55rem 0.35rem;
+    font-size: 0.8125rem;
+    border-inline-end: 0;
+    border-block-end: 2px solid var(--ink);
+  }
+
+  .tabs button:not(:nth-child(3n)) {
+    border-inline-end: 2px solid var(--ink);
+  }
+
+  .tabs button:nth-child(n + 4) {
+    border-block-end: 0;
+  }
+
+  .tabs .tab-count {
+    display: none;
   }
 
   .admin-table th,

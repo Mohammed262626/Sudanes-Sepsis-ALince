@@ -16,30 +16,30 @@
 
   const dataTabs = tabs.filter((t) => t.id !== "templates" && t.id !== "scan");
 
-  const columns: Record<string, { key: string; label: string; cls?: string; w?: string }[]> = {
+  const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
     conference_registrations: [
-      { key: "created_at", label: "التاريخ", cls: "nw hide-sm", w: "9%" },
-      { key: "name", label: "الاسم", cls: "nw", w: "14%" },
-      { key: "status", label: "الحالة", cls: "nw", w: "8%" },
-      { key: "ticket_code", label: "رمز التذكرة", cls: "nw", w: "9%" },
-      { key: "email", label: "البريد", cls: "ltr wrap hide-xs", w: "19%" },
-      { key: "phone", label: "الهاتف", cls: "nw hide-xs", w: "10%" },
-      { key: "role", label: "الصفة", cls: "nw hide-sm", w: "8%" },
-      { key: "organization", label: "الجهة", cls: "wrap hide-sm", w: "13%" },
-      { key: "actions", label: "إجراء", cls: "nw", w: "10%" },
+      { key: "created_at", label: "التاريخ", cls: "nw hide-sm" },
+      { key: "name", label: "الاسم", cls: "wrap" },
+      { key: "status", label: "الحالة", cls: "nw" },
+      { key: "ticket_code", label: "رمز التذكرة", cls: "nw hide-xs" },
+      { key: "email", label: "البريد", cls: "ltr wrap hide-xs" },
+      { key: "phone", label: "الهاتف", cls: "nw hide-xs" },
+      { key: "role", label: "الصفة", cls: "nw hide-sm" },
+      { key: "organization", label: "الجهة", cls: "wrap hide-sm" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
     contact_messages: [
-      { key: "created_at", label: "التاريخ", cls: "nw", w: "10%" },
-      { key: "name", label: "الاسم", cls: "nw", w: "14%" },
-      { key: "email", label: "البريد", cls: "ltr wrap", w: "20%" },
-      { key: "message", label: "الرسالة", cls: "wrap", w: "56%" },
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "wrap" },
+      { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "message", label: "الرسالة", cls: "wrap" },
     ],
     donation_interests: [
-      { key: "created_at", label: "التاريخ", cls: "nw", w: "10%" },
-      { key: "name", label: "الاسم", cls: "nw", w: "14%" },
-      { key: "email", label: "البريد", cls: "ltr wrap", w: "20%" },
-      { key: "support_type", label: "نوع الدعم", cls: "nw", w: "14%" },
-      { key: "note", label: "ملاحظات", cls: "wrap", w: "42%" },
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "wrap" },
+      { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "support_type", label: "نوع الدعم", cls: "nw" },
+      { key: "note", label: "ملاحظات", cls: "wrap" },
     ],
   };
 
@@ -736,11 +736,6 @@
       {:else}
         <div class="table-wrap">
           <table class="admin-table">
-            <colgroup>
-              {#each cols as c (c.key)}
-                <col style={c.w ? `width:${c.w}` : undefined} />
-              {/each}
-            </colgroup>
             <thead>
               <tr>
                 {#each cols as c (c.key)}
