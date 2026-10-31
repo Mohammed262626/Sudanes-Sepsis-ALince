@@ -185,7 +185,11 @@ Deno.serve(async (req) => {
   if (!payload?.table || !payload?.record) return json({ error: "bad payload" }, 400);
 
   // Admin decision: approvals send the ticket QR, rejections a closing message.
-  if (payload.table === "conference_registrations" && payload.event === "UPDATE") {
+  // RESEND re-sends the ticket for an already approved registration.
+  if (
+    payload.table === "conference_registrations" &&
+    (payload.event === "UPDATE" || payload.event === "RESEND")
+  ) {
     const chatId = toChatId(payload.record.phone ?? "");
     if (!payload.record.phone) return json({ skipped: true });
     const whatsapp: Record<string, number> = {};

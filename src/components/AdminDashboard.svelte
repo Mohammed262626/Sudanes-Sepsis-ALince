@@ -55,19 +55,21 @@
   };
 
   let busyId = $state(0);
+  let actionError = $state("");
 
   // Admin-only: RLS lets only allowlisted emails update; the DB trigger sends the
   // approval message with the ticket QR (or the rejection message).
   async function decide(id: number, status: "approved" | "rejected") {
     if (!supabase || busyId) return;
     busyId = id;
+    actionError = "";
     const { error } = await supabase
       .from("conference_registrations")
       .update({ status })
       .eq("id", id);
     busyId = 0;
     if (error) {
-      failed = true;
+      actionError = "تعذّر تحديث الحالة. حاول مرة أخرى.";
       return;
     }
     data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
@@ -76,7 +78,36 @@
     data = { ...data };
   }
 
-  onMount(async () => {
+  // Re-sends the ticket QR for an approved registration (via the resend_ticket RPC).
+  async function resend(id: number) {
+    if (!supabase || busyId) return;
+    busyId = id;
+    actionError = "";
+    const { error } = await supabase.rpc("resend_ticket", { p_id: id });
+    busyId = 0;
+    if (error) actionError = "تعذّر إرسال التذكرة. حاول مرة أخرى.";
+  }
+
+  async function remove(id: number) {
+    if (!supabase || busyId || !confirm("حذف هذا التسجيل نهائياً؟")) return;
+    busyId = id;
+    actionError = "";
+    const { error } = await supabase
+      .from("conference_registrations")
+      .delete()
+      .eq("id", id);
+    busyId = 0;
+    if (error) {
+      actionError = "تعذّر الحذف. حاول مرة أخرى.";
+      return;
+    }
+    data.conference_registrations = (data.conference_registrations ?? []).filter(
+      (r) => r.id !== id,
+    );
+    data = { ...data };
+  }
+
+  async function load() {
     if (!supabase) return;
     const { data: session } = await supabase.auth.getSession();
     if (!session.session) {
@@ -84,6 +115,8 @@
       return;
     }
     userEmail = session.session.user.email ?? "";
+    loading = true;
+    actionError = "";
 
     const results = await Promise.all(
       tabs.map((t) =>
@@ -102,7 +135,9 @@
     });
     data = next;
     loading = false;
-  });
+  }
+
+  onMount(load);
 
   async function signOut() {
     await supabase?.auth.signOut();
@@ -119,12 +154,17 @@
     <h1>الطلبات والرسائل</h1>
   </div>
   <div class="admin-user">
+    <button class="btn btn--ghost" type="button" onclick={load}>تحديث</button>
     <span dir="ltr">{userEmail}</span>
     <button class="btn btn--ghost" type="button" onclick={signOut}>
       خروج
     </button>
   </div>
 </header>
+
+{#if actionError}
+  <p class="form-status" data-state="error">{actionError}</p>
+{/if}
 
 {#if loading}
   <div class="admin-loading" aria-busy="true" aria-label="جارٍ التحميل">
@@ -173,26 +213,43 @@
                       {statusLabels[row.status] ?? row.status}
                     </span>
                   {:else if c.key === "actions"}
-                    {#if row.status === "pending"}
-                      <button
-                        class="btn btn--sm"
-                        type="button"
-                        disabled={busyId === row.id}
-                        onclick={() => decide(row.id, "approved")}
-                      >
-                        قبول
-                      </button>
+                    <div class="row-actions">
+                      {#if row.status === "pending"}
+                        <button
+                          class="btn btn--sm"
+                          type="button"
+                          disabled={busyId === row.id}
+                          onclick={() => decide(row.id, "approved")}
+                        >
+                          قبول
+                        </button>
+                        <button
+                          class="btn btn--ghost btn--sm"
+                          type="button"
+                          disabled={busyId === row.id}
+                          onclick={() => decide(row.id, "rejected")}
+                        >
+                          رفض
+                        </button>
+                      {:else if row.status === "approved"}
+                        <button
+                          class="btn btn--ghost btn--sm"
+                          type="button"
+                          disabled={busyId === row.id}
+                          onclick={() => resend(row.id)}
+                        >
+                          إعادة الإرسال
+                        </button>
+                      {/if}
                       <button
                         class="btn btn--ghost btn--sm"
                         type="button"
                         disabled={busyId === row.id}
-                        onclick={() => decide(row.id, "rejected")}
+                        onclick={() => remove(row.id)}
                       >
-                        رفض
+                        حذف
                       </button>
-                    {:else}
-                      —
-                    {/if}
+                    </div>
                   {:else}
                     {row[c.key] || "—"}
                   {/if}

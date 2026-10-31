@@ -43,6 +43,7 @@ Conference registration is two-stage: a new row is a *request* (`status` =
 `pending`, auto `ticket_code`) and gets only a "received" message. Approving it in
 `/admin` flips the status, firing the update trigger → approval message + ticket QR
 image. Rejection sends a closing message.
+Admins can re-send an approved ticket (`resend_ticket` RPC, sends the QR again) and delete registrations; both are RLS-gated.
 
 ## Design rules
 
