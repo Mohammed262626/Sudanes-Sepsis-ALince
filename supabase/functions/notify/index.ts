@@ -94,7 +94,7 @@ async function sendTicketQr(chatId: string, code: string, target: string, captio
   return res.status;
 }
 
-// Two link buttons: the check-in page, and the raw 1000px QR to print.
+// One link button: the guest's page. Attendance still needs the door QR scan.
 async function sendTicketButtons(chatId: string, code: string, target: string): Promise<number> {
   const id = await getSecret("green_api_instance");
   const token = await getSecret("green_api_token");
@@ -109,12 +109,9 @@ async function sendTicketButtons(chatId: string, code: string, target: string): 
         header: "مؤتمر كسلا للإنتان",
         body:
           `تذكرتك ${code} جاهزة.\n` +
-          "اضغط «تأكيد الحضور» يوم المؤتمر لعرض بياناتك وتسجيل حضورك، أو حمّل رمز QR بجودة كاملة للطباعة.",
+          "اضغط «تأكيد الحضور» عند وصولك، ثم امسح رمز البوابة بكاميرا هاتفك ليُسجَّل حضورك.",
         footer: "الاثنين 16 نوفمبر 2026",
-        buttons: [
-          { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
-          { type: "url", buttonId: "2", buttonText: "تحميل رمز QR", url: qrImageUrl(target) },
-        ],
+        buttons: [{ type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target }],
       }),
     },
   );
