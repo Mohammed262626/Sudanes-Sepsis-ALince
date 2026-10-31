@@ -1028,6 +1028,24 @@ section[id] {
 }
 
 /* Status filter */
+.admin-search {
+  inline-size: 100%;
+  max-inline-size: 26rem;
+  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+.admin-search:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

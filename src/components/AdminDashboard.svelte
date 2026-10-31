@@ -68,6 +68,7 @@
   let busyId = $state(0);
   let actionError = $state("");
   let flashId = $state(0);
+  let query = $state("");
 
   // Row feedback after a write; cleared so the animation can replay.
   const flash = (id: number) => {
@@ -108,6 +109,28 @@
     busyId = 0;
     if (error) actionError = "تعذّر إرسال التذكرة. حاول مرة أخرى.";
     else flash(id);
+  }
+
+  // Clears a mistaken check-in. The attendance trigger only fires null -> value,
+  // so nothing is sent to the guest.
+  async function clearAttendance(id: number) {
+    if (!supabase || busyId || !confirm("إلغاء تسجيل حضور هذا الشخص؟")) return;
+    busyId = id;
+    actionError = "";
+    const { error } = await supabase
+      .from("conference_registrations")
+      .update({ attended_at: null })
+      .eq("id", id);
+    busyId = 0;
+    if (error) {
+      actionError = "تعذّر إلغاء الحضور. حاول مرة أخرى.";
+      return;
+    }
+    data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
+      r.id === id ? { ...r, attended_at: null } : r,
+    );
+    data = { ...data };
+    flash(id);
   }
 
   async function remove(id: number) {
@@ -446,6 +469,17 @@
       : (data[tab] ?? []),
   );
   const cols = $derived(columns[tab] ?? []);
+  // Name, email or phone; digits are compared separately so "966782749"
+  // still finds "0966 782 749".
+  const shown = $derived.by(() => {
+    const q = query.trim().toLowerCase();
+    if (tab !== "conference_registrations" || !q) return rows;
+    const digits = q.replace(/\D/g, "");
+    const hit = (v: unknown) => String(v ?? "").toLowerCase().includes(q);
+    const phoneHit = (v: unknown) =>
+      digits.length >= 3 && String(v ?? "").replace(/\D/g, "").includes(digits);
+    return rows.filter((r) => hit(r.name) || hit(r.email) || hit(r.phone) || phoneHit(r.phone));
+  });
   const count = (id: string) =>
     id === "templates"
       ? templates.length
@@ -607,6 +641,13 @@
     </div>
   {:else}
     {#if tab === "conference_registrations"}
+      <input
+        class="admin-search"
+        type="search"
+        bind:value={query}
+        placeholder="ابحث بالاسم أو الهاتف أو البريد"
+        aria-label="ابحث بالاسم أو الهاتف أو البريد"
+      />
       <div class="filters">
         {#each filterOptions as f (f.id)}
           <button
@@ -621,8 +662,10 @@
     {/if}
 
     {#key tab + ":" + statusFilter}
-      {#if rows.length === 0}
-        <p class="admin-empty">لا توجد سجلات بعد.</p>
+      {#if shown.length === 0}
+        <p class="admin-empty">
+          {query.trim() ? "لا نتائج مطابقة." : "لا توجد سجلات بعد."}
+        </p>
       {:else}
         <div class="table-wrap">
           <table class="admin-table">
@@ -634,7 +677,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each rows as row (row.id)}
+              {#each shown as row (row.id)}
                 <tr data-flash={flashId === row.id ? "1" : undefined}>
                 {#each cols as c (c.key)}
                   <td class={c.cls ?? ""}>
@@ -681,6 +724,18 @@
                             onclick={() => resend(row.id)}
                           >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
+                          </button>
+                        {/if}
+                        {#if row.attended_at}
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            title="إلغاء الحضور"
+                            aria-label="إلغاء الحضور"
+                            disabled={busyId === row.id}
+                            onclick={() => clearAttendance(row.id)}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></svg>
                           </button>
                         {/if}
                         <button
