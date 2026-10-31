@@ -1,5 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
+import { url } from "../lib/url";
 import ConferenceBand from "../components/ConferenceBand.svelte";
 import Countdown from "../components/Countdown.svelte";
 import ConferenceForm from "../components/ConferenceForm.svelte";
@@ -336,7 +337,7 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
           بالإنتان، فاتجه فوراً إلى أقرب مستشفى.
         </p>
         <p>
-          تفاصيل المؤتمر على <a href="/conference">صفحة مؤتمر كسلا</a>.
+          تفاصيل المؤتمر على <a href={url("conference")}>صفحة مؤتمر كسلا</a>.
         </p>
       </div>
       <ContactForm client:visible />

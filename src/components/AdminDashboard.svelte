@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { supabase } from "../lib/supabase";
+  import { url } from "../lib/url";
 
   type Row = Record<string, string | number>;
   type Template = { key: string; label: string; body: string };
@@ -250,7 +251,7 @@
     if (!supabase) return;
     const { data: session } = await supabase.auth.getSession();
     if (!session.session) {
-      location.replace("/admin/login");
+      location.replace(url("admin/login"));
       return;
     }
     userEmail = session.session.user.email ?? "";
@@ -290,7 +291,7 @@
 
   async function signOut() {
     await supabase?.auth.signOut();
-    location.replace("/admin/login");
+    location.replace(url("admin/login"));
   }
 
   const registrations = $derived(data.conference_registrations ?? []);

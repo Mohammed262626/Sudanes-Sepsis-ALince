@@ -1,5 +1,6 @@
 <script lang="ts">
   import { supabase } from "../lib/supabase";
+  import { url } from "../lib/url";
 
   const DEADLINE = new Date("2026-11-03T23:59:59+02:00").getTime();
 
@@ -103,6 +104,6 @@
 {:else}
   <p>
     انتهت فترة التسجيل في 3 نوفمبر 2026. للاستفسار،
-    <a href="/#contact">تواصل معنا</a>.
+    <a href={url("#contact")}>تواصل معنا</a>.
   </p>
 {/if}

@@ -4,6 +4,7 @@ import "@fontsource/tajawal/400.css";
 import "@fontsource/tajawal/500.css";
 import "@fontsource/tajawal/700.css";
 import "../styles/global.css";
+import { url } from "../lib/url";
 
 interface Props {
   title?: string;
@@ -16,12 +17,12 @@ const {
 } = Astro.props;
 
 const nav = [
-  { href: "/#sepsis", label: "ما هو الإنتان" },
-  { href: "/#symptoms", label: "الأعراض والوقاية" },
-  { href: "/#conference", label: "المؤتمر" },
-  { href: "/#activities", label: "أنشطتنا" },
-  { href: "/#about", label: "من نحن" },
-  { href: "/#contact", label: "اتصل بنا" },
+  { href: url("#sepsis"), label: "ما هو الإنتان" },
+  { href: url("#symptoms"), label: "الأعراض والوقاية" },
+  { href: url("#conference"), label: "المؤتمر" },
+  { href: url("#activities"), label: "أنشطتنا" },
+  { href: url("#about"), label: "من نحن" },
+  { href: url("#contact"), label: "اتصل بنا" },
 ];
 ---
 
@@ -33,16 +34,16 @@ const nav = [
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f7f5f0" />
     <title>{title}</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
   </head>
   <body>
     <a class="skip" href="#main">تجاوز إلى المحتوى</a>
 
     <header class="site-header">
       <nav class="nav wrap" aria-label="التنقل الرئيسي">
-        <a class="brand" href="/">التحالف السوداني للإنتان</a>
+        <a class="brand" href={url()}>التحالف السوداني للإنتان</a>
         <ul class="nav-links">
-          <li class="nav-special"><a href="/conference">مؤتمر كسلا</a></li>
+          <li class="nav-special"><a href={url("conference")}>مؤتمر كسلا</a></li>
           {
             nav.map((item) => (
               <li>
@@ -51,7 +52,7 @@ const nav = [
             ))
           }
         </ul>
-        <a class="btn" href="/#support">ادعمنا</a>
+        <a class="btn" href={url("#support")}>ادعمنا</a>
       </nav>
     </header>
 
@@ -62,7 +63,7 @@ const nav = [
     <footer class="footer wrap">
       <div class="footer-top">
         <div>
-          <a class="brand" href="/">التحالف السوداني للإنتان</a>
+          <a class="brand" href={url()}>التحالف السوداني للإنتان</a>
           <p style="margin-top: .75rem; max-width: 34ch;">
             نعمل على خفض الوفيات الناتجة عن الإنتان في السودان من خلال
             التوعية، التدريب، والمناصرة.
@@ -72,7 +73,7 @@ const nav = [
           {nav.map((item) => (
             <li><a href={item.href}>{item.label}</a></li>
           ))}
-          <li><a href="/#support">ادعمنا</a></li>
+          <li><a href={url("#support")}>ادعمنا</a></li>
         </ul>
       </div>
       <div class="footer-bottom">
@@ -83,7 +84,7 @@ const nav = [
 
     <script>
       const links = Array.from(
-        document.querySelectorAll<HTMLAnchorElement>(".nav-links a[href^='/#']"),
+        document.querySelectorAll<HTMLAnchorElement>(".nav-links a[href*='#']"),
       );
       const sections = Array.from(
         document.querySelectorAll<HTMLElement>("main section[id]"),
@@ -93,7 +94,7 @@ const nav = [
         for (const link of links) {
           link.toggleAttribute(
             "data-active",
-            link.getAttribute("href") === `/#${id}`,
+            link.getAttribute("href")?.endsWith(`#${id}`) ?? false,
           );
         }
       };

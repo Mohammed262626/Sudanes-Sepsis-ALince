@@ -4,6 +4,7 @@ import "@fontsource/tajawal/400.css";
 import "@fontsource/tajawal/500.css";
 import "@fontsource/tajawal/700.css";
 import "../styles/global.css";
+import { url } from "../lib/url";
 
 interface Props {
   title?: string;
@@ -18,13 +19,13 @@ const { title = "لوحة التحكم" } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <title>{title} | التحالف السوداني للإنتان</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
   </head>
   <body>
     <main class="admin-shell">
       <header class="admin-top">
-        <a class="admin-brand" href="/">التحالف السوداني للإنتان</a>
-        <a class="admin-top-link" href="/">الموقع</a>
+        <a class="admin-brand" href={url()}>التحالف السوداني للإنتان</a>
+        <a class="admin-top-link" href={url()}>الموقع</a>
       </header>
       <slot />
     </main>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { supabase } from "../lib/supabase";
+  import { url } from "../lib/url";
 
   let email = $state("");
   let password = $state("");
@@ -8,7 +9,7 @@
 
   if (supabase) {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) location.replace("/admin");
+      if (data.session) location.replace(url("admin"));
     });
   }
 
@@ -29,7 +30,7 @@
       error = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
       return;
     }
-    location.replace("/admin");
+    location.replace(url("admin"));
   }
 </script>
 

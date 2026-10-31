@@ -1,5 +1,6 @@
 <script lang="ts">
   import { EVENT, DEADLINE } from "../lib/event";
+  import { url } from "../lib/url";
 
   let now = $state(Date.now());
   $effect(() => {
@@ -18,7 +19,7 @@
 {#if remaining > 0}
   <section class="conf-band" aria-label="مؤتمر كسلا للإنتان">
     <div class="wrap conf-band-inner">
-      <a class="conf-band-title" href="/conference">
+      <a class="conf-band-title" href={url("conference")}>
         <strong>مؤتمر كسلا للإنتان</strong>
         <span>16 نوفمبر 2026 · 9:00 صباحاً · كسلا</span>
       </a>
@@ -28,7 +29,7 @@
           {pad(hours)}:{pad(minutes)}:{pad(seconds)}
         </span>
       </p>
-      <a class="btn btn--light" href="/conference">
+      <a class="btn btn--light" href={url("conference")}>
         {now < DEADLINE ? "سجّل حضورك" : "تفاصيل المؤتمر"}
       </a>
     </div>
