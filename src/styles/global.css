@@ -1283,6 +1283,10 @@ section[id] {
 
 .scan-manual .btn {
   block-size: 2.75rem;
+  padding-block: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .scan-manual input:focus-visible {
@@ -1467,14 +1471,92 @@ section[id] {
     display: none;
   }
 
-  .admin-table th,
+  /* A record is a rectangle card on a phone, not a squeezed table row. */
+  .admin-table {
+    min-width: 0;
+  }
+
+  .admin-table,
+  .admin-table tbody {
+    display: block;
+  }
+
+  .admin-table thead {
+    display: none;
+  }
+
+  .admin-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.3rem 0.75rem;
+    padding: 0.85rem 0.9rem;
+    border: 2px solid var(--ink);
+  }
+
+  .admin-table tr + tr {
+    margin-block-start: 0.75rem;
+  }
+
   .admin-table td {
-    padding: 0.6rem 0.5rem;
-    font-size: 0.8125rem;
+    grid-column: 1 / -1;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    font-size: 0.9375rem;
+  }
+
+  .admin-table td:first-child {
+    position: static;
+    background: none;
   }
 
   .admin-table .hide-xs {
     display: none;
+  }
+
+  .admin-table td[data-col="name"] {
+    grid-column: 1;
+    grid-row: 1;
+    inline-size: 100%;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.0625rem;
+  }
+
+  .admin-table td[data-col="status"] {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .admin-table td[data-col="ticket_code"],
+  .admin-table td[data-col="phone"] {
+    grid-row: 2;
+    color: var(--muted);
+    font-size: 0.8125rem;
+  }
+
+  .admin-table td[data-col="ticket_code"] {
+    grid-column: 1;
+  }
+
+  .admin-table td[data-col="phone"] {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  /* The card has room for both, so hide-xs stops applying here. */
+  .admin-table td[data-col="ticket_code"],
+  .admin-table td[data-col="phone"] {
+    display: block;
+  }
+
+  .admin-table td[data-col="actions"] {
+    margin-block-start: 0.4rem;
+  }
+
+  .admin-empty-cell {
+    border: 2px solid var(--ink);
   }
 
   .admin-table .btn--icon,
@@ -1485,6 +1567,8 @@ section[id] {
 
   .table-wrap {
     max-height: none;
+    border: 0;
+    overflow: visible;
   }
 
   .scan,
@@ -1515,8 +1599,9 @@ section[id] {
     min-height: 2.75rem;
   }
 
-  .scan-manual label {
-    flex-basis: 100%;
+  .scan-manual {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .scan-manual .btn {
@@ -1618,7 +1703,6 @@ section[id] {
 .table-wrap,
 .scan,
 .templates,
-.admin-empty,
 .form-status,
 .scan-result,
 .scan-hint,
@@ -1640,10 +1724,9 @@ section[id] {
   transform: translateY(1px);
 }
 
-.admin-empty {
-  border: 2px dashed var(--line);
-  padding: clamp(2rem, 6vw, 3.5rem) 1.5rem;
+.admin-empty-cell {
+  margin: 0;
+  padding: clamp(2rem, 6vw, 3rem) 1rem;
   text-align: center;
   color: var(--muted);
-  max-width: 40rem;
 }

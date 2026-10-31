@@ -784,25 +784,25 @@
     {/if}
 
     {#key tab + ":" + statusFilter}
-      {#if shown.length === 0}
-        <p class="admin-empty">
-          {query.trim() ? "لا نتائج مطابقة." : "لا توجد سجلات بعد."}
-        </p>
-      {:else}
-        <div class="table-wrap">
+      <div class="table-wrap">
+        {#if shown.length === 0}
+          <p class="admin-empty-cell">
+            {query.trim() ? "لا نتائج مطابقة." : "لا توجد سجلات بعد."}
+          </p>
+        {:else}
           <table class="admin-table">
-            <thead>
-              <tr>
-                {#each cols as c (c.key)}
-                  <th class={c.cls ?? ""}>{c.label}</th>
-                {/each}
-              </tr>
-            </thead>
-            <tbody>
-              {#each shown as row (row.id)}
+          <thead>
+            <tr>
+              {#each cols as c (c.key)}
+                <th data-col={c.key} class={c.cls ?? ""}>{c.label}</th>
+              {/each}
+            </tr>
+          </thead>
+          <tbody>
+            {#each shown as row (row.id)}
                 <tr data-flash={flashId === row.id ? "1" : undefined}>
                 {#each cols as c (c.key)}
-                  <td class={c.cls ?? ""}>
+                  <td data-col={c.key} class={c.cls ?? ""}>
                     {#if c.key === "created_at"}
                       {dateFmt.format(new Date(row.created_at))}
                     {:else if c.key === "status"}
@@ -888,11 +888,11 @@
                   </td>
                 {/each}
               </tr>
-            {/each}
-          </tbody>
-        </table>
+              {/each}
+            </tbody>
+          </table>
+        {/if}
       </div>
-      {/if}
     {/key}
   {/if}
 {/if}
