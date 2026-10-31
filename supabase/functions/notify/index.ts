@@ -127,6 +127,24 @@ function compose(
   return null;
 }
 
+// Admin-editable template from public.message_templates; falls back to the
+// built-in text when the row is missing or blank.
+async function template(key: string, r: Record_, fallback: string): Promise<string> {
+  const url = Deno.env.get("SUPABASE_URL");
+  const skey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !skey) return fallback;
+  const res = await fetch(`${url}/rest/v1/message_templates?key=eq.${key}&select=body`, {
+    headers: { apikey: skey, Authorization: "Bearer " + skey },
+  });
+  if (!res.ok) return fallback;
+  const rows = await res.json().catch(() => []);
+  const body = Array.isArray(rows) ? rows[0]?.body : null;
+  if (typeof body !== "string" || !body.trim()) return fallback;
+  return body
+    .replaceAll("{{name}}", r.name ?? "")
+    .replaceAll("{{ticket_code}}", r.ticket_code ?? "");
+}
+
 function confirmation(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
@@ -194,14 +212,20 @@ Deno.serve(async (req) => {
     if (!payload.record.phone) return json({ skipped: true });
     const whatsapp: Record<string, number> = {};
     if (payload.record.status === "approved") {
-      whatsapp.approval = await sendWhats(chatId, approval(payload.record));
+      whatsapp.approval = await sendWhats(
+        chatId,
+        await template("registration_approved", payload.record, approval(payload.record))
+      );
       whatsapp.ticket = await sendTicketQr(
         chatId,
         payload.record.ticket_code,
         "تذكرتك — مؤتمر كسلا للإنتان"
       );
     } else if (payload.record.status === "rejected") {
-      whatsapp.rejection = await sendWhats(chatId, rejection(payload.record));
+      whatsapp.rejection = await sendWhats(
+        chatId,
+        await template("registration_rejected", payload.record, rejection(payload.record))
+      );
     }
     return json({ whatsapp });
   }
@@ -218,7 +242,7 @@ Deno.serve(async (req) => {
       if (payload.table === "conference_registrations" && payload.record.phone) {
         whatsapp.confirmation = await sendWhats(
           toChatId(payload.record.phone),
-          confirmation(payload.record)
+          await template("registration_received", payload.record, confirmation(payload.record))
         );
       }
     })(),

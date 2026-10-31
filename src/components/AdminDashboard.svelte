@@ -3,37 +3,41 @@
   import { supabase } from "../lib/supabase";
 
   type Row = Record<string, string | number>;
+  type Template = { key: string; label: string; body: string };
 
   const tabs = [
     { id: "conference_registrations", label: "التسجيلات" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
+    { id: "templates", label: "قوالب واتساب" },
   ];
 
-  const columns: Record<string, { key: string; label: string }[]> = {
+  const dataTabs = tabs.filter((t) => t.id !== "templates");
+
+  const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
     conference_registrations: [
-      { key: "created_at", label: "التاريخ" },
-      { key: "name", label: "الاسم" },
-      { key: "email", label: "البريد" },
-      { key: "phone", label: "الهاتف" },
-      { key: "role", label: "الصفة" },
-      { key: "organization", label: "الجهة" },
-      { key: "status", label: "الحالة" },
-      { key: "ticket_code", label: "رمز التذكرة" },
-      { key: "actions", label: "إجراء" },
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "nw" },
+      { key: "status", label: "الحالة", cls: "nw" },
+      { key: "ticket_code", label: "رمز التذكرة", cls: "nw" },
+      { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "phone", label: "الهاتف", cls: "nw" },
+      { key: "role", label: "الصفة", cls: "nw" },
+      { key: "organization", label: "الجهة", cls: "wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
     contact_messages: [
-      { key: "created_at", label: "التاريخ" },
-      { key: "name", label: "الاسم" },
-      { key: "email", label: "البريد" },
-      { key: "message", label: "الرسالة" },
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "nw" },
+      { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "message", label: "الرسالة", cls: "wrap" },
     ],
     donation_interests: [
-      { key: "created_at", label: "التاريخ" },
-      { key: "name", label: "الاسم" },
-      { key: "email", label: "البريد" },
-      { key: "support_type", label: "نوع الدعم" },
-      { key: "note", label: "ملاحظات" },
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "nw" },
+      { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "support_type", label: "نوع الدعم", cls: "nw" },
+      { key: "note", label: "ملاحظات", cls: "wrap" },
     ],
   };
 
@@ -42,6 +46,11 @@
   let data = $state<Record<string, Row[]>>({});
   let failed = $state(false);
   let userEmail = $state("");
+  let statusFilter = $state("all");
+
+  let templates = $state<Template[]>([]);
+  let saving = $state(false);
+  let saveNote = $state("");
 
   const dateFmt = new Intl.DateTimeFormat("ar-SD", {
     dateStyle: "medium",
@@ -107,6 +116,24 @@
     data = { ...data };
   }
 
+  async function saveTemplates() {
+    if (!supabase || saving) return;
+    saving = true;
+    saveNote = "";
+    const results = await Promise.all(
+      templates.map((t) =>
+        supabase!
+          .from("message_templates")
+          .update({ body: t.body, updated_at: new Date().toISOString() })
+          .eq("key", t.key),
+      ),
+    );
+    saving = false;
+    saveNote = results.some((r) => r.error)
+      ? "تعذّر الحفظ. حاول مرة أخرى."
+      : "تم الحفظ — تُطبّق على الرسائل القادمة.";
+  }
+
   async function load() {
     if (!supabase) return;
     const { data: session } = await supabase.auth.getSession();
@@ -117,22 +144,32 @@
     userEmail = session.session.user.email ?? "";
     loading = true;
     actionError = "";
+    saveNote = "";
 
-    const results = await Promise.all(
-      tabs.map((t) =>
+    const results = await Promise.all([
+      ...dataTabs.map((t) =>
         supabase
           .from(t.id)
           .select("*")
           .order("created_at", { ascending: false })
           .limit(200),
       ),
-    );
+      supabase.from("message_templates").select("key,label,body").order("key"),
+    ]);
 
     const next: Record<string, Row[]> = {};
-    results.forEach((r, i) => {
+    results.slice(0, dataTabs.length).forEach((r, i) => {
       if (r.error) failed = true;
-      next[tabs[i].id] = r.data ?? [];
+      next[dataTabs[i].id] = r.data ?? [];
     });
+    const order = [
+      "registration_received",
+      "registration_approved",
+      "registration_rejected",
+    ];
+    templates = ((results[results.length - 1].data ?? []) as Template[]).sort(
+      (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
+    );
     data = next;
     loading = false;
   }
@@ -144,8 +181,21 @@
     location.replace("/admin/login");
   }
 
-  const rows = $derived(data[tab] ?? []);
-  const cols = $derived(columns[tab]);
+  const registrations = $derived(data.conference_registrations ?? []);
+  const filterOptions = $derived([
+    { id: "all", label: "الكل", n: registrations.length },
+    { id: "pending", label: "بانتظار القبول", n: registrations.filter((r) => r.status === "pending").length },
+    { id: "approved", label: "مقبول", n: registrations.filter((r) => r.status === "approved").length },
+    { id: "rejected", label: "مرفوض", n: registrations.filter((r) => r.status === "rejected").length },
+  ]);
+  const rows = $derived(
+    tab === "conference_registrations" && statusFilter !== "all"
+      ? registrations.filter((r) => r.status === statusFilter)
+      : (data[tab] ?? []),
+  );
+  const cols = $derived(columns[tab] ?? []);
+  const count = (id: string) =>
+    id === "templates" ? templates.length : (data[id]?.length ?? 0);
 </script>
 
 <header class="admin-head">
@@ -154,11 +204,27 @@
     <h1>الطلبات والرسائل</h1>
   </div>
   <div class="admin-user">
-    <button class="btn btn--ghost" type="button" onclick={load}>تحديث</button>
     <span dir="ltr">{userEmail}</span>
-    <button class="btn btn--ghost" type="button" onclick={signOut}>
-      خروج
-    </button>
+    <div class="admin-actions">
+      <button
+        class="btn btn--ghost btn--icon"
+        type="button"
+        title="تحديث"
+        aria-label="تحديث"
+        onclick={load}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.7-6.4" /><path d="M21 3v6h-6" /></svg>
+      </button>
+      <button
+        class="btn btn--ghost btn--icon"
+        type="button"
+        title="خروج"
+        aria-label="خروج"
+        onclick={signOut}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -184,81 +250,123 @@
         class:active={tab === t.id}
         onclick={() => (tab = t.id)}
       >
-        {t.label} <span class="tab-count">{data[t.id]?.length ?? 0}</span>
+        {t.label} <span class="tab-count">{count(t.id)}</span>
       </button>
     {/each}
   </div>
 
-  {#if rows.length === 0}
-    <p class="admin-empty">لا توجد سجلات بعد.</p>
+  {#if tab === "templates"}
+    <div class="templates">
+      {#each templates as t (t.key)}
+        <label>
+          <span>{t.label}</span>
+          <textarea rows="5" spellcheck="false" bind:value={t.body}></textarea>
+        </label>
+      {/each}
+      <div class="templates-foot">
+        <button class="btn" type="button" onclick={saveTemplates} disabled={saving}>
+          حفظ القوالب
+        </button>
+        <p class="admin-note">
+          {saveNote ||
+            "المتغيّرات المتاحة: {{name}} و {{ticket_code}} — تُستبدل تلقائياً عند الإرسال."}
+        </p>
+      </div>
+    </div>
   {:else}
-    <div class="table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            {#each cols as c (c.key)}
-              <th>{c.label}</th>
-            {/each}
-          </tr>
-        </thead>
-        <tbody>
-          {#each rows as row (row.id)}
+    {#if tab === "conference_registrations"}
+      <div class="filters">
+        {#each filterOptions as f (f.id)}
+          <button
+            type="button"
+            aria-pressed={statusFilter === f.id}
+            onclick={() => (statusFilter = f.id)}
+          >
+            {f.label} <span class="tab-count">{f.n}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+
+    {#if rows.length === 0}
+      <p class="admin-empty">لا توجد سجلات بعد.</p>
+    {:else}
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
             <tr>
               {#each cols as c (c.key)}
-                <td class={c.key === "email" ? "ltr" : ""}>
-                  {#if c.key === "created_at"}
-                    {dateFmt.format(new Date(row.created_at))}
-                  {:else if c.key === "status"}
-                    <span class="badge" data-status={row.status}>
-                      {statusLabels[row.status] ?? row.status}
-                    </span>
-                  {:else if c.key === "actions"}
-                    <div class="row-actions">
-                      {#if row.status === "pending"}
-                        <button
-                          class="btn btn--sm"
-                          type="button"
-                          disabled={busyId === row.id}
-                          onclick={() => decide(row.id, "approved")}
-                        >
-                          قبول
-                        </button>
-                        <button
-                          class="btn btn--ghost btn--sm"
-                          type="button"
-                          disabled={busyId === row.id}
-                          onclick={() => decide(row.id, "rejected")}
-                        >
-                          رفض
-                        </button>
-                      {:else if row.status === "approved"}
-                        <button
-                          class="btn btn--ghost btn--sm"
-                          type="button"
-                          disabled={busyId === row.id}
-                          onclick={() => resend(row.id)}
-                        >
-                          إعادة الإرسال
-                        </button>
-                      {/if}
-                      <button
-                        class="btn btn--ghost btn--sm"
-                        type="button"
-                        disabled={busyId === row.id}
-                        onclick={() => remove(row.id)}
-                      >
-                        حذف
-                      </button>
-                    </div>
-                  {:else}
-                    {row[c.key] || "—"}
-                  {/if}
-                </td>
+                <th>{c.label}</th>
               {/each}
             </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {#each rows as row (row.id)}
+              <tr>
+                {#each cols as c (c.key)}
+                  <td class={c.cls ?? ""}>
+                    {#if c.key === "created_at"}
+                      {dateFmt.format(new Date(row.created_at))}
+                    {:else if c.key === "status"}
+                      <span class="badge" data-status={row.status}>
+                        {statusLabels[row.status] ?? row.status}
+                      </span>
+                    {:else if c.key === "actions"}
+                      <div class="row-actions">
+                        {#if row.status === "pending"}
+                          <button
+                            class="btn btn--icon"
+                            type="button"
+                            title="قبول"
+                            aria-label="قبول"
+                            disabled={busyId === row.id}
+                            onclick={() => decide(row.id, "approved")}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                          </button>
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            title="رفض"
+                            aria-label="رفض"
+                            disabled={busyId === row.id}
+                            onclick={() => decide(row.id, "rejected")}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        {:else if row.status === "approved"}
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            title="إعادة إرسال التذكرة"
+                            aria-label="إعادة إرسال التذكرة"
+                            disabled={busyId === row.id}
+                            onclick={() => resend(row.id)}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
+                          </button>
+                        {/if}
+                        <button
+                          class="btn btn--ghost btn--icon"
+                          type="button"
+                          title="حذف"
+                          aria-label="حذف"
+                          disabled={busyId === row.id}
+                          onclick={() => remove(row.id)}
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v6M14 11v6" /></svg>
+                        </button>
+                      </div>
+                    {:else}
+                      {row[c.key] || "—"}
+                    {/if}
+                  </td>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
   {/if}
 {/if}
