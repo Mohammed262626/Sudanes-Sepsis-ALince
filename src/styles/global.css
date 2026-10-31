@@ -1167,7 +1167,6 @@ section[id] {
 .scan {
   display: grid;
   gap: 0.9rem;
-  max-width: 34rem;
 }
 
 .scan-status {
@@ -1233,6 +1232,7 @@ section[id] {
 
 .scan video {
   inline-size: 100%;
+  max-block-size: 24rem;
   aspect-ratio: 4 / 3;
   background: var(--ink);
   border: 0;
@@ -1490,6 +1490,19 @@ section[id] {
   .scan,
   .templates {
     max-width: none;
+  }
+
+  /* Three even chips per row instead of ragged wrapping. */
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+
+  .filters button {
+    justify-content: center;
+    font-size: 0.8125rem;
+    padding: 0 0.35rem;
   }
 
   .scan-actions {
