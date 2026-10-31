@@ -5,11 +5,22 @@ import "@fontsource/tajawal/500.css";
 import "@fontsource/tajawal/700.css";
 import "../styles/global.css";
 import { url } from "../lib/url";
+import { execSync } from "node:child_process";
+import pkg from "../../package.json";
 
 interface Props {
   title?: string;
 }
 const { title = "لوحة التحكم" } = Astro.props;
+
+// Short commit hash tells you which deploy is live; empty off-git builds.
+const sha = (() => {
+  try {
+    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+})();
 ---
 
 <!doctype html>
@@ -25,7 +36,9 @@ const { title = "لوحة التحكم" } = Astro.props;
     <main class="admin-shell">
       <header class="admin-top">
         <a class="admin-brand" href={url()}>التحالف السوداني للإنتان</a>
-        <a class="admin-top-link" href={url()}>الموقع</a>
+        <span class="admin-top-link" dir="ltr">
+          v{pkg.version}{sha && <span class="sha"> · {sha}</span>}
+        </span>
       </header>
       <slot />
     </main>

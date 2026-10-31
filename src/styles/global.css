@@ -1264,6 +1264,10 @@ section[id] {
     display: none;
   }
 
+  .admin-top .sha {
+    display: none;
+  }
+
   .tabs {
     width: 100%;
   }
