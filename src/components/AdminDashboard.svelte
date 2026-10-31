@@ -216,6 +216,31 @@
     flash(id);
   }
 
+  // Copying the ticket code is the one thing staff do with it at the desk; a tap
+// copies it and says so for a moment.
+  let copiedCode = $state("");
+  let copyTimer = 0;
+
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      // Old browsers / non-secure contexts: fall back to a hidden selection.
+      const el = document.createElement("textarea");
+      el.value = code;
+      el.setAttribute("readonly", "");
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.append(el);
+      el.select();
+      document.execCommand("copy");
+      el.remove();
+    }
+    copiedCode = code;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => (copiedCode = ""), 1600);
+  }
+
   async function remove(id: number) {
     if (!supabase || busyId || !confirm("حذف هذا التسجيل نهائياً؟")) return;
     busyId = id;
@@ -953,6 +978,23 @@
                           {statusLabels[row.status] ?? row.status}
                         </span>
                       {/if}
+                    {:else if c.key === "ticket_code"}
+                      {#if row.ticket_code}
+                        <button
+                          class="code-copy"
+                          type="button"
+                          title="نسخ رمز التذكرة"
+                          aria-label={`نسخ رمز التذكرة ${row.ticket_code}`}
+                          onclick={() => copyCode(String(row.ticket_code))}
+                        >
+                          <span dir="ltr">{row.ticket_code}</span>
+                          <span class="copy-note" data-copied={copiedCode === row.ticket_code ? "1" : undefined}>
+                            {copiedCode === row.ticket_code ? "تم النسخ" : "نسخ"}
+                          </span>
+                        </button>
+                      {:else}
+                        —
+                      {/if}
                     {:else if c.key === "actions"}
                       <div class="row-actions">
                         {#if row.status === "pending"}
@@ -1009,7 +1051,7 @@
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="m17 11 2 2 4-4" /></svg>
                             </button>
                           {/if}
-                          {#if !row.attended_at}
+                          {#if !row.attended_at && !row.declined_at}
                             <button
                               class="btn btn--ghost btn--icon"
                               type="button"

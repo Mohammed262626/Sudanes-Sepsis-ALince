@@ -1022,6 +1022,44 @@ section[id] {
   opacity: 0.7;
 }
 
+/* Ticket code: tap to copy, with a word of confirmation. */
+.code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.code-copy > span:first-child {
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+}
+
+.copy-note {
+  font-size: 0.6875rem;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  white-space: nowrap;
+}
+
+.copy-note[data-copied] {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .code-copy {
+    min-block-size: 2.75rem;
+  }
+}
+
 .btn--sm {
   padding: 0.3rem 0.75rem;
   font-size: 0.8125rem;
