@@ -106,7 +106,16 @@ img {
   background: var(--ink);
   color: var(--paper);
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
 }
 
 .btn:hover {
@@ -506,6 +515,7 @@ img {
 
   * {
     transition: none !important;
+    animation: none !important;
   }
 }
 
@@ -1304,8 +1314,67 @@ section[id] {
 
 .admin-loading span {
   display: block;
-  height: 2.75rem;
+  height: 3rem;
   background: rgba(21, 19, 15, 0.06);
+  animation: skeleton 1.3s ease-in-out infinite;
+}
+
+.admin-loading span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.admin-loading span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+.admin-loading span:nth-child(4) {
+  animation-delay: 0.36s;
+}
+
+/* Feedback motion: content fades in on tab/filter changes, an acted-on row
+   flashes, screens sit still otherwise. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes skeleton {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes flashed {
+  from {
+    background: rgba(21, 19, 15, 0.14);
+  }
+}
+
+.table-wrap,
+.scan,
+.templates,
+.admin-empty,
+.form-status,
+.scan-result,
+.scan-confirm,
+.admin-note {
+  animation: rise 0.22s ease-out both;
+}
+
+.admin-table tbody tr {
+  animation: rise 0.18s ease-out both;
+}
+
+.admin-table tr[data-flash] td {
+  animation: flashed 0.9s ease-out;
+}
+
+.btn--icon:active:not(:disabled),
+.tabs button:active,
+.filters button:active {
+  transform: translateY(1px);
 }
 
 .admin-empty {

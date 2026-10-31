@@ -67,6 +67,15 @@
 
   let busyId = $state(0);
   let actionError = $state("");
+  let flashId = $state(0);
+
+  // Row feedback after a write; cleared so the animation can replay.
+  const flash = (id: number) => {
+    flashId = id;
+    setTimeout(() => {
+      if (flashId === id) flashId = 0;
+    }, 900);
+  };
 
   // Admin-only: RLS lets only allowlisted emails update; the DB trigger sends the
   // approval message with the ticket QR (or the rejection message).
@@ -87,6 +96,7 @@
       r.id === id ? { ...r, status } : r,
     );
     data = { ...data };
+    flash(id);
   }
 
   // Re-sends the ticket QR for an approved registration (via the resend_ticket RPC).
@@ -97,6 +107,7 @@
     const { error } = await supabase.rpc("resend_ticket", { p_id: id });
     busyId = 0;
     if (error) actionError = "تعذّر إرسال التذكرة. حاول مرة أخرى.";
+    else flash(id);
   }
 
   async function remove(id: number) {
@@ -573,21 +584,22 @@
       </div>
     {/if}
 
-    {#if rows.length === 0}
-      <p class="admin-empty">لا توجد سجلات بعد.</p>
-    {:else}
-      <div class="table-wrap">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              {#each cols as c (c.key)}
-                <th class={c.cls ?? ""}>{c.label}</th>
-              {/each}
-            </tr>
-          </thead>
-          <tbody>
-            {#each rows as row (row.id)}
+    {#key tab + ":" + statusFilter}
+      {#if rows.length === 0}
+        <p class="admin-empty">لا توجد سجلات بعد.</p>
+      {:else}
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
               <tr>
+                {#each cols as c (c.key)}
+                  <th class={c.cls ?? ""}>{c.label}</th>
+                {/each}
+              </tr>
+            </thead>
+            <tbody>
+              {#each rows as row (row.id)}
+                <tr data-flash={flashId === row.id ? "1" : undefined}>
                 {#each cols as c (c.key)}
                   <td class={c.cls ?? ""}>
                     {#if c.key === "created_at"}
@@ -656,6 +668,7 @@
           </tbody>
         </table>
       </div>
-    {/if}
+      {/if}
+    {/key}
   {/if}
 {/if}
