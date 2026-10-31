@@ -139,6 +139,7 @@
   let video = $state<HTMLVideoElement | null>(null);
   let scanning = $state(false);
   let manualCode = $state("");
+  let pending = $state<Row | null>(null);
   let scanResult = $state<{ ok: boolean; title: string; note: string } | null>(null);
   let stream: MediaStream | null = null;
   let loop = 0;
@@ -151,7 +152,7 @@
   async function startScan() {
     scanResult = null;
     if (!navigator.mediaDevices?.getUserMedia) {
-      scanResult = { ok: false, title: "الكاميرا غير متاحة", note: "أدخل رمز التذكرة يدويًا." };
+      scanResult = { ok: false, title: "الكاميرا غير متاحة", note: "على iPhone تحتاج الكاميرا رابط HTTPS — استخدم الموقع المنشور أو أدخل الرمز يدويًا." };
       return;
     }
     try {
@@ -183,31 +184,39 @@
       await video.play().catch(() => {});
     }
     const detector = new Detector({ formats: ["qr_code"] });
-    const tick = async () => {
+    const poll = async () => {
       if (!scanning || !video) return;
+      // A read is waiting for confirmation: keep the frame loop alive, skip detect.
+      if (pending) {
+        loop = requestAnimationFrame(() => void poll());
+        return;
+      }
       try {
         const codes = await detector.detect(video);
         const raw = codes?.[0]?.rawValue;
         if (raw) {
-          await checkIn(raw);
+          checkIn(raw, true);
           return;
         }
       } catch {
         // frames before the video is ready throw; keep polling
       }
-      loop = requestAnimationFrame(() => void tick());
+      loop = requestAnimationFrame(() => void poll());
     };
-    void tick();
+    void poll();
   }
 
   function stopScan() {
     scanning = false;
+    pending = null;
     cancelAnimationFrame(loop);
     stream?.getTracks().forEach((t) => t.stop());
     stream = null;
   }
 
-  async function checkIn(raw: string) {
+  // Camera reads ask for confirmation (misreads are common at a busy door);
+  // typing a code is already deliberate, so it marks straight away.
+  function checkIn(raw: string, ask = false) {
     const code = parseCode(raw);
     if (!code || !supabase) return;
     const row = registrations.find(
@@ -229,11 +238,28 @@
       scanResult = { ok: false, title: `${row.name} — لم يُقبل بعد`, note: code };
       return;
     }
+    if (ask) {
+      scanResult = null;
+      pending = row;
+      return;
+    }
+    void markAttended(row);
+  }
+
+  function confirmAttend() {
+    if (pending) void markAttended(pending);
+  }
+
+  async function markAttended(row: Row) {
+    if (!supabase || busyId) return;
+    busyId = row.id;
+    scanResult = null;
     const at = new Date().toISOString();
     const { error } = await supabase
       .from("conference_registrations")
       .update({ attended_at: at })
       .eq("id", row.id);
+    busyId = 0;
     if (error) {
       scanResult = { ok: false, title: "تعذّر تسجيل الحضور", note: "حاول مرة أخرى." };
       return;
@@ -243,8 +269,13 @@
     );
     data = { ...data };
     manualCode = "";
+    pending = null;
     stopScan();
-    scanResult = { ok: true, title: `${row.name} — حاضر`, note: code };
+    scanResult = {
+      ok: true,
+      title: `${row.name} — حاضر`,
+      note: String(row.ticket_code ?? ""),
+    };
   }
 
   async function load() {
@@ -383,7 +414,9 @@
 
   {#if tab === "scan"}
     <div class="scan">
-      {#if scanning}`r`n        <video bind:this={video} playsinline muted></video>`r`n      {/if}
+      {#if scanning}
+        <video bind:this={video} playsinline muted></video>
+      {/if}
       <div class="scan-actions">
         {#if scanning}
           <button class="btn btn--ghost" type="button" onclick={stopScan}>
@@ -393,6 +426,36 @@
           <button class="btn" type="button" onclick={startScan}>افتح الكاميرا</button>
         {/if}
       </div>
+      {#if pending}
+        <div class="scan-confirm">
+          <strong>{pending.name}</strong>
+          <span dir="ltr">{pending.ticket_code}</span>
+          <span>{pending.phone}</span>
+          <div class="scan-actions">
+            <button
+              class="btn"
+              type="button"
+              disabled={busyId === pending.id}
+              onclick={confirmAttend}
+            >
+              تأكيد الحضور
+            </button>
+            <button
+              class="btn btn--ghost"
+              type="button"
+              onclick={() => (pending = null)}
+            >
+              إعادة المسح
+            </button>
+          </div>
+        </div>
+      {/if}
+      {#if scanResult}
+        <p class="scan-result" data-ok={scanResult.ok} role="status">
+          <strong>{scanResult.title}</strong>
+          <span>{scanResult.note}</span>
+        </p>
+      {/if}
       <div class="scan-manual">
         <label>
           <span>أو أدخل رمز التذكرة</span>
@@ -408,12 +471,6 @@
           تأكيد
         </button>
       </div>
-      {#if scanResult}
-        <p class="scan-result" data-ok={scanResult.ok} role="status">
-          <strong>{scanResult.title}</strong>
-          <span>{scanResult.note}</span>
-        </p>
-      {/if}
     </div>
   {:else if tab === "templates"}
     <div class="templates">

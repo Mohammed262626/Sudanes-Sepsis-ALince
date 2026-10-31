@@ -1194,6 +1194,27 @@ section[id] {
   opacity: 0.8;
 }
 
+.scan-confirm {
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem;
+  border: 2px solid var(--ink);
+}
+
+.scan-confirm strong {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.scan-confirm > span {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.scan-confirm .scan-actions {
+  margin-top: 0.6rem;
+}
+
 /* States */
 .admin-loading {
   display: grid;
