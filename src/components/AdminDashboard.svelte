@@ -336,11 +336,7 @@
       video.srcObject = stream;
       await video.play().catch(() => {});
     }
-    // If nothing decodes in 8s, say so instead of a silent live preview.
-    clearTimeout(hintTimer);
-    hintTimer = setTimeout(() => {
-      if (scanning && !pending) scanHint = true;
-    }, 8000);
+    armHint();
 
     let frames = 0;
     const poll = () => {
@@ -363,6 +359,14 @@
       checkIn(raw);
     };
     poll();
+  }
+
+  function armHint() {
+    // If nothing decodes in 8s, say so instead of a silent live preview.
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => {
+      if (scanning && !pending) scanHint = true;
+    }, 8000);
   }
 
   function stopScan() {
@@ -444,7 +448,8 @@
     data = { ...data };
     manualCode = "";
     pending = null;
-    stopScan();
+    // The camera keeps running between guests: only the card resets.
+    armHint();
     // Keep the field ready so a USB QR gun's next scan lands here.
     input?.focus();
     tone([880, 1320]);
@@ -510,6 +515,12 @@
 
   const registrations = $derived(data.conference_registrations ?? []);
   const present = $derived(registrations.filter((r) => r.attended_at).length);
+  const recent = $derived(
+    registrations
+      .filter((r) => r.attended_at)
+      .sort((a, b) => String(b.attended_at).localeCompare(String(a.attended_at)))
+      .slice(0, 5),
+  );
   const filterOptions = $derived([
     { id: "all", label: "الكل", n: registrations.length },
     { id: "pending", label: "بانتظار القبول", n: registrations.filter((r) => r.status === "pending").length },
@@ -536,6 +547,14 @@
       digits.length >= 3 && String(v ?? "").replace(/\D/g, "").includes(digits);
     return rows.filter((r) => hit(r.name) || hit(r.email) || hit(r.phone) || phoneHit(r.phone));
   });
+  // From the registrations table: jump to the attendance tab with that guest's
+  // card already open, so one tap confirms.
+  function openCheckIn(row: Row) {
+    tab = "scan";
+    checkIn(String(row.ticket_code ?? ""));
+    input?.focus();
+  }
+
   // Enter in the search box jumps straight to that guest's check-in card.
   function openMatch() {
     if (shown.length !== 1) return;
@@ -617,18 +636,31 @@
 
   {#if tab === "scan"}
     <div class="scan">
-      {#if scanning}
-        <video bind:this={video} class:hit={hit} playsinline muted></video>
-      {/if}
-      <div class="scan-actions">
+      <p
+        class="scan-status"
+        data-state={pending ? "wait" : scanning ? "live" : "ready"}
+      >
+        <span class="dot" aria-hidden="true"></span>
+        {pending ? "بانتظار التأكيد" : scanning ? "جاري المسح…" : "جاهز للمسح"}
+      </p>
+
+      <div class="scan-stage">
         {#if scanning}
-          <button class="btn btn--ghost" type="button" onclick={stopScan}>
-            إيقاف الكاميرا
-          </button>
+          <video bind:this={video} class:hit={hit} playsinline muted></video>
+          <div class="scan-stage-bar">
+            <span>وجّه الكاميرا إلى رمز التذكرة</span>
+            <button class="btn btn--ghost btn--sm" type="button" onclick={stopScan}>
+              إيقاف
+            </button>
+          </div>
         {:else}
-          <button class="btn" type="button" onclick={startScan}>افتح الكاميرا</button>
+          <button class="btn scan-open" type="button" onclick={startScan}>
+            افتح الكاميرا
+          </button>
+          <span class="scan-tip">أو استخدم قارئ QR أو أدخل الرمز بالأسفل</span>
         {/if}
       </div>
+
       {#if scanning && showDebug && debug}
         <p class="scan-hint" dir="ltr">{debug}</p>
       {/if}
@@ -637,15 +669,15 @@
           لم يُقرأ الرمز — قرّب الكاميرا أكثر، أو استخدم الرقم أدناه.
         </p>
       {/if}
+
       {#if pending}
         <div class="scan-confirm">
+          <span class="scan-confirm-kicker">بطاقة الضيف</span>
           <strong>{pending.name}</strong>
-          <span dir="ltr">{pending.ticket_code}</span>
-          <span>{pending.phone}</span>
-          <span class="scan-confirm-state">
-            <span class="badge" data-status="approved">مقبول</span>
-            لم يُسجّل حضوره بعد
-          </span>
+          <div class="scan-confirm-facts">
+            <span dir="ltr">{pending.ticket_code}</span>
+            <span dir="ltr">{pending.phone}</span>
+          </div>
           <div class="scan-actions">
             <button
               class="btn"
@@ -661,12 +693,19 @@
           </div>
         </div>
       {/if}
+
       {#if scanResult}
         <p class="scan-result" data-ok={scanResult.ok} role="status">
-          <strong>{scanResult.title}</strong>
-          <span>{scanResult.note}</span>
+          <span class="scan-result-icon" aria-hidden="true">
+            {scanResult.ok ? "✓" : "!"}
+          </span>
+          <span class="scan-result-body">
+            <strong>{scanResult.title}</strong>
+            <span>{scanResult.note}</span>
+          </span>
         </p>
       {/if}
+
       <p class="scan-divider">أو أدخل الرمز يدوياً</p>
       <div class="scan-manual">
         <label>
@@ -684,6 +723,18 @@
           تحقق
         </button>
       </div>
+
+      {#if recent.length}
+        <p class="scan-divider">آخر الحضوض</p>
+        <ul class="scan-recent">
+          {#each recent as r (r.id)}
+            <li>
+              <span>{r.name}</span>
+              <span dir="ltr">{r.ticket_code}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </div>
   {:else if tab === "templates"}
     <div class="templates">
@@ -792,6 +843,17 @@
                           >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
                           </button>
+                          {#if !row.attended_at}
+                            <button
+                              class="btn btn--icon"
+                              type="button"
+                              title="تأكيد الحضور"
+                              aria-label="تأكيد الحضور"
+                              onclick={() => openCheckIn(row)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="m17 11 2 2 4-4" /></svg>
+                            </button>
+                          {/if}
                         {/if}
                         {#if row.attended_at}
                           <button
