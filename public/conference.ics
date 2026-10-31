@@ -1,0 +1,15 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sudanese Sepsis Alliance//Conference//AR
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:ksala-sepsis-2026@sudanese-sepsis
+DTSTAMP:20261031T000000Z
+DTSTART;VALUE=DATE:20261116
+DTEND;VALUE=DATE:20261117
+SUMMARY:مؤتمر كسلا للإنتان
+DESCRIPTION:مؤتمر التحالف السوداني للإنتان — يبدأ 9:00 صباحاً بتوقيت الخرطوم.
+LOCATION:كسلا، السودان
+END:VEVENT
+END:VCALENDAR

@@ -190,6 +190,62 @@
     data = { ...data };
   }
 
+  // CSV of what is on screen (search + status filter applied), BOM so Excel
+  // keeps the Arabic.
+  function exportCsv() {
+    const keys = cols.filter((c) => c.key !== "actions");
+    if (!keys.length || !shown.length) return;
+    const cell = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+    const head = keys.map((k) => cell(k.label)).join(",");
+    const body = shown
+      .map((r) =>
+        keys
+          .map((k) =>
+            cell(
+              k.key === "status"
+                ? (statusLabels[String(r.status)] ?? r.status)
+                : k.key === "created_at"
+                  ? new Date(String(r.created_at)).toISOString()
+                  : r[k.key],
+            ),
+          )
+          .join(","),
+      )
+      .join("\r\n");
+    const blob = new Blob(["\uFEFF" + head + "\r\n" + body], {
+      type: "text/csv;charset=utf-8",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${tab}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  // Evening-before nudge: one batch of 25, press again for the next. The RPC
+  // stamps reminder_sent_at, so nobody is reminded twice.
+  let reminding = $state(false);
+  let notice = $state("");
+
+  async function remind() {
+    if (!supabase || reminding || !pendingReminders) return;
+    if (!confirm(`إرسال تذكير إلى ${pendingReminders} ضيفاً؟`)) return;
+    reminding = true;
+    actionError = "";
+    notice = "";
+    const { data: n, error } = await supabase.rpc("remind_pending", { p_limit: 25 });
+    reminding = false;
+    if (error) {
+      actionError = "تعذّر إرسال التذكير. حاول مرة أخرى.";
+      return;
+    }
+    const sent = Number(n ?? 0);
+    notice =
+      `أُرسل ${sent} تذكيراً.` +
+      (pendingReminders > sent ? " اضغط مرة أخرى للدفعة التالية." : "");
+    await load();
+  }
+
   async function saveTemplates() {
     if (!supabase || saving) return;
     saving = true;
@@ -527,12 +583,28 @@
   const filterOptions = $derived([
     { id: "all", label: "الكل", n: registrations.length },
     { id: "pending", label: "بانتظار القبول", n: registrations.filter((r) => r.status === "pending").length },
-    { id: "approved", label: "مقبول", n: registrations.filter((r) => r.status === "approved" && !r.attended_at).length },
+    { id: "approved", label: "مقبول", n: registrations.filter((r) => r.status === "approved" && !r.attended_at && !r.declined_at).length },
     { id: "attended", label: "حاضر", n: present },
+    { id: "declined", label: "اعتذر", n: registrations.filter((r) => r.declined_at && !r.attended_at).length },
     { id: "rejected", label: "مرفوض", n: registrations.filter((r) => r.status === "rejected").length },
   ]);
-  const matches = (r: Row, f: string) =>
-    f === "attended" ? !!r.attended_at : r.status === f && !r.attended_at;
+  // Approved guests who have not been reminded yet — the reminder button count.
+  const pendingReminders = $derived(
+    registrations.filter(
+      (r) =>
+        r.status === "approved" &&
+        !r.attended_at &&
+        !r.declined_at &&
+        !r.reminder_sent_at &&
+        String(r.phone ?? "").trim().length > 0,
+    ).length,
+  );
+  const matches = (r: Row, f: string) => {
+    if (f === "attended") return !!r.attended_at;
+    if (f === "declined") return !!r.declined_at && !r.attended_at;
+    if (f === "approved") return r.status === "approved" && !r.attended_at && !r.declined_at;
+    return r.status === f && !r.attended_at;
+  };
   const rows = $derived(
     tab === "conference_registrations" && statusFilter !== "all"
       ? registrations.filter((r) => matches(r, statusFilter))
@@ -588,6 +660,16 @@
   <div class="admin-user">
     <span dir="ltr">{userEmail}</span>
     <div class="admin-actions">
+      <button
+        class="btn btn--ghost btn--icon"
+        type="button"
+        title="تنزيل CSV"
+        aria-label="تنزيل CSV"
+        disabled={shown.length === 0}
+        onclick={exportCsv}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 19h16" /></svg>
+      </button>
       <button
         class="btn btn--ghost btn--icon"
         type="button"
@@ -780,7 +862,18 @@
             </button>
           {/each}
         </div>
+        <button
+          class="btn btn--ghost btn--sm"
+          type="button"
+          disabled={reminding || pendingReminders === 0}
+          onclick={remind}
+        >
+          {reminding ? "جارٍ الإرسال..." : `تذكير غير الحاضرين (${pendingReminders})`}
+        </button>
       </div>
+      {#if notice}
+        <p class="form-status">{notice}</p>
+      {/if}
     {/if}
 
     {#key tab + ":" + statusFilter}
@@ -808,6 +901,8 @@
                     {:else if c.key === "status"}
                       {#if row.attended_at}
                         <span class="badge" data-status="attended">حاضر</span>
+                      {:else if row.declined_at}
+                        <span class="badge" data-status="declined">اعتذر</span>
                       {:else}
                         <span class="badge" data-status={row.status}>
                           {statusLabels[row.status] ?? row.status}

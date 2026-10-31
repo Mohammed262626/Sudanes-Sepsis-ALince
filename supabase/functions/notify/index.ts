@@ -94,7 +94,7 @@ async function sendTicketQr(chatId: string, code: string, target: string, captio
   return res.status;
 }
 
-// One link button: the guest's page. Attendance still needs the door QR scan.
+// Three link buttons: the guest's page, the calendar file, and the decline path.
 async function sendTicketButtons(chatId: string, code: string, target: string): Promise<number> {
   const id = await getSecret("green_api_instance");
   const token = await getSecret("green_api_token");
@@ -111,7 +111,11 @@ async function sendTicketButtons(chatId: string, code: string, target: string): 
           `تذكرتك ${code} جاهزة.\n` +
           "اضغط «تأكيد الحضور» عند وصولك، ثم امسح رمز البوابة بكاميرا هاتفك ليُسجَّل حضورك.",
         footer: "الاثنين 16 نوفمبر 2026",
-        buttons: [{ type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target }],
+        buttons: [
+          { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
+          { type: "url", buttonId: "2", buttonText: "أضف إلى التقويم", url: `${SITE}/conference.ics` },
+          { type: "url", buttonId: "3", buttonText: "لا أستطيع الحضور", url: target + "&d=1" },
+        ],
       }),
     },
   );
@@ -219,6 +223,25 @@ function rejection(r: Record_): string {
   );
 }
 
+function reminderText(r: Record_): string {
+  return (
+    "أهلاً " + (r.name ?? "") + "،\n" +
+    "تذكير بمؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026 — 9:00 صباحاً — كسلا.\n" +
+    "رقم تذكرتك: " + (r.ticket_code ?? "") + "\n" +
+    "اضغط «تأكيد الحضور» عند وصولك، أو «لا أستطيع الحضور» إن تعذّر مجيئك.\n" +
+    "— التحالف السوداني للإنتان"
+  );
+}
+
+function declinedText(r: Record_): string {
+  return (
+    "أهلاً " + (r.name ?? "") + "،\n" +
+    "سجّلنا اعتذارك عن حضور مؤتمر كسلا للإنتان، وأتحنا مقعدك لضيف آخر.\n" +
+    "شكراً لإبلاغنا، ونأمل أن نلتقي بك في فعالية قادمة.\n" +
+    "— التحالف السوداني للإنتان"
+  );
+}
+
 function adminAlert(table: string, r: Record_): string | null {
   const who = (r.name ?? "") + (r.email ? " — " + r.email : "");
   if (table === "conference_registrations") {
@@ -256,6 +279,47 @@ Deno.serve(async (req) => {
       await template("registration_attended", payload.record, attended(payload.record))
     );
     return json({ whatsapp: { attended: status } });
+  }
+
+  // Evening-before nudge: the reminder text, then the ticket itself again.
+  if (payload.table === "conference_registrations" && payload.event === "REMIND") {
+    if (!payload.record.phone) return json({ skipped: true });
+    const chatId = toChatId(payload.record.phone);
+    const code = payload.record.ticket_code;
+    const target = checkinUrl(code, String(payload.record.checkin_token ?? ""));
+    const whatsapp: Record<string, number> = {};
+    whatsapp.reminder = await sendWhats(
+      chatId,
+      await template("registration_reminder", payload.record, reminderText(payload.record))
+    );
+    whatsapp.ticket = await sendTicketQr(
+      chatId,
+      code,
+      target,
+      "مؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026\nرقم تذكرتك: " + code
+    );
+    whatsapp.buttons = await sendTicketButtons(chatId, code, target);
+    return json({ whatsapp });
+  }
+
+  // "I can't come": closing message to the guest, a note to the admins.
+  if (payload.table === "conference_registrations" && payload.event === "DECLINE") {
+    const whatsapp: Record<string, number> = {};
+    if (payload.record.phone) {
+      whatsapp.declined = await sendWhats(
+        toChatId(payload.record.phone),
+        await template("registration_declined", payload.record, declinedText(payload.record))
+      );
+    }
+    const adminChat = await getSecret("green_api_admin");
+    if (adminChat) {
+      whatsapp.admin = await sendWhats(
+        adminChat,
+        "اعتذر عن الحضور: " + (payload.record.name ?? "") +
+          (payload.record.phone ? " — " + payload.record.phone : "")
+      );
+    }
+    return json({ whatsapp });
   }
 
   // Admin decision: approvals send the ticket QR, rejections a closing message.

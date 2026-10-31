@@ -10,6 +10,8 @@
     | "notfound"
     | "notapproved"
     | "ready"
+    | "decline"
+    | "declined"
     | "done"
     | "error";
 
@@ -23,6 +25,7 @@
   let name = $state("");
   let ticket = $state("");
   let attendedAt = $state<string | null>(null);
+  let declinedAt = $state<string | null>(null);
   let busy = $state(false);
 
   // Door step: the URI says who the guest is, the entrance poster proves he is
@@ -46,7 +49,9 @@
   const step = $derived(state === "done" ? 4 : doorOk ? 3 : 2);
 
   onMount(async () => {
-    token = new URLSearchParams(location.search).get("k")?.trim() ?? "";
+    const params = new URLSearchParams(location.search);
+    token = params.get("k")?.trim() ?? "";
+    const wantsDecline = params.get("d") === "1";
     if (!token || !supabase) {
       state = "nokey";
       return;
@@ -62,6 +67,7 @@
       name?: string;
       ticket_code?: string;
       attended_at?: string | null;
+      declined_at?: string | null;
     };
     if (!r?.ok) {
       state =
@@ -75,7 +81,14 @@
     name = r.name ?? "";
     ticket = r.ticket_code ?? "";
     attendedAt = r.attended_at ?? null;
-    state = attendedAt ? "done" : "ready";
+    declinedAt = r.declined_at ?? null;
+    state = attendedAt
+      ? "done"
+      : declinedAt
+        ? "declined"
+        : wantsDecline
+          ? "decline"
+          : "ready";
   });
 
   onDestroy(stopCamera);
@@ -276,6 +289,25 @@
     busy = false;
   }
 
+  // Declining frees the seat; the trigger sends the closing message and tells
+// the admins. Allowed before the event, not only during the check-in window.
+  async function doDecline() {
+    if (busy || !supabase) return;
+    busy = true;
+    const { data, error } = await supabase.rpc("checkin_decline", { p_token: token });
+    busy = false;
+    const r = data as { ok?: boolean; reason?: string; declined_at?: string };
+    if (error || !r?.ok) {
+      state = "error";
+      return;
+    }
+    declinedAt = r.declined_at ?? new Date().toISOString();
+    beep(392, 0.12, "sine", 0.1);
+    beep(330, 0.16, "sine", 0.1, 0.1);
+    hum(40);
+    state = "declined";
+  }
+
   async function confirm() {
     if (busy || !supabase) return;
     busy = true;
@@ -420,6 +452,30 @@
             {/if}
           {/if}
         {/if}
+      {:else if state === "decline"}
+        <h1>إلغاء المشاركة؟</h1>
+        <p class="note">
+          أهلاً {name} — إن أكدت الإلغاء فسيُرسل لنا اعتذارك، ويُتاح مقعدك لضيف آخر.
+        </p>
+        <div class="facts">
+          <span class="ticket" dir="ltr">{ticket}</span>
+          <span>{EVENT}</span>
+        </div>
+        <button class="btn btn--ghost" type="button" disabled={busy} onclick={doDecline}>
+          {#if busy}
+            <span class="spin" aria-hidden="true"></span> جارٍ الإلغاء...
+          {:else}
+            نعم، ألغِ مشاركتي
+          {/if}
+        </button>
+        <button class="link" type="button" onclick={() => (state = "ready")}>
+          تراجع — سأحضر
+        </button>
+      {:else if state === "declined"}
+        <h1>تم إلغاء مشاركتك</h1>
+        <p class="note">
+          شكراً لإبلاغنا — أتحنا مقعدك لضيف آخر، وأرسلنا لك رسالة تأكيد على الواتساب.
+        </p>
       {:else if state === "done"}
         <div class="done" role="status">
           <span class="mark" aria-hidden="true">✓</span>
