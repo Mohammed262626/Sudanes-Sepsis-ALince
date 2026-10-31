@@ -866,10 +866,10 @@ section[id] {
 
 /* Tabs */
 .tabs {
-  display: flex;
-  max-width: 100%;
-  overflow-x: auto;
-  width: fit-content;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  width: 100%;
   border: 2px solid var(--ink);
   margin-bottom: 1.5rem;
 }
@@ -881,6 +881,7 @@ section[id] {
   font-size: 0.9375rem;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
   padding: 0.55rem 1.15rem;
   background: transparent;
@@ -924,6 +925,7 @@ section[id] {
 .admin-table {
   width: 100%;
   min-width: 820px;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.875rem;
@@ -1028,11 +1030,20 @@ section[id] {
 }
 
 /* Status filter */
+/* Search + status filter share one row so they read as a toolbar */
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
 .admin-search {
-  inline-size: 100%;
-  max-inline-size: 26rem;
-  margin-bottom: 0.75rem;
-  padding: 0.55rem 0.7rem;
+  flex: 1 1 16rem;
+  max-inline-size: 24rem;
+  block-size: 2.75rem;
+  padding: 0 0.7rem;
   border: 2px solid var(--ink);
   border-radius: 0;
   background: var(--paper);
@@ -1050,18 +1061,18 @@ section[id] {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0;
 }
 
 .filters button {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   font-family: var(--font-display);
   font-size: 0.875rem;
-  padding: 0.35rem 0.85rem;
-  border: 1px solid var(--line);
+  padding: 0 0.85rem;
+  border: 2px solid var(--line);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -1166,6 +1177,16 @@ section[id] {
   gap: 0.6rem;
 }
 
+.scan-actions .btn {
+  flex: 1;
+}
+
+.scan-divider {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 .scan-manual {
   display: flex;
   align-items: flex-end;
@@ -1183,11 +1204,16 @@ section[id] {
 .scan-manual input {
   font-family: var(--font-body);
   font-size: 1rem;
-  padding: 0.55rem 0.7rem;
+  block-size: 2.75rem;
+  padding: 0 0.7rem;
   border: 2px solid var(--ink);
   border-radius: 0;
   background: var(--paper);
   color: var(--ink);
+}
+
+.scan-manual .btn {
+  block-size: 2.75rem;
 }
 
 .scan-manual input:focus-visible {
@@ -1295,7 +1321,7 @@ section[id] {
   }
 
   .filters button {
-    min-height: 2.5rem;
+    min-height: 2.75rem;
   }
 }
 
@@ -1303,6 +1329,12 @@ section[id] {
   .admin-head {
     align-items: flex-start;
     margin-block: 1.5rem 1.25rem;
+  }
+
+  /* Equal tabs no longer fit: scroll them instead of squeezing the labels. */
+  .tabs {
+    grid-auto-columns: max-content;
+    overflow-x: auto;
   }
 
   .admin-table th,
@@ -1397,6 +1429,43 @@ section[id] {
   }
 }
 
+/* A read pops the confirmation card in rather than fading it: nothing appears
+   from nothing, so it starts at 0.96, never 0. */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(0.25rem);
+  }
+}
+
+@keyframes shake {
+  25% {
+    transform: translateX(0.3rem);
+  }
+  75% {
+    transform: translateX(-0.3rem);
+  }
+}
+
+/* Settles instantly; the frame tints for a quarter second after a read. */
+@keyframes hit {
+  from {
+    box-shadow: inset 0 0 0 4px var(--accent);
+  }
+}
+
+.scan-confirm {
+  animation: pop 0.18s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.scan-result[data-ok="false"] {
+  animation: shake 0.24s ease-in-out both;
+}
+
+.scan video.hit {
+  animation: hit 0.26s ease-out;
+}
+
 .table-wrap,
 .scan,
 .templates,
@@ -1404,7 +1473,6 @@ section[id] {
 .form-status,
 .scan-result,
 .scan-hint,
-.scan-confirm,
 .admin-note {
   animation: rise 0.22s ease-out both;
 }

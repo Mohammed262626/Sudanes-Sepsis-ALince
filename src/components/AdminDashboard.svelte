@@ -16,30 +16,30 @@
 
   const dataTabs = tabs.filter((t) => t.id !== "templates" && t.id !== "scan");
 
-  const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
+  const columns: Record<string, { key: string; label: string; cls?: string; w?: string }[]> = {
     conference_registrations: [
-      { key: "created_at", label: "التاريخ", cls: "nw hide-sm" },
-      { key: "name", label: "الاسم", cls: "nw" },
-      { key: "status", label: "الحالة", cls: "nw" },
-      { key: "ticket_code", label: "رمز التذكرة", cls: "nw" },
-      { key: "email", label: "البريد", cls: "ltr wrap hide-xs" },
-      { key: "phone", label: "الهاتف", cls: "nw hide-xs" },
-      { key: "role", label: "الصفة", cls: "nw hide-sm" },
-      { key: "organization", label: "الجهة", cls: "wrap hide-sm" },
-      { key: "actions", label: "إجراء", cls: "nw" },
+      { key: "created_at", label: "التاريخ", cls: "nw hide-sm", w: "9%" },
+      { key: "name", label: "الاسم", cls: "nw", w: "14%" },
+      { key: "status", label: "الحالة", cls: "nw", w: "8%" },
+      { key: "ticket_code", label: "رمز التذكرة", cls: "nw", w: "9%" },
+      { key: "email", label: "البريد", cls: "ltr wrap hide-xs", w: "19%" },
+      { key: "phone", label: "الهاتف", cls: "nw hide-xs", w: "10%" },
+      { key: "role", label: "الصفة", cls: "nw hide-sm", w: "8%" },
+      { key: "organization", label: "الجهة", cls: "wrap hide-sm", w: "13%" },
+      { key: "actions", label: "إجراء", cls: "nw", w: "10%" },
     ],
     contact_messages: [
-      { key: "created_at", label: "التاريخ", cls: "nw" },
-      { key: "name", label: "الاسم", cls: "nw" },
-      { key: "email", label: "البريد", cls: "ltr wrap" },
-      { key: "message", label: "الرسالة", cls: "wrap" },
+      { key: "created_at", label: "التاريخ", cls: "nw", w: "10%" },
+      { key: "name", label: "الاسم", cls: "nw", w: "14%" },
+      { key: "email", label: "البريد", cls: "ltr wrap", w: "20%" },
+      { key: "message", label: "الرسالة", cls: "wrap", w: "56%" },
     ],
     donation_interests: [
-      { key: "created_at", label: "التاريخ", cls: "nw" },
-      { key: "name", label: "الاسم", cls: "nw" },
-      { key: "email", label: "البريد", cls: "ltr wrap" },
-      { key: "support_type", label: "نوع الدعم", cls: "nw" },
-      { key: "note", label: "ملاحظات", cls: "wrap" },
+      { key: "created_at", label: "التاريخ", cls: "nw", w: "10%" },
+      { key: "name", label: "الاسم", cls: "nw", w: "14%" },
+      { key: "email", label: "البريد", cls: "ltr wrap", w: "20%" },
+      { key: "support_type", label: "نوع الدعم", cls: "nw", w: "14%" },
+      { key: "note", label: "ملاحظات", cls: "wrap", w: "42%" },
     ],
   };
 
@@ -76,6 +76,44 @@
     setTimeout(() => {
       if (flashId === id) flashId = 0;
     }, 900);
+  };
+
+  // Beeps are synthesised, so there are no audio files and nothing to load:
+  // one tone when a code is read, two when attendance is confirmed, one low
+  // tone when the code is unknown or not approved.
+  let audio: AudioContext | null = null;
+  const ensureAudio = () => {
+    const Ctx = window.AudioContext ?? (window as any).webkitAudioContext;
+    if (!Ctx) return null;
+    audio ??= new Ctx();
+    if (audio.state === "suspended") void audio.resume();
+    return audio;
+  };
+  const tone = (freqs: number[], type: OscillatorType = "sine", level = 0.1) => {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const t0 = ctx.currentTime;
+    freqs.forEach((f, i) => {
+      const at = t0 + i * 0.09;
+      const osc = ctx.createOscillator();
+      const amp = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = f;
+      amp.gain.setValueAtTime(0.0001, at);
+      amp.gain.exponentialRampToValueAtTime(level, at + 0.012);
+      amp.gain.exponentialRampToValueAtTime(0.0001, at + 0.085);
+      osc.connect(amp).connect(ctx.destination);
+      osc.start(at);
+      osc.stop(at + 0.1);
+    });
+  };
+  const buzz = (ms: number) => navigator.vibrate?.(ms);
+
+  let hit = $state(false);
+  let resultTimer = 0;
+  const pulse = () => {
+    hit = true;
+    setTimeout(() => (hit = false), 260);
   };
 
   // Admin-only: RLS lets only allowlisted emails update; the DB trigger sends the
@@ -235,6 +273,8 @@
 
   async function startScan() {
     scanResult = null;
+    // The tap that opens the camera is also the gesture that unlocks audio.
+    ensureAudio();
     if (!window.isSecureContext) {
       scanResult = {
         ok: false,
@@ -340,15 +380,19 @@
   function checkIn(raw: string) {
     const code = parseCode(raw);
     if (!code || !supabase) return;
+    clearTimeout(resultTimer);
     pending = null;
     const row = registrations.find(
       (r) => String(r.ticket_code ?? "").toUpperCase() === code,
     );
     if (!row) {
+      tone([200], "triangle");
+      buzz(80);
       scanResult = { ok: false, title: "رمز غير معروف", note: code };
       return;
     }
     if (row.attended_at) {
+      tone([600, 480]);
       scanResult = {
         ok: true,
         title: `سبق تسجيل ${row.name}`,
@@ -357,9 +401,14 @@
       return;
     }
     if (row.status !== "approved") {
+      tone([200], "triangle");
+      buzz(80);
       scanResult = { ok: false, title: `${row.name} — لم يُقبل بعد`, note: code };
       return;
     }
+    tone([880]);
+    buzz(40);
+    pulse();
     scanResult = null;
     pending = row;
   }
@@ -385,6 +434,7 @@
       .eq("id", row.id);
     busyId = 0;
     if (error) {
+      tone([200], "triangle");
       scanResult = { ok: false, title: "تعذّر تسجيل الحضور", note: "حاول مرة أخرى." };
       return;
     }
@@ -397,11 +447,17 @@
     stopScan();
     // Keep the field ready so a USB QR gun's next scan lands here.
     input?.focus();
+    tone([880, 1320]);
+    buzz(60);
+    pulse();
     scanResult = {
       ok: true,
       title: `${row.name} — حاضر`,
       note: String(row.ticket_code ?? ""),
     };
+    // Clears itself so the next guest starts from a clean card.
+    clearTimeout(resultTimer);
+    resultTimer = setTimeout(() => (scanResult = null), 4000);
   }
 
   async function load() {
@@ -480,6 +536,13 @@
       digits.length >= 3 && String(v ?? "").replace(/\D/g, "").includes(digits);
     return rows.filter((r) => hit(r.name) || hit(r.email) || hit(r.phone) || phoneHit(r.phone));
   });
+  // Enter in the search box jumps straight to that guest's check-in card.
+  function openMatch() {
+    if (shown.length !== 1) return;
+    tab = "scan";
+    checkIn(String(shown[0].ticket_code ?? ""));
+  }
+
   const count = (id: string) =>
     id === "templates"
       ? templates.length
@@ -555,7 +618,7 @@
   {#if tab === "scan"}
     <div class="scan">
       {#if scanning}
-        <video bind:this={video} playsinline muted></video>
+        <video bind:this={video} class:hit={hit} playsinline muted></video>
       {/if}
       <div class="scan-actions">
         {#if scanning}
@@ -604,6 +667,7 @@
           <span>{scanResult.note}</span>
         </p>
       {/if}
+      <p class="scan-divider">أو أدخل الرمز يدوياً</p>
       <div class="scan-manual">
         <label>
           <span>امسح بقارئ QR أو اكتب الرمز</span>
@@ -641,23 +705,26 @@
     </div>
   {:else}
     {#if tab === "conference_registrations"}
-      <input
-        class="admin-search"
-        type="search"
-        bind:value={query}
-        placeholder="ابحث بالاسم أو الهاتف أو البريد"
-        aria-label="ابحث بالاسم أو الهاتف أو البريد"
-      />
-      <div class="filters">
-        {#each filterOptions as f (f.id)}
-          <button
-            type="button"
-            aria-pressed={statusFilter === f.id}
-            onclick={() => (statusFilter = f.id)}
-          >
-            {f.label} <span class="tab-count">{f.n}</span>
-          </button>
-        {/each}
+      <div class="admin-toolbar">
+        <input
+          class="admin-search"
+          type="search"
+          bind:value={query}
+          placeholder="ابحث بالاسم أو الهاتف أو البريد"
+          aria-label="ابحث بالاسم أو الهاتف أو البريد"
+          onkeydown={(e) => e.key === "Enter" && openMatch()}
+        />
+        <div class="filters">
+          {#each filterOptions as f (f.id)}
+            <button
+              type="button"
+              aria-pressed={statusFilter === f.id}
+              onclick={() => (statusFilter = f.id)}
+            >
+              {f.label} <span class="tab-count">{f.n}</span>
+            </button>
+          {/each}
+        </div>
       </div>
     {/if}
 
@@ -669,6 +736,11 @@
       {:else}
         <div class="table-wrap">
           <table class="admin-table">
+            <colgroup>
+              {#each cols as c (c.key)}
+                <col style={c.w ? `width:${c.w}` : undefined} />
+              {/each}
+            </colgroup>
             <thead>
               <tr>
                 {#each cols as c (c.key)}
