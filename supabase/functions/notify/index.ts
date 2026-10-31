@@ -65,6 +65,24 @@ async function sendWhats(chatId: string, message: string): Promise<number> {
   return res.status;
 }
 
+// Sends the ticket QR as an image; the code itself is the only data in the QR.
+async function sendTicketQr(chatId: string, code: string, caption: string): Promise<number> {
+  const id = await getSecret("green_api_instance");
+  const token = await getSecret("green_api_token");
+  if (!id || !token) return 0;
+  const res = await fetch(`https://api.green-api.com/waInstance${id}/sendFileByUrl/${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chatId,
+      urlFile: `https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=10&data=${encodeURIComponent(code)}`,
+      fileName: `ticket-${code}.png`,
+      caption,
+    }),
+  });
+  return res.status;
+}
+
 function compose(
   table: string,
   r: Record_
@@ -73,14 +91,14 @@ function compose(
   if (table === "conference_registrations") {
     return {
       to: r.email,
-      subject: "تم تسجيلك في مؤتمر كسلا للإنتان",
+      subject: "استلمنا طلب تسجيلك في مؤتمر كسلا للإنتان",
       html: layout(
-        '<h1 style="font-size:22px;margin:0 0 16px">تم تسجيلك</h1>' +
+        '<h1 style="font-size:22px;margin:0 0 16px">استلمنا طلب تسجيلك</h1>' +
           "<p>أهلاً " + name + "،</p>" +
-          "<p>تأكدنا من تسجيلك في <strong>مؤتمر كسلا للإنتان</strong>:</p>" +
+          "<p>طلبك لمؤتمر <strong>كسلا للإنتان</strong> وصلنا:</p>" +
           '<p style="margin:16px 0;padding:16px;border:1px solid #ddd8cf">' +
           "الاثنين 16 نوفمبر 2026<br>9:00 صباحاً بتوقيت الخرطوم<br>كسلا</p>" +
-          "<p>سنرسل لك تفاصيل الموقع الدقيق والبرنامج قبل الموعد.</p>"
+          "<p>سنتواصل معك قريباً لتأكيد القبول.</p>"
       ),
     };
   }
@@ -112,9 +130,27 @@ function compose(
 function confirmation(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "تم تسجيلك في مؤتمر كسلا للإنتان:\n" +
+    "استلمنا طلب تسجيلك في مؤتمر كسلا للإنتان ✅\n" +
+    "سنتواصل معك قريباً لتأكيد القبول.\n" +
+    "— التحالف السوداني للإنتان"
+  );
+}
+
+function approval(r: Record_): string {
+  return (
+    "أهلاً " + (r.name ?? "") + "،\n" +
+    "تم قبول تسجيلك في مؤتمر كسلا للإنتان ✅\n" +
     "الاثنين 16 نوفمبر 2026 — 9:00 صباحاً — كسلا\n" +
-    "سنرسل تفاصيل الموقع قبل الموعد.\n" +
+    "رمز QR المرفق هو تذكرتك — أظهره عند الدخول.\n" +
+    "— التحالف السوداني للإنتان"
+  );
+}
+
+function rejection(r: Record_): string {
+  return (
+    "أهلاً " + (r.name ?? "") + "،\n" +
+    "نشكرك على اهتمامك بمؤتمر كسلا للإنتان. للأسف لم نتمكن من قبول تسجيلك في هذه الدورة.\n" +
+    "نأمل أن نلتقي في فعاليات قادمة.\n" +
     "— التحالف السوداني للإنتان"
   );
 }
@@ -147,6 +183,24 @@ Deno.serve(async (req) => {
 
   const payload = await req.json().catch(() => null);
   if (!payload?.table || !payload?.record) return json({ error: "bad payload" }, 400);
+
+  // Admin decision: approvals send the ticket QR, rejections a closing message.
+  if (payload.table === "conference_registrations" && payload.event === "UPDATE") {
+    const chatId = toChatId(payload.record.phone ?? "");
+    if (!payload.record.phone) return json({ skipped: true });
+    const whatsapp: Record<string, number> = {};
+    if (payload.record.status === "approved") {
+      whatsapp.approval = await sendWhats(chatId, approval(payload.record));
+      whatsapp.ticket = await sendTicketQr(
+        chatId,
+        payload.record.ticket_code,
+        "تذكرتك — مؤتمر كسلا للإنتان"
+      );
+    } else if (payload.record.status === "rejected") {
+      whatsapp.rejection = await sendWhats(chatId, rejection(payload.record));
+    }
+    return json({ whatsapp });
+  }
 
   const adminChat = await getSecret("green_api_admin");
   const alert = adminAlert(payload.table, payload.record);

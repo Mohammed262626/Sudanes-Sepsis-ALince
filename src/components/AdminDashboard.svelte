@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { supabase } from "../lib/supabase";
 
-  type Row = Record<string, string>;
+  type Row = Record<string, string | number>;
 
   const tabs = [
     { id: "conference_registrations", label: "التسجيلات" },
@@ -18,7 +18,9 @@
       { key: "phone", label: "الهاتف" },
       { key: "role", label: "الصفة" },
       { key: "organization", label: "الجهة" },
-      { key: "note", label: "ملاحظات" },
+      { key: "status", label: "الحالة" },
+      { key: "ticket_code", label: "رمز التذكرة" },
+      { key: "actions", label: "إجراء" },
     ],
     contact_messages: [
       { key: "created_at", label: "التاريخ" },
@@ -45,6 +47,34 @@
     dateStyle: "medium",
     timeStyle: "short",
   });
+
+  const statusLabels: Record<string, string> = {
+    pending: "بانتظار القبول",
+    approved: "مقبول",
+    rejected: "مرفوض",
+  };
+
+  let busyId = $state(0);
+
+  // Admin-only: RLS lets only allowlisted emails update; the DB trigger sends the
+  // approval message with the ticket QR (or the rejection message).
+  async function decide(id: number, status: "approved" | "rejected") {
+    if (!supabase || busyId) return;
+    busyId = id;
+    const { error } = await supabase
+      .from("conference_registrations")
+      .update({ status })
+      .eq("id", id);
+    busyId = 0;
+    if (error) {
+      failed = true;
+      return;
+    }
+    data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
+      r.id === id ? { ...r, status } : r,
+    );
+    data = { ...data };
+  }
 
   onMount(async () => {
     if (!supabase) return;
@@ -131,9 +161,36 @@
             <tr>
               {#each cols as c (c.key)}
                 <td class={c.key === "email" ? "ltr" : ""}>
-                  {c.key === "created_at"
-                    ? dateFmt.format(new Date(row.created_at))
-                    : row[c.key] || "—"}
+                  {#if c.key === "created_at"}
+                    {dateFmt.format(new Date(row.created_at))}
+                  {:else if c.key === "status"}
+                    <span class="badge" data-status={row.status}>
+                      {statusLabels[row.status] ?? row.status}
+                    </span>
+                  {:else if c.key === "actions"}
+                    {#if row.status === "pending"}
+                      <button
+                        class="btn btn--sm"
+                        type="button"
+                        disabled={busyId === row.id}
+                        onclick={() => decide(row.id, "approved")}
+                      >
+                        قبول
+                      </button>
+                      <button
+                        class="btn btn--ghost btn--sm"
+                        type="button"
+                        disabled={busyId === row.id}
+                        onclick={() => decide(row.id, "rejected")}
+                      >
+                        رفض
+                      </button>
+                    {:else}
+                      —
+                    {/if}
+                  {:else}
+                    {row[c.key] || "—"}
+                  {/if}
                 </td>
               {/each}
             </tr>

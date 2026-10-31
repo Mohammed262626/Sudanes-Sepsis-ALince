@@ -39,6 +39,11 @@ WhatsApp is the live channel: the same function sends registrant confirmations a
 admin alerts via Green API, using Vault secrets `green_api_instance`,
 `green_api_token`, `green_api_admin` (chat id, e.g. `2499…@c.us`).
 
+Conference registration is two-stage: a new row is a *request* (`status` =
+`pending`, auto `ticket_code`) and gets only a "received" message. Approving it in
+`/admin` flips the status, firing the update trigger → approval message + ticket QR
+image. Rejection sends a closing message.
+
 ## Design rules
 
 Modern-minimal NGO: off-white `--paper`, ink `--ink`, one accent (`--accent` is a
