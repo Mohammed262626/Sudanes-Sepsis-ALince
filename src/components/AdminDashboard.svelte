@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { supabase } from "../lib/supabase";
 
   type Row = Record<string, string | number>;
@@ -7,12 +7,13 @@
 
   const tabs = [
     { id: "conference_registrations", label: "التسجيلات" },
+    { id: "scan", label: "الحضور" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
     { id: "templates", label: "قوالب واتساب" },
   ];
 
-  const dataTabs = tabs.filter((t) => t.id !== "templates");
+  const dataTabs = tabs.filter((t) => t.id !== "templates" && t.id !== "scan");
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
     conference_registrations: [
@@ -134,6 +135,117 @@
       : "تم الحفظ — تُطبّق على الرسائل القادمة.";
   }
 
+  let video = $state<HTMLVideoElement | null>(null);
+  let scanning = $state(false);
+  let manualCode = $state("");
+  let scanResult = $state<{ ok: boolean; title: string; note: string } | null>(null);
+  let stream: MediaStream | null = null;
+  let loop = 0;
+
+  const parseCode = (raw: string) =>
+    (raw.match(/SX-[A-Z0-9]+/i)?.[0] ?? raw).trim().toUpperCase();
+
+  // Camera is a convenience: browsers without BarcodeDetector (iOS Safari) fall
+  // back to typing the ticket code, which hits the same check-in path.
+  async function startScan() {
+    scanResult = null;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      scanResult = { ok: false, title: "الكاميرا غير متاحة", note: "أدخل رمز التذكرة يدويًا." };
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+    } catch {
+      scanResult = {
+        ok: false,
+        title: "تعذّر فتح الكاميرا",
+        note: "اسمح بالوصول إلى الكاميرا أو أدخل الرمز يدويًا.",
+      };
+      return;
+    }
+    const Detector = (window as any).BarcodeDetector;
+    if (!Detector) {
+      stopScan();
+      scanResult = {
+        ok: false,
+        title: "المتصفح لا يدعم المسح بالكاميرا",
+        note: "أدخل رمز التذكرة يدويًا أدناه.",
+      };
+      return;
+    }
+    scanning = true;
+    await tick();
+    if (video) {
+      video.srcObject = stream;
+      await video.play().catch(() => {});
+    }
+    const detector = new Detector({ formats: ["qr_code"] });
+    const tick = async () => {
+      if (!scanning || !video) return;
+      try {
+        const codes = await detector.detect(video);
+        const raw = codes?.[0]?.rawValue;
+        if (raw) {
+          await checkIn(raw);
+          return;
+        }
+      } catch {
+        // frames before the video is ready throw; keep polling
+      }
+      loop = requestAnimationFrame(() => void tick());
+    };
+    void tick();
+  }
+
+  function stopScan() {
+    scanning = false;
+    cancelAnimationFrame(loop);
+    stream?.getTracks().forEach((t) => t.stop());
+    stream = null;
+  }
+
+  async function checkIn(raw: string) {
+    const code = parseCode(raw);
+    if (!code || !supabase) return;
+    const row = registrations.find(
+      (r) => String(r.ticket_code ?? "").toUpperCase() === code,
+    );
+    if (!row) {
+      scanResult = { ok: false, title: "رمز غير معروف", note: code };
+      return;
+    }
+    if (row.attended_at) {
+      scanResult = {
+        ok: true,
+        title: `سبق تسجيل ${row.name}`,
+        note: "الحضور: " + dateFmt.format(new Date(row.attended_at)),
+      };
+      return;
+    }
+    if (row.status !== "approved") {
+      scanResult = { ok: false, title: `${row.name} — لم يُقبل بعد`, note: code };
+      return;
+    }
+    const at = new Date().toISOString();
+    const { error } = await supabase
+      .from("conference_registrations")
+      .update({ attended_at: at })
+      .eq("id", row.id);
+    if (error) {
+      scanResult = { ok: false, title: "تعذّر تسجيل الحضور", note: "حاول مرة أخرى." };
+      return;
+    }
+    data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
+      r.id === row.id ? { ...r, attended_at: at } : r,
+    );
+    data = { ...data };
+    manualCode = "";
+    stopScan();
+    scanResult = { ok: true, title: `${row.name} — حاضر`, note: code };
+  }
+
   async function load() {
     if (!supabase) return;
     const { data: session } = await supabase.auth.getSession();
@@ -182,20 +294,33 @@
   }
 
   const registrations = $derived(data.conference_registrations ?? []);
+  const present = $derived(registrations.filter((r) => r.attended_at).length);
   const filterOptions = $derived([
     { id: "all", label: "الكل", n: registrations.length },
     { id: "pending", label: "بانتظار القبول", n: registrations.filter((r) => r.status === "pending").length },
-    { id: "approved", label: "مقبول", n: registrations.filter((r) => r.status === "approved").length },
+    { id: "approved", label: "مقبول", n: registrations.filter((r) => r.status === "approved" && !r.attended_at).length },
+    { id: "attended", label: "حاضر", n: present },
     { id: "rejected", label: "مرفوض", n: registrations.filter((r) => r.status === "rejected").length },
   ]);
+  const matches = (r: Row, f: string) =>
+    f === "attended" ? !!r.attended_at : r.status === f && !r.attended_at;
   const rows = $derived(
     tab === "conference_registrations" && statusFilter !== "all"
-      ? registrations.filter((r) => r.status === statusFilter)
+      ? registrations.filter((r) => matches(r, statusFilter))
       : (data[tab] ?? []),
   );
   const cols = $derived(columns[tab] ?? []);
   const count = (id: string) =>
-    id === "templates" ? templates.length : (data[id]?.length ?? 0);
+    id === "templates"
+      ? templates.length
+      : id === "scan"
+        ? present
+        : (data[id]?.length ?? 0);
+
+  // Release the camera when leaving the attendance tab.
+  $effect(() => {
+    if (tab !== "scan") stopScan();
+  });
 </script>
 
 <header class="admin-head">
@@ -255,7 +380,41 @@
     {/each}
   </div>
 
-  {#if tab === "templates"}
+  {#if tab === "scan"}
+    <div class="scan">
+      {#if scanning}`r`n        <video bind:this={video} playsinline muted></video>`r`n      {/if}
+      <div class="scan-actions">
+        {#if scanning}
+          <button class="btn btn--ghost" type="button" onclick={stopScan}>
+            إيقاف الكاميرا
+          </button>
+        {:else}
+          <button class="btn" type="button" onclick={startScan}>افتح الكاميرا</button>
+        {/if}
+      </div>
+      <div class="scan-manual">
+        <label>
+          <span>أو أدخل رمز التذكرة</span>
+          <input
+            dir="ltr"
+            spellcheck="false"
+            placeholder="SX-XXXXXX"
+            bind:value={manualCode}
+            onkeydown={(e) => e.key === "Enter" && checkIn(manualCode)}
+          />
+        </label>
+        <button class="btn" type="button" onclick={() => checkIn(manualCode)}>
+          تأكيد
+        </button>
+      </div>
+      {#if scanResult}
+        <p class="scan-result" data-ok={scanResult.ok} role="status">
+          <strong>{scanResult.title}</strong>
+          <span>{scanResult.note}</span>
+        </p>
+      {/if}
+    </div>
+  {:else if tab === "templates"}
     <div class="templates">
       {#each templates as t (t.key)}
         <label>
@@ -308,9 +467,13 @@
                     {#if c.key === "created_at"}
                       {dateFmt.format(new Date(row.created_at))}
                     {:else if c.key === "status"}
-                      <span class="badge" data-status={row.status}>
-                        {statusLabels[row.status] ?? row.status}
-                      </span>
+                      {#if row.attended_at}
+                        <span class="badge" data-status="attended">حاضر</span>
+                      {:else}
+                        <span class="badge" data-status={row.status}>
+                          {statusLabels[row.status] ?? row.status}
+                        </span>
+                      {/if}
                     {:else if c.key === "actions"}
                       <div class="row-actions">
                         {#if row.status === "pending"}
