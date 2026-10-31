@@ -113,18 +113,23 @@
   const cols = $derived(columns[tab]);
 </script>
 
-<div class="admin-head">
-  <p class="kicker">لوحة التحكم</p>
+<header class="admin-head">
+  <div>
+    <p class="kicker">لوحة التحكم</p>
+    <h1>الطلبات والرسائل</h1>
+  </div>
   <div class="admin-user">
     <span dir="ltr">{userEmail}</span>
     <button class="btn btn--ghost" type="button" onclick={signOut}>
       خروج
     </button>
   </div>
-</div>
+</header>
 
 {#if loading}
-  <p>جارٍ التحميل…</p>
+  <div class="admin-loading" aria-busy="true" aria-label="جارٍ التحميل">
+    <span></span><span></span><span></span><span></span>
+  </div>
 {:else if failed}
   <p class="form-status" data-state="error">
     تعذّر تحميل البيانات. تحقق من صلاحيات الحساب.
@@ -145,7 +150,7 @@
   </div>
 
   {#if rows.length === 0}
-    <p>لا توجد سجلات بعد.</p>
+    <p class="admin-empty">لا توجد سجلات بعد.</p>
   {:else}
     <div class="table-wrap">
       <table class="admin-table">

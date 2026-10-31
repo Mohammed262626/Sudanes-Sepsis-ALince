@@ -4,8 +4,9 @@ import AdminLogin from "../../components/AdminLogin.svelte";
 ---
 
 <AdminLayout title="تسجيل الدخول">
-  <a class="brand" href="/">التحالف السوداني للإنتان</a>
-  <p class="kicker" style="margin-top: 2.5rem;">لوحة التحكم</p>
-  <h1 style="font-size: 2rem; margin-bottom: 1.5rem;">تسجيل الدخول</h1>
-  <AdminLogin client:load />
+  <div class="admin-panel">
+    <p class="kicker">لوحة التحكم</p>
+    <h1>تسجيل الدخول</h1>
+    <AdminLogin client:load />
+  </div>
 </AdminLayout>
