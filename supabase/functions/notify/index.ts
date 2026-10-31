@@ -1,6 +1,8 @@
-// Sends Arabic transactional emails via Resend when a row is inserted.
+// Sends Arabic transactional messages when a row is inserted.
 // Triggered by public.notify_email() (see Supabase migrations); authenticated
 // with the x-webhook-secret header, compared against the value in Supabase Vault.
+// WhatsApp via Green API is the live channel (registrant confirmation + admin
+// alerts); Resend email stays dormant until a verified domain exists.
 
 const FROM = "التحالف السوداني للإنتان <no-reply@sudansepsisalince.sd>";
 
@@ -42,6 +44,26 @@ function layout(body: string) {
 }
 
 type Record_ = Record<string, string>;
+
+// "0127575701" → "249127575701@c.us" (Sudan country code; other formats as typed).
+function toChatId(phone: string): string {
+  let d = phone.replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  else if (d.startsWith("0")) d = "249" + d.slice(1);
+  return d + "@c.us";
+}
+
+async function sendWhats(chatId: string, message: string): Promise<number> {
+  const id = await getSecret("green_api_instance");
+  const token = await getSecret("green_api_token");
+  if (!id || !token) return 0;
+  const res = await fetch(`https://api.green-api.com/waInstance${id}/sendMessage/${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chatId, message }),
+  });
+  return res.status;
+}
 
 function compose(
   table: string,
@@ -87,6 +109,34 @@ function compose(
   return null;
 }
 
+function confirmation(r: Record_): string {
+  return (
+    "أهلاً " + (r.name ?? "") + "،\n" +
+    "تم تسجيلك في مؤتمر كسلا للإنتان:\n" +
+    "الاثنين 16 نوفمبر 2026 — 9:00 صباحاً — كسلا\n" +
+    "سنرسل تفاصيل الموقع قبل الموعد.\n" +
+    "— التحالف السوداني للإنتان"
+  );
+}
+
+function adminAlert(table: string, r: Record_): string | null {
+  const who = (r.name ?? "") + (r.email ? " — " + r.email : "");
+  if (table === "conference_registrations") {
+    return "تسجيل جديد في المؤتمر: " + who + (r.phone ? " — " + r.phone : "");
+  }
+  if (table === "contact_messages") {
+    return "رسالة جديدة من الموقع:\n" + who + "\n" + (r.message ?? "").slice(0, 300);
+  }
+  if (table === "donation_interests") {
+    return (
+      "اهتمام جديد بالدعم:\n" + who +
+      (r.support_type ? "\nنوع: " + r.support_type : "") +
+      (r.note ? "\n" + r.note.slice(0, 200) : "")
+    );
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
@@ -98,11 +148,29 @@ Deno.serve(async (req) => {
   const payload = await req.json().catch(() => null);
   if (!payload?.table || !payload?.record) return json({ error: "bad payload" }, 400);
 
+  const adminChat = await getSecret("green_api_admin");
+  const alert = adminAlert(payload.table, payload.record);
+  const whatsapp: Record<string, number | string> = {};
+
+  await Promise.all([
+    (async () => {
+      if (adminChat && alert) whatsapp.admin = await sendWhats(adminChat, alert);
+    })(),
+    (async () => {
+      if (payload.table === "conference_registrations" && payload.record.phone) {
+        whatsapp.confirmation = await sendWhats(
+          toChatId(payload.record.phone),
+          confirmation(payload.record)
+        );
+      }
+    })(),
+  ]);
+
   const mail = compose(payload.table, payload.record);
-  if (!mail?.to) return json({ skipped: true });
+  if (!mail?.to) return json({ skipped: true, whatsapp });
 
   const apiKey = await getSecret("resend_api_key");
-  if (!apiKey) return json({ error: "missing resend key" }, 500);
+  if (!apiKey) return json({ error: "missing resend key", whatsapp }, 500);
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -120,5 +188,5 @@ Deno.serve(async (req) => {
 
   const out = await res.text();
   console.log("resend", payload.table, res.status, out);
-  return json({ sent: res.ok, status: res.status });
+  return json({ sent: res.ok, status: res.status, whatsapp });
 });

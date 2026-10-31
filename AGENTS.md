@@ -35,6 +35,10 @@ Email: inserts on the three tables fire `public.notify_email()` → Edge Functio
 `notify` (`supabase/functions/notify/`) → Resend. Secrets live in Supabase Vault
 (`resend_api_key`, `webhook_secret`), never in the repo or client code.
 
+WhatsApp is the live channel: the same function sends registrant confirmations and
+admin alerts via Green API, using Vault secrets `green_api_instance`,
+`green_api_token`, `green_api_admin` (chat id, e.g. `2499…@c.us`).
+
 ## Design rules
 
 Modern-minimal NGO: off-white `--paper`, ink `--ink`, one accent (`--accent` is a
