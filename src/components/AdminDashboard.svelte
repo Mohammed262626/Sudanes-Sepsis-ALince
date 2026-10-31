@@ -156,6 +156,9 @@
   let loop = 0;
   let scanHint = $state(false);
   let hintTimer = 0;
+  // ?debug prints what the camera actually delivers; harmless otherwise.
+  const showDebug = typeof location !== "undefined" && location.search.includes("debug");
+  let debug = $state("");
 
   const parseCode = (raw: string) =>
     (raw.match(/SX-[A-Z0-9]+/i)?.[0] ?? raw).trim().toUpperCase();
@@ -163,8 +166,9 @@
   let input = $state<HTMLInputElement | null>(null);
   let canvas: HTMLCanvasElement | null = null;
 
-  // The browser's own detector when it exists, otherwise jsQR (vendored, loaded
-  // only here) so iOS Safari and older Android browsers can still scan.
+  // jsQR (vendored, loaded only here) on every device: the native
+  // BarcodeDetector on Android Chrome reports "no QR" forever on frames jsQR
+  // reads fine, so it is not used at all.
   async function loadJsQr(): Promise<any> {
     const w = window as any;
     if (w.jsQR) return w.jsQR;
@@ -178,21 +182,31 @@
     return w.jsQR;
   }
 
-  async function jsQrDecoder(): Promise<(v: HTMLVideoElement) => Promise<string | null>> {
+  async function jsQrDecoder(): Promise<(v: HTMLVideoElement) => string | null> {
     const jsQR = await loadJsQr();
     canvas ??= document.createElement("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    return async (v) => {
+    const grab = (v: HTMLVideoElement, sx: number, sy: number, sw: number, sh: number, cap: number) => {
+      const s = Math.min(1, cap / sw);
+      canvas!.width = Math.max(1, Math.round(sw * s));
+      canvas!.height = Math.max(1, Math.round(sh * s));
+      ctx!.drawImage(v, sx, sy, sw, sh, 0, 0, canvas!.width, canvas!.height);
+      return ctx!.getImageData(0, 0, canvas!.width, canvas!.height);
+    };
+    return (v) => {
       if (!ctx || !v.videoWidth) return null;
-      // Downscale for speed, but keep enough detail for a photo of a screen.
-      const scale = Math.min(1, 800 / v.videoWidth);
-      canvas!.width = Math.round(v.videoWidth * scale);
-      canvas!.height = Math.round(v.videoHeight * scale);
-      ctx.drawImage(v, 0, 0, canvas!.width, canvas!.height);
-      const img = ctx.getImageData(0, 0, canvas!.width, canvas!.height);
-      return jsQR(img.data, img.width, img.height, {
-        inversionAttempts: "attemptBoth",
-      })?.data ?? null;
+      // The middle of the frame is where the ticket is pointed: decoding that
+      // square at full detail beats a downscaled whole frame.
+      const w = v.videoWidth;
+      const h = v.videoHeight;
+      const side = Math.round(Math.min(w, h) * 0.7);
+      const crop = grab(v, (w - side) / 2, (h - side) / 2, side, side, 720);
+      const hit = jsQR(crop.data, crop.width, crop.height, { inversionAttempts: "attemptBoth" });
+      if (hit) return hit.data;
+      const full = grab(v, 0, 0, w, h, 800);
+      return (
+        jsQR(full.data, full.width, full.height, { inversionAttempts: "attemptBoth" })?.data ?? null
+      );
     };
   }
 
@@ -215,35 +229,42 @@
       return;
     }
 
-    const Detector = (window as any).BarcodeDetector;
-    let decode: (v: HTMLVideoElement) => Promise<string | null>;
-    if (Detector) {
-      const detector = new Detector({ formats: ["qr_code"] });
-      decode = async (v) => (await detector.detect(v))?.[0]?.rawValue ?? null;
-    } else {
-      try {
-        decode = await jsQrDecoder();
-      } catch {
-        scanResult = {
-          ok: false,
-          title: "تعذّر تحميل قارئ QR",
-          note: "تحقق من الاتصال أو أدخل الرمز يدويًا.",
-        };
-        return;
-      }
+    let decode: (v: HTMLVideoElement) => string | null;
+    try {
+      decode = await jsQrDecoder();
+    } catch {
+      scanResult = {
+        ok: false,
+        title: "تعذّر تحميل قارئ QR",
+        note: "تحقق من الاتصال أو أدخل الرمز يدويًا.",
+      };
+      return;
     }
 
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          // Ignored where unsupported; low-res, soft frames are the usual
+          // reason a phone cannot resolve QR modules at arm's length.
+          advanced: [{ focusMode: "continuous" }],
+        } as MediaTrackConstraints,
       });
     } catch {
-      scanResult = {
-        ok: false,
-        title: "تعذّر فتح الكاميرا",
-        note: "اسمح بالوصول إلى الكاميرا، أو استخدم قارئ QR أو أدخل الرمز يدويًا.",
-      };
-      return;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+      } catch {
+        scanResult = {
+          ok: false,
+          title: "تعذّر فتح الكاميرا",
+          note: "اسمح بالوصول إلى الكاميرا، أو استخدم قارئ QR أو أدخل الرمز يدويًا.",
+        };
+        return;
+      }
     }
     scanning = true;
     scanHint = false;
@@ -258,45 +279,27 @@
       if (scanning && !pending) scanHint = true;
     }, 8000);
 
-    let fails = 0;
-    const poll = async () => {
-      if (!scanning || !video) return;
-      // A read is waiting for confirmation: keep the frame loop alive, skip detect.
-      if (pending) {
-        loop = requestAnimationFrame(() => void poll());
+    let frames = 0;
+    const poll = () => {
+      if (!scanning) return;
+      loop = requestAnimationFrame(poll);
+      // A read is waiting for confirmation: keep the loop alive, skip decoding.
+      if (pending || !video) return;
+      // ~15 fps is plenty for a QR and keeps a phone from heating up.
+      if (++frames % 4) return;
+      if (showDebug) debug = `${video.videoWidth}×${video.videoHeight} · ${frames}`;
+      let raw: string | null;
+      try {
+        raw = decode(video);
+      } catch {
         return;
       }
-      // A hung detect() would freeze the loop forever on some Androids, so
-      // every read is raced against a 1.2s timeout.
-      let timer = 0;
-      const timeout = new Promise<never>((_, reject) => {
-        timer = window.setTimeout(() => reject(new Error("timeout")), 1200);
-      });
-      try {
-        const raw = await Promise.race([decode(video), timeout]);
-        fails = 0;
-        if (raw) {
-          clearTimeout(hintTimer);
-          scanHint = false;
-          checkIn(raw);
-          return;
-        }
-      } catch {
-        // Stuck or throwing native detector: switch to the bundled jsQR decoder.
-        if (++fails >= 2) {
-          fails = 0;
-          try {
-            decode = await jsQrDecoder();
-          } catch {
-            // keeps the current decoder; frames before play() also fail
-          }
-        }
-      } finally {
-        clearTimeout(timer);
-      }
-      loop = requestAnimationFrame(() => void poll());
+      if (!raw) return;
+      clearTimeout(hintTimer);
+      scanHint = false;
+      checkIn(raw);
     };
-    void poll();
+    poll();
   }
 
   function stopScan() {
@@ -529,6 +532,9 @@
           <button class="btn" type="button" onclick={startScan}>افتح الكاميرا</button>
         {/if}
       </div>
+      {#if scanning && showDebug && debug}
+        <p class="scan-hint" dir="ltr">{debug}</p>
+      {/if}
       {#if scanning && scanHint && !pending}
         <p class="scan-hint" role="status">
           لم يُقرأ الرمز — قرّب الكاميرا أكثر، أو استخدم الرقم أدناه.
