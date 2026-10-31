@@ -1,0 +1,9 @@
+---
+import AdminLayout from "../../layouts/Admin.astro";
+import AdminDashboard from "../../components/AdminDashboard.svelte";
+---
+
+<AdminLayout title="لوحة التحكم">
+  <a class="brand" href="/">التحالف السوداني للإنتان</a>
+  <AdminDashboard client:load />
+</AdminLayout>
