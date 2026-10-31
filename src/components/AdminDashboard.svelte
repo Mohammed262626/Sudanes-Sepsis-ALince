@@ -18,14 +18,14 @@
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
     conference_registrations: [
-      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "created_at", label: "التاريخ", cls: "nw hide-sm" },
       { key: "name", label: "الاسم", cls: "nw" },
       { key: "status", label: "الحالة", cls: "nw" },
       { key: "ticket_code", label: "رمز التذكرة", cls: "nw" },
-      { key: "email", label: "البريد", cls: "ltr wrap" },
-      { key: "phone", label: "الهاتف", cls: "nw" },
-      { key: "role", label: "الصفة", cls: "nw" },
-      { key: "organization", label: "الجهة", cls: "wrap" },
+      { key: "email", label: "البريد", cls: "ltr wrap hide-xs" },
+      { key: "phone", label: "الهاتف", cls: "nw hide-xs" },
+      { key: "role", label: "الصفة", cls: "nw hide-sm" },
+      { key: "organization", label: "الجهة", cls: "wrap hide-sm" },
       { key: "actions", label: "إجراء", cls: "nw" },
     ],
     contact_messages: [
@@ -147,14 +147,77 @@
   const parseCode = (raw: string) =>
     (raw.match(/SX-[A-Z0-9]+/i)?.[0] ?? raw).trim().toUpperCase();
 
-  // Camera is a convenience: browsers without BarcodeDetector (iOS Safari) fall
-  // back to typing the ticket code, which hits the same check-in path.
+  let input = $state<HTMLInputElement | null>(null);
+  let canvas: HTMLCanvasElement | null = null;
+
+  // The browser's own detector when it exists, otherwise jsQR (vendored, loaded
+  // only here) so iOS Safari and older Android browsers can still scan.
+  async function loadJsQr(): Promise<any> {
+    const w = window as any;
+    if (w.jsQR) return w.jsQR;
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = url("vendor/jsQR.js");
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("jsQR"));
+      document.head.append(s);
+    });
+    return w.jsQR;
+  }
+
+  async function jsQrDecoder(): Promise<(v: HTMLVideoElement) => Promise<string | null>> {
+    const jsQR = await loadJsQr();
+    canvas ??= document.createElement("canvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    return async (v) => {
+      if (!ctx || !v.videoWidth) return null;
+      // Downscale: full-resolution frames make jsQR crawl on phones.
+      const scale = Math.min(1, 640 / v.videoWidth);
+      canvas!.width = Math.round(v.videoWidth * scale);
+      canvas!.height = Math.round(v.videoHeight * scale);
+      ctx.drawImage(v, 0, 0, canvas!.width, canvas!.height);
+      const img = ctx.getImageData(0, 0, canvas!.width, canvas!.height);
+      return jsQR(img.data, img.width, img.height)?.data ?? null;
+    };
+  }
+
   async function startScan() {
     scanResult = null;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      scanResult = { ok: false, title: "الكاميرا غير متاحة", note: "على iPhone تحتاج الكاميرا رابط HTTPS — استخدم الموقع المنشور أو أدخل الرمز يدويًا." };
+    if (!window.isSecureContext) {
+      scanResult = {
+        ok: false,
+        title: "الكاميرا تحتاج رابط HTTPS",
+        note: "افتح الموقع المنشور (https)، أو استخدم قارئ QR، أو أدخل الرمز يدويًا.",
+      };
       return;
     }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      scanResult = {
+        ok: false,
+        title: "هذا المتصفح لا يسمح بالكاميرا",
+        note: "استخدم قارئ QR أو أدخل الرمز يدويًا.",
+      };
+      return;
+    }
+
+    const Detector = (window as any).BarcodeDetector;
+    let decode: (v: HTMLVideoElement) => Promise<string | null>;
+    if (Detector) {
+      const detector = new Detector({ formats: ["qr_code"] });
+      decode = async (v) => (await detector.detect(v))?.[0]?.rawValue ?? null;
+    } else {
+      try {
+        decode = await jsQrDecoder();
+      } catch {
+        scanResult = {
+          ok: false,
+          title: "تعذّر تحميل قارئ QR",
+          note: "تحقق من الاتصال أو أدخل الرمز يدويًا.",
+        };
+        return;
+      }
+    }
+
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -163,17 +226,7 @@
       scanResult = {
         ok: false,
         title: "تعذّر فتح الكاميرا",
-        note: "اسمح بالوصول إلى الكاميرا أو أدخل الرمز يدويًا.",
-      };
-      return;
-    }
-    const Detector = (window as any).BarcodeDetector;
-    if (!Detector) {
-      stopScan();
-      scanResult = {
-        ok: false,
-        title: "المتصفح لا يدعم المسح بالكاميرا",
-        note: "أدخل رمز التذكرة يدويًا أدناه.",
+        note: "اسمح بالوصول إلى الكاميرا، أو استخدم قارئ QR أو أدخل الرمز يدويًا.",
       };
       return;
     }
@@ -183,7 +236,7 @@
       video.srcObject = stream;
       await video.play().catch(() => {});
     }
-    const detector = new Detector({ formats: ["qr_code"] });
+    let fails = 0;
     const poll = async () => {
       if (!scanning || !video) return;
       // A read is waiting for confirmation: keep the frame loop alive, skip detect.
@@ -192,14 +245,23 @@
         return;
       }
       try {
-        const codes = await detector.detect(video);
-        const raw = codes?.[0]?.rawValue;
+        const raw = await decode(video);
+        fails = 0;
         if (raw) {
           checkIn(raw, true);
           return;
         }
       } catch {
-        // frames before the video is ready throw; keep polling
+        // Some Androids ship a BarcodeDetector that throws on camera frames:
+        // after a run of failures, switch to jsQR instead of retrying forever.
+        if (++fails === 20) {
+          fails = 0;
+          try {
+            decode = await jsQrDecoder();
+          } catch {
+            // keeps the native decoder; frames before play() also throw
+          }
+        }
       }
       loop = requestAnimationFrame(() => void poll());
     };
@@ -271,6 +333,8 @@
     manualCode = "";
     pending = null;
     stopScan();
+    // Keep the field ready so a USB QR gun's next scan lands here.
+    input?.focus();
     scanResult = {
       ok: true,
       title: `${row.name} — حاضر`,
@@ -309,6 +373,7 @@
     const order = [
       "registration_received",
       "registration_approved",
+      "registration_attended",
       "registration_rejected",
     ];
     templates = ((results[results.length - 1].data ?? []) as Template[]).sort(
@@ -349,9 +414,11 @@
         ? present
         : (data[id]?.length ?? 0);
 
-  // Release the camera when leaving the attendance tab.
+  // Release the camera when leaving the attendance tab; focus the code field when
+  // arriving so a USB/keyboard QR gun types straight into it.
   $effect(() => {
     if (tab !== "scan") stopScan();
+    else input?.focus();
   });
 </script>
 
@@ -458,8 +525,9 @@
       {/if}
       <div class="scan-manual">
         <label>
-          <span>أو أدخل رمز التذكرة</span>
+          <span>امسح بقارئ QR أو اكتب الرمز</span>
           <input
+            bind:this={input}
             dir="ltr"
             spellcheck="false"
             placeholder="SX-XXXXXX"
@@ -513,7 +581,7 @@
           <thead>
             <tr>
               {#each cols as c (c.key)}
-                <th>{c.label}</th>
+                <th class={c.cls ?? ""}>{c.label}</th>
               {/each}
             </tr>
           </thead>

@@ -1215,6 +1215,86 @@ section[id] {
   margin-top: 0.6rem;
 }
 
+/* Tablet & phone: the dashboard runs at the door, so keep targets big and drop
+   the columns nobody reads on a small screen. */
+@media (max-width: 900px) {
+  .admin-table {
+    min-width: 0;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.7rem 0.65rem;
+  }
+
+  .admin-table .hide-sm {
+    display: none;
+  }
+
+  .tabs {
+    width: 100%;
+  }
+
+  .tabs button {
+    min-height: 2.75rem;
+  }
+
+  .filters button {
+    min-height: 2.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-head {
+    align-items: flex-start;
+    margin-block: 1.5rem 1.25rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .admin-table .hide-xs {
+    display: none;
+  }
+
+  .admin-table .btn--icon,
+  .admin-head .btn--icon {
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+  }
+
+  .table-wrap {
+    max-height: none;
+  }
+
+  .scan,
+  .templates {
+    max-width: none;
+  }
+
+  .scan-actions {
+    flex-wrap: wrap;
+  }
+
+  .scan-actions .btn,
+  .templates-foot .btn {
+    flex: 1 1 auto;
+    min-height: 2.75rem;
+  }
+
+  .scan-manual label {
+    flex-basis: 100%;
+  }
+
+  .scan-manual .btn {
+    inline-size: 100%;
+    min-height: 2.75rem;
+  }
+}
+
 /* States */
 .admin-loading {
   display: grid;

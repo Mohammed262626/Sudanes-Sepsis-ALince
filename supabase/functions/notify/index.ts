@@ -159,7 +159,18 @@ function approval(r: Record_): string {
     "أهلاً " + (r.name ?? "") + "،\n" +
     "تم قبول تسجيلك في مؤتمر كسلا للإنتان ✅\n" +
     "الاثنين 16 نوفمبر 2026 — 9:00 صباحاً — كسلا\n" +
+    "رقم تذكرتك: " + (r.ticket_code ?? "") + "\n" +
     "رمز QR المرفق هو تذكرتك — أظهره عند الدخول.\n" +
+    "— التحالف السوداني للإنتان"
+  );
+}
+
+function attended(r: Record_): string {
+  return (
+    "أهلاً " + (r.name ?? "") + "،\n" +
+    "تم تسجيل حضورك في مؤتمر كسلا للإنتان بنجاح ✅\n" +
+    "رقم تذكرتك: " + (r.ticket_code ?? "") + "\n" +
+    "نتمنى لك مؤتمراً مفيداً.\n" +
     "— التحالف السوداني للإنتان"
   );
 }
@@ -201,6 +212,16 @@ Deno.serve(async (req) => {
 
   const payload = await req.json().catch(() => null);
   if (!payload?.table || !payload?.record) return json({ error: "bad payload" }, 400);
+
+  // Door check-in: the guest gets a thanks message once the scan is confirmed.
+  if (payload.table === "conference_registrations" && payload.event === "ATTEND") {
+    if (!payload.record.phone) return json({ skipped: true });
+    const status = await sendWhats(
+      toChatId(payload.record.phone),
+      await template("registration_attended", payload.record, attended(payload.record))
+    );
+    return json({ whatsapp: { attended: status } });
+  }
 
   // Admin decision: approvals send the ticket QR, rejections a closing message.
   // RESEND re-sends the ticket for an already approved registration.
