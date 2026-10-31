@@ -1197,6 +1197,12 @@ section[id] {
 
 /* One stage for both states: idle sits where the video will be, so the page
    does not jump when the camera opens. */
+/* Camera and the manual field share one frame: it reads as one scanner. */
+.scan-card {
+  display: grid;
+  border: 2px solid var(--ink);
+}
+
 .scan-stage {
   display: grid;
   gap: 0.6rem;
@@ -1204,7 +1210,6 @@ section[id] {
   justify-items: stretch;
   min-block-size: 9rem;
   padding: 0.6rem;
-  border: 2px solid var(--ink);
 }
 
 .scan-stage-bar {
@@ -1254,6 +1259,8 @@ section[id] {
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 0.6rem;
+  padding: 0.6rem;
+  border-block-start: 2px solid var(--line);
 }
 
 .scan-manual label {

@@ -225,6 +225,7 @@
     (raw.match(/SX-[A-Z0-9]+/i)?.[0] ?? raw).trim().toUpperCase();
 
   let input = $state<HTMLInputElement | null>(null);
+  let confirmEl = $state<HTMLElement | null>(null);
   let canvas: HTMLCanvasElement | null = null;
 
   // jsQR (vendored, loaded only here) on every device: the native
@@ -415,6 +416,8 @@
     pulse();
     scanResult = null;
     pending = row;
+    // The card sits at the bottom of the tab; keep it in view on a phone.
+    void tick().then(() => confirmEl?.scrollIntoView({ block: "nearest" }));
   }
 
   function cancelPending() {
@@ -644,21 +647,40 @@
         {pending ? "بانتظار التأكيد" : scanning ? "جاري المسح…" : "جاهز للمسح"}
       </p>
 
-      <div class="scan-stage">
-        {#if scanning}
-          <video bind:this={video} class:hit={hit} playsinline muted></video>
-          <div class="scan-stage-bar">
-            <span>وجّه الكاميرا إلى رمز التذكرة</span>
-            <button class="btn btn--ghost btn--sm" type="button" onclick={stopScan}>
-              إيقاف
+      <div class="scan-card">
+        <div class="scan-stage">
+          {#if scanning}
+            <video bind:this={video} class:hit={hit} playsinline muted></video>
+            <div class="scan-stage-bar">
+              <span>وجّه الكاميرا إلى رمز التذكرة</span>
+              <button class="btn btn--ghost btn--sm" type="button" onclick={stopScan}>
+                إيقاف
+              </button>
+            </div>
+          {:else}
+            <button class="btn scan-open" type="button" onclick={startScan}>
+              افتح الكاميرا
             </button>
-          </div>
-        {:else}
-          <button class="btn scan-open" type="button" onclick={startScan}>
-            افتح الكاميرا
+            <span class="scan-tip">أو استخدم قارئ QR أو أدخل الرمز بالأسفل</span>
+          {/if}
+        </div>
+
+        <div class="scan-manual">
+          <label>
+            <span>امسح بقارئ QR أو اكتب الرمز</span>
+            <input
+              bind:this={input}
+              dir="ltr"
+              spellcheck="false"
+              placeholder="SX-XXXXXX"
+              bind:value={manualCode}
+              onkeydown={(e) => e.key === "Enter" && checkIn(manualCode)}
+            />
+          </label>
+          <button class="btn" type="button" onclick={() => checkIn(manualCode)}>
+            تحقق
           </button>
-          <span class="scan-tip">أو استخدم قارئ QR أو أدخل الرمز بالأسفل</span>
-        {/if}
+        </div>
       </div>
 
       {#if scanning && showDebug && debug}
@@ -670,8 +692,32 @@
         </p>
       {/if}
 
+      {#if scanResult}
+        <p class="scan-result" data-ok={scanResult.ok} role="status">
+          <span class="scan-result-icon" aria-hidden="true">
+            {scanResult.ok ? "✓" : "!"}
+          </span>
+          <span class="scan-result-body">
+            <strong>{scanResult.title}</strong>
+            <span>{scanResult.note}</span>
+          </span>
+        </p>
+      {/if}
+
+      {#if recent.length}
+        <p class="scan-divider">آخر الحضوض</p>
+        <ul class="scan-recent">
+          {#each recent as r (r.id)}
+            <li>
+              <span>{r.name}</span>
+              <span dir="ltr">{r.ticket_code}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
       {#if pending}
-        <div class="scan-confirm">
+        <div class="scan-confirm" bind:this={confirmEl}>
           <span class="scan-confirm-kicker">بطاقة الضيف</span>
           <strong>{pending.name}</strong>
           <div class="scan-confirm-facts">
@@ -692,48 +738,6 @@
             </button>
           </div>
         </div>
-      {/if}
-
-      {#if scanResult}
-        <p class="scan-result" data-ok={scanResult.ok} role="status">
-          <span class="scan-result-icon" aria-hidden="true">
-            {scanResult.ok ? "✓" : "!"}
-          </span>
-          <span class="scan-result-body">
-            <strong>{scanResult.title}</strong>
-            <span>{scanResult.note}</span>
-          </span>
-        </p>
-      {/if}
-
-      <p class="scan-divider">أو أدخل الرمز يدوياً</p>
-      <div class="scan-manual">
-        <label>
-          <span>امسح بقارئ QR أو اكتب الرمز</span>
-          <input
-            bind:this={input}
-            dir="ltr"
-            spellcheck="false"
-            placeholder="SX-XXXXXX"
-            bind:value={manualCode}
-            onkeydown={(e) => e.key === "Enter" && checkIn(manualCode)}
-          />
-        </label>
-        <button class="btn" type="button" onclick={() => checkIn(manualCode)}>
-          تحقق
-        </button>
-      </div>
-
-      {#if recent.length}
-        <p class="scan-divider">آخر الحضوض</p>
-        <ul class="scan-recent">
-          {#each recent as r (r.id)}
-            <li>
-              <span>{r.name}</span>
-              <span dir="ltr">{r.ticket_code}</span>
-            </li>
-          {/each}
-        </ul>
       {/if}
     </div>
   {:else if tab === "templates"}
