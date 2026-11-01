@@ -31,11 +31,11 @@
       { key: "actions", label: "إجراء", cls: "nw" },
     ],
     assessments: [
-      { key: "created_at", label: "التاريخ", cls: "nw" },
       { key: "name", label: "الاسم", cls: "wrap" },
-      { key: "stage", label: "الاستبانة", cls: "nw" },
-      { key: "answers", label: "الإجابات", cls: "wrap" },
       { key: "ticket_code", label: "رمز التذكرة", cls: "nw hide-xs" },
+      { key: "pre", label: "الأولى", cls: "nw" },
+      { key: "post", label: "النهائية", cls: "nw" },
+      { key: "score", label: "الدرجة (قبل · بعد)", cls: "nw" },
     ],
     contact_messages: [
       { key: "created_at", label: "التاريخ", cls: "nw" },
@@ -72,6 +72,17 @@
     pending: "بانتظار القبول",
     approved: "مقبول",
     rejected: "مرفوض",
+  };
+
+  // shortcut: mirrors the test questions in AssessmentForm.svelte; swap both
+  // together when the clinician-reviewed set lands.
+  const ANSWER_KEY = [0, 0, 0, 0, 0, 0];
+
+  const scoreOf = (answers: Record<string, number> | undefined) => {
+    if (!answers) return "—";
+    const picks = Object.keys(answers).sort();
+    const hit = picks.filter((k, i) => Number(answers[k]) === ANSWER_KEY[i]).length;
+    return `${hit}/${picks.length}`;
   };
 
   let busyId = $state(0);
@@ -272,7 +283,14 @@
   // CSV of what is on screen (search + status filter applied), BOM so Excel
   // keeps the Arabic.
   function exportCsv() {
-    const keys = cols.filter((c) => c.key !== "actions");
+    const extra =
+      tab === "assessments"
+        ? [
+            { key: "pre_answers", label: "إجابات الأولى" },
+            { key: "post_answers", label: "إجابات النهائية" },
+          ]
+        : [];
+    const keys = [...cols.filter((c) => c.key !== "actions"), ...extra];
     if (!keys.length || !shown.length) return;
     const cell = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
     const head = keys.map((k) => cell(k.label)).join(",");
@@ -352,7 +370,7 @@
     if (!supabase || sendingStage) return;
     sendingStage = stage;
     actionError = "";
-    const { error } = await supabase.rpc("set_assessment_window", {
+    const { data, error } = await supabase.rpc("set_assessment_window", {
       p_stage: stage,
       p_open: open,
     });
@@ -363,6 +381,10 @@
     }
     if (stage === "pre") preOpen = open;
     else postOpen = open;
+    // Opening the final one sends its invites from inside the same call.
+    const sent = Number((data as { sent?: number } | null)?.sent ?? 0);
+    notice = open && stage === "post" ? `فُتحت النهائية وأُرسل ${sent} رابطاً.` : "";
+    if (stage === "post") await load();
   }
 
   async function sendInvite(stage: "pre" | "post") {
@@ -698,21 +720,41 @@
         .maybeSingle(),
     ]);
     if (responses.error || config.error) failed = true;
-    const byId = new Map((next.conference_registrations ?? []).map((r) => [r.id, r]));
-    const stageLabel = (s: unknown) => (s === "post" ? "النهائية" : "الأولى");
-    next.assessments = (responses.data ?? []).map((a) => ({
-      id: a.id,
-      created_at: a.created_at,
-      registration_id: a.registration_id,
-      name: byId.get(a.registration_id)?.name ?? "—",
-      ticket_code: byId.get(a.registration_id)?.ticket_code ?? "—",
-      stage: stageLabel(a.stage),
-      raw_stage: a.stage,
-      // q1=0 q2=1 … — readable in the table and in the CSV.
-      answers: Object.entries(a.answers ?? {})
-        .map(([k, v]) => `${k}=${v}`)
-        .join(" "),
-    }));
+    // One card per person: pre and post answers meet on the registration.
+    const byReg = new Map<
+      number,
+      { pre?: { at: string; answers: Record<string, number> }; post?: { at: string; answers: Record<string, number> } }
+    >();
+    for (const a of responses.data ?? []) {
+      const entry = byReg.get(a.registration_id) ?? {};
+      entry[a.stage as "pre" | "post"] = { at: a.created_at, answers: a.answers ?? {} };
+      byReg.set(a.registration_id, entry);
+    }
+    const raw = (answers?: Record<string, number>) =>
+      answers
+        ? Object.entries(answers)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(" ")
+        : "";
+    const when = (at?: string) => (at ? dateFmt.format(new Date(at)) : "—");
+
+    next.assessments = (next.conference_registrations ?? [])
+      .filter((r) => r.attended_at)
+      .map((r) => {
+        const e = byReg.get(Number(r.id)) ?? {};
+        return {
+          id: r.id,
+          name: r.name,
+          ticket_code: r.ticket_code,
+          pre: when(e.pre?.at),
+          post: when(e.post?.at),
+          score: `${scoreOf(e.pre?.answers)} · ${scoreOf(e.post?.answers)}`,
+          has_pre: e.pre ? "1" : "",
+          has_post: e.post ? "1" : "",
+          pre_answers: raw(e.pre?.answers),
+          post_answers: raw(e.post?.answers),
+        };
+      });
     preOpen = !!config.data?.assessment_pre_open;
     postOpen = !!config.data?.assessment_post_open;
 
@@ -757,11 +799,12 @@
   // Attendees who still owe a stage — the invite button counts.
   const assessmentRows = $derived(data.assessments ?? []);
   const preAnswered = $derived(
-    new Set(assessmentRows.filter((r) => r.raw_stage === "pre").map((r) => r.registration_id)),
+    new Set(assessmentRows.filter((r) => r.has_pre).map((r) => r.id)),
   );
   const postAnswered = $derived(
-    new Set(assessmentRows.filter((r) => r.raw_stage === "post").map((r) => r.registration_id)),
+    new Set(assessmentRows.filter((r) => r.has_post).map((r) => r.id)),
   );
+  const answeredPeople = $derived(new Set([...preAnswered, ...postAnswered]).size);
   const preTargets = $derived(
     registrations.filter(
       (r) => r.attended_at && !preAnswered.has(r.id) && String(r.phone ?? "").trim(),
@@ -827,7 +870,7 @@
       : id === "scan"
         ? present
         : id === "assessments"
-          ? assessmentRows.length
+          ? answeredPeople
           : (data[id]?.length ?? 0);
 
   // Release the camera when leaving the attendance tab; focus the code field when

@@ -1,0 +1,73 @@
+---
+// One-time notice: the camera is used at check-in, and preferences live in the
+// browser. No tracking cookies, so there is nothing to ask beyond this.
+---
+
+<aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية">
+  <p>
+    نستخدم كاميرا هاتفك لمسح رمز البوابة عند تسجيل الحضور، ونحفظ تفضيلاتك في
+    متصفحك. لا نستخدم كوكيز تتبّع.
+  </p>
+  <button class="btn btn--ghost btn--sm" type="button" id="consent-ok">حسناً</button>
+</aside>
+
+<script is:inline>
+  (() => {
+    const box = document.getElementById("consent");
+    if (!box) return;
+    let seen = false;
+    try {
+      seen = !!localStorage.getItem("sep-consent");
+    } catch {
+      // Private mode: show it once, nothing to remember.
+    }
+    if (seen) return;
+    box.removeAttribute("hidden");
+    document.getElementById("consent-ok")?.addEventListener("click", () => {
+      try {
+        localStorage.setItem("sep-consent", "1");
+      } catch {
+        // Nothing to store; the bar still closes.
+      }
+      box.remove();
+    });
+  })();
+</script>
+
+<style>
+  .consent {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.25rem;
+    border-block-start: 2px solid var(--ink);
+    background: var(--paper);
+  }
+
+  .consent[hidden] {
+    display: none;
+  }
+
+  .consent p {
+    margin: 0;
+    flex: 1;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .consent .btn {
+    flex: none;
+  }
+
+  @media (max-width: 40rem) {
+    .consent {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.6rem;
+    }
+  }
+</style>

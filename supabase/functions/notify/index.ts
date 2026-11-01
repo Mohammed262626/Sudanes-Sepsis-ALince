@@ -340,19 +340,21 @@ Deno.serve(async (req) => {
           ? "قبل أن تبدأ الجلسات، أجب عن أسئلة قصيرة لقياس معرفتك الحالية بالإنتان."
           : "قبل أن ينتهي المؤتمر، أجب عن الأسئلة نفسها لنقيس ما تعلّمته."),
       footer: "دقيقة واحدة — إجابة واحدة لكل سؤال",
+      // One button: this message invites one stage, not both.
       buttons: [
-        {
-          type: "url",
-          buttonId: "1",
-          buttonText: "الاستبانة الأولى",
-          url: assessmentUrl(hash, "pre"),
-        },
-        {
-          type: "url",
-          buttonId: "2",
-          buttonText: "الاستبانة النهائية",
-          url: assessmentUrl(hash, "post"),
-        },
+        stage === "pre"
+          ? {
+              type: "url",
+              buttonId: "1",
+              buttonText: "الاستبانة الأولى",
+              url: assessmentUrl(hash, "pre"),
+            }
+          : {
+              type: "url",
+              buttonId: "1",
+              buttonText: "الاستبانة النهائية",
+              url: assessmentUrl(hash, "post"),
+            },
       ],
     });
     return json({ whatsapp: { assessment: result } });

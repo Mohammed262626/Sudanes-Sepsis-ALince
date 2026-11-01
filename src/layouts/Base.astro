@@ -5,6 +5,7 @@ import "@fontsource/tajawal/500.css";
 import "@fontsource/tajawal/700.css";
 import "../styles/global.css";
 import { url } from "../lib/url";
+import ConsentBar from "../components/ConsentBar.astro";
 
 interface Props {
   title?: string;
@@ -81,6 +82,8 @@ const nav = [
         <span>جميع الحقوق محفوظة</span>
       </div>
     </footer>
+
+    <ConsentBar />
 
     <script>
       const links = Array.from(
