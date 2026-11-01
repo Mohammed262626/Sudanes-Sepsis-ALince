@@ -736,7 +736,10 @@
             .map(([k, v]) => `${k}=${v}`)
             .join(" ")
         : "";
-    const when = (at?: string) => (at ? dateFmt.format(new Date(at)) : "—");
+    // Each stage line carries its own score, so a phone card is readable
+    // without the table header.
+    const line = (e?: { at: string; answers: Record<string, number> }) =>
+      e ? `${scoreOf(e.answers)} · ${dateFmt.format(new Date(e.at))}` : "—";
 
     next.assessments = (next.conference_registrations ?? [])
       .filter((r) => r.attended_at)
@@ -746,8 +749,8 @@
           id: r.id,
           name: r.name,
           ticket_code: r.ticket_code,
-          pre: when(e.pre?.at),
-          post: when(e.post?.at),
+          pre: line(e.pre),
+          post: line(e.post),
           score: `${scoreOf(e.pre?.answers)} · ${scoreOf(e.post?.answers)}`,
           has_pre: e.pre ? "1" : "",
           has_post: e.post ? "1" : "",

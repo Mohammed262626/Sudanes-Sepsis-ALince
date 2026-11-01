@@ -1653,6 +1653,40 @@ section[id] {
     margin-block-start: 0.4rem;
   }
 
+  /* Assessment card: name + stage lines, each carrying its own score and time,
+     so nothing needs the hidden table header to make sense. */
+  .admin-table td[data-col="pre"],
+  .admin-table td[data-col="post"] {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  .admin-table td[data-col="pre"] {
+    grid-row: 3;
+  }
+
+  .admin-table td[data-col="post"] {
+    grid-row: 4;
+  }
+
+  .admin-table td[data-col="pre"]::before {
+    content: "الاستبانة الأولى";
+    color: var(--ink);
+  }
+
+  .admin-table td[data-col="post"]::before {
+    content: "الاستبانة النهائية";
+    color: var(--ink);
+  }
+
+  .admin-table td[data-col="score"] {
+    display: none;
+  }
+
   .admin-empty-cell {
     border: 2px solid var(--ink);
   }
