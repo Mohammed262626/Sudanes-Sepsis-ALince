@@ -36,6 +36,7 @@
       { key: "pre", label: "الأولى", cls: "nw" },
       { key: "post", label: "النهائية", cls: "nw" },
       { key: "score", label: "الدرجة (قبل · بعد)", cls: "nw" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
     contact_messages: [
       { key: "created_at", label: "التاريخ", cls: "nw" },
@@ -405,6 +406,25 @@
     }
     notice = `أُرسل ${Number(n ?? 0)} رابطاً.`;
     await load();
+  }
+
+  // Wipes a guest's answers (both stages) so he can take it again.
+  async function wipeAssessment(id: number) {
+    if (!supabase || busyId) return;
+    if (!confirm("حذف إجابات هذا الضيف؟ سيُسمح له بالإجابة من جديد.")) return;
+    busyId = id;
+    actionError = "";
+    const { error } = await supabase
+      .from("assessment_responses")
+      .delete()
+      .eq("registration_id", id);
+    busyId = 0;
+    if (error) {
+      actionError = "تعذّر حذف الإجابات. حاول مرة أخرى.";
+      return;
+    }
+    await load();
+    flash(id);
   }
 
   let video = $state<HTMLVideoElement | null>(null);
@@ -1211,7 +1231,19 @@
                       {/if}
                     {:else if c.key === "actions"}
                       <div class="row-actions">
-                        {#if row.status === "pending"}
+                        {#if tab === "assessments"}
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            data-act="danger"
+                            title="حذف الإجابات"
+                            aria-label="حذف الإجابات"
+                            disabled={busyId === row.id}
+                            onclick={() => wipeAssessment(row.id)}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v6M14 11v6" /></svg>
+                          </button>
+                        {:else if row.status === "pending"}
                           <button
                             class="btn btn--icon"
                             type="button"
@@ -1292,7 +1324,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
                           </button>
                         {/if}
-                        {#if row.attended_at}
+                        {#if row.attended_at && tab !== "assessments"}
                           <button
                             class="btn btn--ghost btn--icon"
                             type="button"
@@ -1304,17 +1336,19 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></svg>
                           </button>
                         {/if}
-                        <button
-                          class="btn btn--ghost btn--icon"
-                          type="button"
-                          data-act="danger"
-                          title="حذف"
-                          aria-label="حذف"
-                          disabled={busyId === row.id}
-                          onclick={() => remove(row.id)}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v6M14 11v6" /></svg>
-                        </button>
+                        {#if tab !== "assessments"}
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            data-act="danger"
+                            title="حذف"
+                            aria-label="حذف"
+                            disabled={busyId === row.id}
+                            onclick={() => remove(row.id)}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v6M14 11v6" /></svg>
+                          </button>
+                        {/if}
                       </div>
                     {:else}
                       {row[c.key] || "—"}
