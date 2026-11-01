@@ -9,7 +9,7 @@
   const tabs = [
     { id: "conference_registrations", label: "التسجيلات" },
     { id: "scan", label: "الحضور" },
-    { id: "assessments", label: "الأسسمنت" },
+    { id: "assessments", label: "الاستبانات" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
     { id: "templates", label: "قوالب واتساب" },
@@ -34,6 +34,7 @@
       { key: "created_at", label: "التاريخ", cls: "nw" },
       { key: "name", label: "الاسم", cls: "wrap" },
       { key: "stage", label: "الاستبانة", cls: "nw" },
+      { key: "answers", label: "الإجابات", cls: "wrap" },
       { key: "ticket_code", label: "رمز التذكرة", cls: "nw hide-xs" },
     ],
     contact_messages: [
@@ -357,7 +358,7 @@
     });
     sendingStage = "";
     if (error) {
-      actionError = "تعذّر تغيير حالة الأسسمنت. حاول مرة أخرى.";
+      actionError = "تعذّر تغيير حالة الاستبانة. حاول مرة أخرى.";
       return;
     }
     if (stage === "pre") preOpen = open;
@@ -368,7 +369,7 @@
     if (!supabase || sendingStage) return;
     const target = stage === "pre" ? preTargets : postTargets;
     if (!target) return;
-    if (!confirm(`إرسال رابط الأسسمنت إلى ${target} حاضراً؟`)) return;
+    if (!confirm(`إرسال رابط الاستبانة إلى ${target} حاضراً؟`)) return;
     sendingStage = stage;
     actionError = "";
     notice = "";
@@ -687,7 +688,7 @@
     const [responses, config] = await Promise.all([
       supabase
         .from("assessment_responses")
-        .select("id,registration_id,stage,created_at")
+        .select("id,registration_id,stage,answers,created_at")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase
@@ -698,7 +699,7 @@
     ]);
     if (responses.error || config.error) failed = true;
     const byId = new Map((next.conference_registrations ?? []).map((r) => [r.id, r]));
-    const stageLabel = (s: unknown) => (s === "post" ? "النهائي" : "الأولي");
+    const stageLabel = (s: unknown) => (s === "post" ? "النهائية" : "الأولى");
     next.assessments = (responses.data ?? []).map((a) => ({
       id: a.id,
       created_at: a.created_at,
@@ -707,6 +708,10 @@
       ticket_code: byId.get(a.registration_id)?.ticket_code ?? "—",
       stage: stageLabel(a.stage),
       raw_stage: a.stage,
+      // q1=0 q2=1 … — readable in the table and in the CSV.
+      answers: Object.entries(a.answers ?? {})
+        .map(([k, v]) => `${k}=${v}`)
+        .join(" "),
     }));
     preOpen = !!config.data?.assessment_pre_open;
     postOpen = !!config.data?.assessment_post_open;
@@ -1077,7 +1082,7 @@
             disabled={!!sendingStage}
             onclick={() => toggleWindow("pre", !preOpen)}
           >
-            الأولي: {preOpen ? "مفتوح" : "مغلق"}
+            الأولى: {preOpen ? "مفتوح" : "مغلق"}
           </button>
           <button
             type="button"
@@ -1085,7 +1090,7 @@
             disabled={!!sendingStage}
             onclick={() => toggleWindow("post", !postOpen)}
           >
-            النهائي: {postOpen ? "مفتوح" : "مغلق"}
+            النهائية: {postOpen ? "مفتوح" : "مغلق"}
           </button>
         </div>
         <button
@@ -1094,7 +1099,7 @@
           disabled={!!sendingStage || preTargets === 0}
           onclick={() => sendInvite("pre")}
         >
-          إرسال رابط الأولي ({preTargets})
+          إرسال رابط الأولى ({preTargets})
         </button>
         <button
           class="btn btn--ghost btn--sm"
@@ -1102,7 +1107,7 @@
           disabled={!!sendingStage || postTargets === 0}
           onclick={() => sendInvite("post")}
         >
-          إرسال رابط النهائي ({postTargets})
+          إرسال رابط النهائية ({postTargets})
         </button>
       </div>
       {#if notice}

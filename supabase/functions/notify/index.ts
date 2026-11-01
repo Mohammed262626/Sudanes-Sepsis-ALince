@@ -93,6 +93,22 @@ const checkinUrl = (code: string, pass: string) =>
 const assessmentUrl = (hash: string, stage: "pre" | "post") =>
   `${SITE}/assessment/?t=${encodeURIComponent(hash)}&s=${stage}`;
 
+// Which window is open right now. The button is only attached when it leads
+// somewhere, so a guest never lands on a dead "closed" page at the door.
+async function assessmentOpen(stage: "pre" | "post"): Promise<boolean> {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return false;
+  const res = await fetch(
+    `${url}/rest/v1/event_config?id=eq.1&select=assessment_pre_open,assessment_post_open`,
+    { headers: { apikey: key, Authorization: "Bearer " + key } },
+  );
+  if (!res.ok) return false;
+  const rows = await res.json().catch(() => []);
+  const c = Array.isArray(rows) ? rows[0] : null;
+  return stage === "pre" ? !!c?.assessment_pre_open : !!c?.assessment_post_open;
+}
+
 const qrImageUrl = (target: string) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=8B0000&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(target)}`;
 
@@ -283,23 +299,29 @@ Deno.serve(async (req) => {
       attended(payload.record)
     );
     const hash = String(payload.record.assessment_token ?? "");
-    // No hash means the column has not been migrated in: plain text still goes.
-    if (!hash) return json({ whatsapp: { attended: await sendWhats(chatId, body) } });
+    // No hash means the column has not been migrated in; a closed window means
+    // the button would dead-end. Both fall back to the plain thanks message.
+    if (!hash || !(await assessmentOpen("pre"))) {
+      return json({
+        whatsapp: { attended: await sendWhats(chatId, body) },
+        preButton: false,
+      });
+    }
     const result = await greenApi("sendInteractiveButtons", {
       chatId,
       header: "مؤتمر كسلا للإنتان",
       body,
-      footer: "الأسسمنت الأولي",
+      footer: "الاستبانة الأولى",
       buttons: [
         {
           type: "url",
           buttonId: "1",
-          buttonText: "الأسسمنت الأولي",
+          buttonText: "الاستبانة الأولى",
           url: assessmentUrl(hash, "pre"),
         },
       ],
     });
-    return json({ whatsapp: { attended: result } });
+    return json({ whatsapp: { attended: result }, preButton: true });
   }
 
   // Admin invite: both assessment links, one tap each. The page itself refuses
@@ -322,13 +344,13 @@ Deno.serve(async (req) => {
         {
           type: "url",
           buttonId: "1",
-          buttonText: "الأسسمنت الأولي",
+          buttonText: "الاستبانة الأولى",
           url: assessmentUrl(hash, "pre"),
         },
         {
           type: "url",
           buttonId: "2",
-          buttonText: "الأسسمنت النهائي",
+          buttonText: "الاستبانة النهائية",
           url: assessmentUrl(hash, "post"),
         },
       ],
