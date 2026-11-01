@@ -9,12 +9,15 @@
   const tabs = [
     { id: "conference_registrations", label: "التسجيلات" },
     { id: "scan", label: "الحضور" },
+    { id: "assessments", label: "الأسسمنت" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
     { id: "templates", label: "قوالب واتساب" },
   ];
 
-  const dataTabs = tabs.filter((t) => t.id !== "templates" && t.id !== "scan");
+  const dataTabs = tabs.filter(
+    (t) => !["templates", "scan", "assessments"].includes(t.id),
+  );
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
     conference_registrations: [
@@ -26,6 +29,12 @@
       { key: "phone", label: "الهاتف", cls: "nw hide-xs" },
       { key: "role", label: "الصفة", cls: "nw hide-sm" },
       { key: "actions", label: "إجراء", cls: "nw" },
+    ],
+    assessments: [
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "wrap" },
+      { key: "stage", label: "الاستبانة", cls: "nw" },
+      { key: "ticket_code", label: "رمز التذكرة", cls: "nw hide-xs" },
     ],
     contact_messages: [
       { key: "created_at", label: "التاريخ", cls: "nw" },
@@ -315,8 +324,7 @@
     await load();
   }
 
-  async function saveTemplates() {
-    if (!supabase || saving) return;
+  async function saveTemplates() {    if (!supabase || saving) return;
     saving = true;
     saveNote = "";
     const results = await Promise.all(
@@ -331,6 +339,49 @@
     saveNote = results.some((r) => r.error)
       ? "تعذّر الحفظ. حاول مرة أخرى."
       : "تم الحفظ — تُطبّق على الرسائل القادمة.";
+  }
+
+  // Assessment windows: the page reads them through the database, so flipping
+  // one here is enough — no rebuild.
+  let preOpen = $state(false);
+  let postOpen = $state(false);
+  let sendingStage = $state("");
+
+  async function toggleWindow(stage: "pre" | "post", open: boolean) {
+    if (!supabase || sendingStage) return;
+    sendingStage = stage;
+    actionError = "";
+    const { error } = await supabase.rpc("set_assessment_window", {
+      p_stage: stage,
+      p_open: open,
+    });
+    sendingStage = "";
+    if (error) {
+      actionError = "تعذّر تغيير حالة الأسسمنت. حاول مرة أخرى.";
+      return;
+    }
+    if (stage === "pre") preOpen = open;
+    else postOpen = open;
+  }
+
+  async function sendInvite(stage: "pre" | "post") {
+    if (!supabase || sendingStage) return;
+    const target = stage === "pre" ? preTargets : postTargets;
+    if (!target) return;
+    if (!confirm(`إرسال رابط الأسسمنت إلى ${target} حاضراً؟`)) return;
+    sendingStage = stage;
+    actionError = "";
+    notice = "";
+    const { data: n, error } = await supabase.rpc("send_assessment_invite", {
+      p_stage: stage,
+    });
+    sendingStage = "";
+    if (error) {
+      actionError = "تعذّر إرسال الروابط. حاول مرة أخرى.";
+      return;
+    }
+    notice = `أُرسل ${Number(n ?? 0)} رابطاً.`;
+    await load();
   }
 
   let video = $state<HTMLVideoElement | null>(null);
@@ -630,6 +681,36 @@
     templates = ((results[results.length - 1].data ?? []) as Template[]).sort(
       (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
     );
+
+    // Assessments ride along: name/ticket come from the registrations already
+    // loaded, so the join happens here instead of in the query.
+    const [responses, config] = await Promise.all([
+      supabase
+        .from("assessment_responses")
+        .select("id,registration_id,stage,created_at")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("event_config")
+        .select("assessment_pre_open,assessment_post_open")
+        .eq("id", 1)
+        .maybeSingle(),
+    ]);
+    if (responses.error || config.error) failed = true;
+    const byId = new Map((next.conference_registrations ?? []).map((r) => [r.id, r]));
+    const stageLabel = (s: unknown) => (s === "post" ? "النهائي" : "الأولي");
+    next.assessments = (responses.data ?? []).map((a) => ({
+      id: a.id,
+      created_at: a.created_at,
+      registration_id: a.registration_id,
+      name: byId.get(a.registration_id)?.name ?? "—",
+      ticket_code: byId.get(a.registration_id)?.ticket_code ?? "—",
+      stage: stageLabel(a.stage),
+      raw_stage: a.stage,
+    }));
+    preOpen = !!config.data?.assessment_pre_open;
+    postOpen = !!config.data?.assessment_post_open;
+
     data = next;
     loading = false;
   }
@@ -666,6 +747,28 @@
         !r.declined_at &&
         !r.reminder_sent_at &&
         String(r.phone ?? "").trim().length > 0,
+    ).length,
+  );
+  // Attendees who still owe a stage — the invite button counts.
+  const assessmentRows = $derived(data.assessments ?? []);
+  const preAnswered = $derived(
+    new Set(assessmentRows.filter((r) => r.raw_stage === "pre").map((r) => r.registration_id)),
+  );
+  const postAnswered = $derived(
+    new Set(assessmentRows.filter((r) => r.raw_stage === "post").map((r) => r.registration_id)),
+  );
+  const preTargets = $derived(
+    registrations.filter(
+      (r) => r.attended_at && !preAnswered.has(r.id) && String(r.phone ?? "").trim(),
+    ).length,
+  );
+  const postTargets = $derived(
+    registrations.filter(
+      (r) =>
+        r.attended_at &&
+        preAnswered.has(r.id) &&
+        !postAnswered.has(r.id) &&
+        String(r.phone ?? "").trim(),
     ).length,
   );
   const matches = (r: Row, f: string) => {
@@ -718,7 +821,9 @@
       ? templates.length
       : id === "scan"
         ? present
-        : (data[id]?.length ?? 0);
+        : id === "assessments"
+          ? assessmentRows.length
+          : (data[id]?.length ?? 0);
 
   // Release the camera when leaving the attendance tab; focus the code field when
   // arriving so a USB/keyboard QR gun types straight into it.
@@ -956,6 +1061,48 @@
           onclick={remind}
         >
           {reminding ? "جارٍ الإرسال..." : `تذكير غير الحاضرين (${pendingReminders})`}
+        </button>
+      </div>
+      {#if notice}
+        <p class="form-status">{notice}</p>
+      {/if}
+    {/if}
+
+    {#if tab === "assessments"}
+      <div class="admin-toolbar">
+        <div class="filters">
+          <button
+            type="button"
+            aria-pressed={preOpen}
+            disabled={!!sendingStage}
+            onclick={() => toggleWindow("pre", !preOpen)}
+          >
+            الأولي: {preOpen ? "مفتوح" : "مغلق"}
+          </button>
+          <button
+            type="button"
+            aria-pressed={postOpen}
+            disabled={!!sendingStage}
+            onclick={() => toggleWindow("post", !postOpen)}
+          >
+            النهائي: {postOpen ? "مفتوح" : "مغلق"}
+          </button>
+        </div>
+        <button
+          class="btn btn--ghost btn--sm"
+          type="button"
+          disabled={!!sendingStage || preTargets === 0}
+          onclick={() => sendInvite("pre")}
+        >
+          إرسال رابط الأولي ({preTargets})
+        </button>
+        <button
+          class="btn btn--ghost btn--sm"
+          type="button"
+          disabled={!!sendingStage || postTargets === 0}
+          onclick={() => sendInvite("post")}
+        >
+          إرسال رابط النهائي ({postTargets})
         </button>
       </div>
       {#if notice}

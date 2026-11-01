@@ -1,0 +1,42 @@
+---
+import "@fontsource-variable/cairo";
+import "@fontsource/tajawal/400.css";
+import "@fontsource/tajawal/500.css";
+import "@fontsource/tajawal/700.css";
+import "../styles/global.css";
+import AssessmentForm from "../components/AssessmentForm.svelte";
+---
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#f7f5f0" />
+    <title>استبانة المؤتمر | التحالف السوداني للإنتان</title>
+  </head>
+  <body>
+    <main>
+      <AssessmentForm client:only="svelte" />
+    </main>
+
+    <style is:global>
+      body {
+        display: grid;
+        place-items: center;
+        min-block-size: 100vh;
+        min-block-size: 100dvh;
+        padding: 1.25rem;
+        background: var(--paper);
+      }
+
+      main {
+        inline-size: 100%;
+        display: grid;
+        place-items: center;
+      }
+    </style>
+  </body>
+</html>

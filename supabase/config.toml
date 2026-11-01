@@ -1,0 +1,6 @@
+project_id = "hdoylixxljkimdypfomp"
+
+# Called by pg_net from database triggers with only x-webhook-secret, so the
+# platform JWT check must stay off; the function authenticates the header itself.
+[functions.notify]
+verify_jwt = false

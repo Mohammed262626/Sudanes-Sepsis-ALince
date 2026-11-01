@@ -53,17 +53,34 @@ function toChatId(phone: string): string {
   return d + "@c.us";
 }
 
-async function sendWhats(chatId: string, message: string): Promise<number> {
-  const id = await getSecret("green_api_instance");
-  const token = await getSecret("green_api_token");
-  if (!id || !token) return 0;
-  const res = await fetch(`https://api.green-api.com/waInstance${id}/sendMessage/${token}`, {
+// One place that calls Green API: trims pasted secrets, logs the status and the
+// error body, and never collapses "no credentials" into a silent success.
+type GreenResult = { ok: boolean; status: number; error?: string };
+
+async function greenApi(method: string, body: Record<string, unknown>): Promise<GreenResult> {
+  const id = (await getSecret("green_api_instance"))?.trim();
+  const token = (await getSecret("green_api_token"))?.trim();
+  if (!id || !token) {
+    console.error("green-api: Vault secrets missing", {
+      green_api_instance: !!id,
+      green_api_token: !!token,
+    });
+    return { ok: false, status: 0, error: "missing green_api_instance / green_api_token in Vault" };
+  }
+  const res = await fetch(`https://api.green-api.com/waInstance${id}/${method}/${token}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chatId, message }),
+    body: JSON.stringify(body),
   });
-  return res.status;
+  const out = await res.text();
+  console.log("green-api", method, body.chatId, res.status, out.slice(0, 300));
+  return res.ok
+    ? { ok: true, status: res.status }
+    : { ok: false, status: res.status, error: out.slice(0, 300) };
 }
+
+const sendWhats = (chatId: string, message: string) =>
+  greenApi("sendMessage", { chatId, message });
 
 // The QR points at the guest's own check-in page. The pass (checkin_token) is
 // what opens it; the readable code rides along for the door scanner.
@@ -72,55 +89,38 @@ const SITE = "https://mohammed262626.github.io/Sudanes-Sepsis-ALince";
 const checkinUrl = (code: string, pass: string) =>
   `${SITE}/checkin/?${pass ? "k=" + encodeURIComponent(pass) + "&" : ""}t=${encodeURIComponent(code)}`;
 
+// The assessment link carries a hash of the door token, never the token itself.
+const assessmentUrl = (hash: string, stage: "pre" | "post") =>
+  `${SITE}/assessment/?t=${encodeURIComponent(hash)}&s=${stage}`;
+
 const qrImageUrl = (target: string) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=8B0000&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(target)}`;
 
 // Sends the ticket QR as an image.
 // Brand colours: dark red on white keeps scanner contrast high.
-async function sendTicketQr(chatId: string, code: string, target: string, caption: string): Promise<number> {
-  const id = await getSecret("green_api_instance");
-  const token = await getSecret("green_api_token");
-  if (!id || !token) return 0;
-  const res = await fetch(`https://api.green-api.com/waInstance${id}/sendFileByUrl/${token}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chatId,
-      urlFile: qrImageUrl(target),
-      fileName: `ticket-${code}.png`,
-      caption,
-    }),
+const sendTicketQr = (chatId: string, code: string, target: string, caption: string) =>
+  greenApi("sendFileByUrl", {
+    chatId,
+    urlFile: qrImageUrl(target),
+    fileName: `ticket-${code}.png`,
+    caption,
   });
-  return res.status;
-}
 
 // Three link buttons: the guest's page, the calendar file, and the decline path.
-async function sendTicketButtons(chatId: string, code: string, target: string): Promise<number> {
-  const id = await getSecret("green_api_instance");
-  const token = await getSecret("green_api_token");
-  if (!id || !token) return 0;
-  const res = await fetch(
-    `https://api.green-api.com/waInstance${id}/sendInteractiveButtons/${token}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chatId,
-        header: "مؤتمر كسلا للإنتان",
-        body:
-          `تذكرتك ${code} جاهزة.\n` +
-          "اضغط «تأكيد الحضور» عند وصولك، ثم امسح رمز البوابة بكاميرا هاتفك ليُسجَّل حضورك.",
-        footer: "الاثنين 16 نوفمبر 2026",
-        buttons: [
-          { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
-          { type: "url", buttonId: "2", buttonText: "أضف إلى التقويم", url: `${SITE}/calendar/` },
-          { type: "url", buttonId: "3", buttonText: "لا أستطيع الحضور", url: target + "&d=1" },
-        ],
-      }),
-    },
-  );
-  return res.status;
-}
+const sendTicketButtons = (chatId: string, code: string, target: string) =>
+  greenApi("sendInteractiveButtons", {
+    chatId,
+    header: "مؤتمر كسلا للإنتان",
+    body:
+      `تذكرتك ${code} جاهزة.\n` +
+      "اضغط «تأكيد الحضور» عند وصولك، ثم امسح رمز البوابة بكاميرا هاتفك ليُسجَّل حضورك.",
+    footer: "الاثنين 16 نوفمبر 2026",
+    buttons: [
+      { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
+      { type: "url", buttonId: "2", buttonText: "أضف إلى التقويم", url: `${SITE}/calendar/` },
+      { type: "url", buttonId: "3", buttonText: "لا أستطيع الحضور", url: target + "&d=1" },
+    ],
+  });
 
 function compose(
   table: string,
@@ -265,20 +265,75 @@ Deno.serve(async (req) => {
 
   const expected = await getSecret("webhook_secret");
   if (!expected || req.headers.get("x-webhook-secret") !== expected) {
+    console.error("notify: unauthorized", { secretInVault: !!expected });
     return json({ error: "unauthorized" }, 401);
   }
 
   const payload = await req.json().catch(() => null);
   if (!payload?.table || !payload?.record) return json({ error: "bad payload" }, 400);
 
-  // Door check-in: the guest gets a thanks message once the scan is confirmed.
+  // Door check-in: the guest gets a thanks message once the scan is confirmed,
+// with the pre-assessment button as the conference starts.
   if (payload.table === "conference_registrations" && payload.event === "ATTEND") {
     if (!payload.record.phone) return json({ skipped: true });
-    const status = await sendWhats(
-      toChatId(payload.record.phone),
-      await template("registration_attended", payload.record, attended(payload.record))
+    const chatId = toChatId(payload.record.phone);
+    const body = await template(
+      "registration_attended",
+      payload.record,
+      attended(payload.record)
     );
-    return json({ whatsapp: { attended: status } });
+    const hash = String(payload.record.assessment_token ?? "");
+    // No hash means the column has not been migrated in: plain text still goes.
+    if (!hash) return json({ whatsapp: { attended: await sendWhats(chatId, body) } });
+    const result = await greenApi("sendInteractiveButtons", {
+      chatId,
+      header: "مؤتمر كسلا للإنتان",
+      body,
+      footer: "الأسسمنت الأولي",
+      buttons: [
+        {
+          type: "url",
+          buttonId: "1",
+          buttonText: "الأسسمنت الأولي",
+          url: assessmentUrl(hash, "pre"),
+        },
+      ],
+    });
+    return json({ whatsapp: { attended: result } });
+  }
+
+  // Admin invite: both assessment links, one tap each. The page itself refuses
+  // whoever is not attended or whose window is shut.
+  if (payload.table === "conference_registrations" && payload.event === "ASSESSMENT") {
+    if (!payload.record.phone) return json({ skipped: true });
+    const hash = String(payload.record.assessment_token ?? "");
+    if (!hash) return json({ skipped: true, reason: "no assessment_token" });
+    const stage = payload.stage === "post" ? "post" : "pre";
+    const result = await greenApi("sendInteractiveButtons", {
+      chatId: toChatId(payload.record.phone),
+      header: "مؤتمر كسلا للإنتان",
+      body:
+        "أهلاً " + (payload.record.name ?? "") + "،\n" +
+        (stage === "pre"
+          ? "قبل أن تبدأ الجلسات، أجب عن أسئلة قصيرة لقياس معرفتك الحالية بالإنتان."
+          : "قبل أن ينتهي المؤتمر، أجب عن الأسئلة نفسها لنقيس ما تعلّمته."),
+      footer: "دقيقة واحدة — إجابة واحدة لكل سؤال",
+      buttons: [
+        {
+          type: "url",
+          buttonId: "1",
+          buttonText: "الأسسمنت الأولي",
+          url: assessmentUrl(hash, "pre"),
+        },
+        {
+          type: "url",
+          buttonId: "2",
+          buttonText: "الأسسمنت النهائي",
+          url: assessmentUrl(hash, "post"),
+        },
+      ],
+    });
+    return json({ whatsapp: { assessment: result } });
   }
 
   // Evening-before nudge: the reminder text, then the ticket itself again.
@@ -287,7 +342,7 @@ Deno.serve(async (req) => {
     const chatId = toChatId(payload.record.phone);
     const code = payload.record.ticket_code;
     const target = checkinUrl(code, String(payload.record.checkin_token ?? ""));
-    const whatsapp: Record<string, number> = {};
+    const whatsapp: Record<string, GreenResult> = {};
     whatsapp.reminder = await sendWhats(
       chatId,
       await template("registration_reminder", payload.record, reminderText(payload.record))
@@ -304,14 +359,14 @@ Deno.serve(async (req) => {
 
   // "I can't come": closing message to the guest, a note to the admins.
   if (payload.table === "conference_registrations" && payload.event === "DECLINE") {
-    const whatsapp: Record<string, number> = {};
+    const whatsapp: Record<string, GreenResult> = {};
     if (payload.record.phone) {
       whatsapp.declined = await sendWhats(
         toChatId(payload.record.phone),
         await template("registration_declined", payload.record, declinedText(payload.record))
       );
     }
-    const adminChat = await getSecret("green_api_admin");
+    const adminChat = (await getSecret("green_api_admin"))?.trim();
     if (adminChat) {
       whatsapp.admin = await sendWhats(
         adminChat,
@@ -330,7 +385,7 @@ Deno.serve(async (req) => {
   ) {
     const chatId = toChatId(payload.record.phone ?? "");
     if (!payload.record.phone) return json({ skipped: true });
-    const whatsapp: Record<string, number> = {};
+    const whatsapp: Record<string, GreenResult> = {};
     if (payload.record.status === "approved") {
       whatsapp.approval = await sendWhats(
         chatId,
@@ -356,9 +411,9 @@ Deno.serve(async (req) => {
     return json({ whatsapp });
   }
 
-  const adminChat = await getSecret("green_api_admin");
+  const adminChat = (await getSecret("green_api_admin"))?.trim();
   const alert = adminAlert(payload.table, payload.record);
-  const whatsapp: Record<string, number | string> = {};
+  const whatsapp: Record<string, GreenResult> = {};
 
   await Promise.all([
     (async () => {
