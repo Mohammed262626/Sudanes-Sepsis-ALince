@@ -45,15 +45,8 @@
     const box = document.getElementById("consent");
     if (!box) return;
 
-    // Only the fresh value counts. A legacy "=1" from the old bar is ignored, so
-    // it can finish deciding instead of being silently skipped forever.
-    let remembered = false;
-    try {
-      remembered = localStorage.getItem("sep-consent") === "granted";
-    } catch {
-      // Private mode: nothing to remember, the bar may return each visit.
-    }
-    if (remembered) return;
+    // The stored flag is only a cache: permissions can be deleted in the browser
+    // later, so every visit re-checks the real state before trusting it.
 
     const cameraState = box.querySelector('[data-item="camera"] .consent-state');
     const notifyState = box.querySelector('[data-item="notify"] .consent-state');
@@ -120,6 +113,8 @@
         box.remove();
         return true;
       }
+      // Missing anything (revoked, never asked, or subscribe failed): show it.
+      box.removeAttribute("hidden");
       return false;
     };
 
@@ -156,7 +151,6 @@
     document.getElementById("consent-later")?.addEventListener("click", () => box.remove());
 
     refresh();
-    box.removeAttribute("hidden");
   })();
 </script>
 
