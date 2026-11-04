@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro";
+import GuestHome from "../components/GuestHome.svelte";
+---
+
+<Base title="لوحتك | التحالف السوداني للإنتان" description="تذكرتك وحضورك واستباناتك في صفحة واحدة.">
+  <section class="wrap guest-shell">
+    <GuestHome client:only="svelte" />
+  </section>
+</Base>
+
+<style>
+  .guest-shell {
+    padding-block: 2.5rem 4rem;
+    max-inline-size: 44rem;
+    margin-inline: auto;
+  }
+</style>

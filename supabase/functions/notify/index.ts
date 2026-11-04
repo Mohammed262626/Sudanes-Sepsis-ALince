@@ -464,6 +464,21 @@ Deno.serve(async (req) => {
         payload.record.ticket_code,
         checkinUrl(payload.record.ticket_code, String(payload.record.checkin_token ?? ""))
       );
+      // One extra message: the guest's own page, opened once and remembered.
+      whatsapp.dashboard = await greenApi("sendInteractiveButtons", {
+        chatId,
+        header: "لوحتك",
+        body: "تذكرتك، حضورك، واستباناتك في صفحة واحدة.\nاحفظها على جهازك — تُفتح بلا كلمة مرور.",
+        footer: "التحالف السوداني للإنتان",
+        buttons: [
+          {
+            type: "url",
+            buttonId: "1",
+            buttonText: "افتح لوحتك",
+            url: `${SITE}/guest/?s=${encodeURIComponent(String(payload.record.checkin_token ?? ""))}`,
+          },
+        ],
+      });
     } else if (payload.record.status === "rejected") {
       whatsapp.rejection = await sendWhats(
         chatId,
