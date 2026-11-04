@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { supabase } from "../lib/supabase";
+  import { url } from "../lib/url";
 
   // shortcut: test questions, swap the array for the clinician-reviewed set.
   const QUESTIONS = [
@@ -150,6 +151,7 @@
       {:else if state === "answered"}
         <h1>أجبت عن هذه الاستبانة</h1>
         <p class="note">{name} — شكراً لك، سُجّلت إجاباتك ولا يمكن تكرارها.</p>
+        <a class="btn" href={url("guest")}>العودة إلى لوحتك</a>
       {:else if state === "submitted"}
         <div class="done">
           <span class="mark" aria-hidden="true">✓</span>
@@ -159,6 +161,7 @@
         {#if stage === "pre"}
           <p class="note">ستصلك الاستبانة النهائية على الواتساب قبل نهاية المؤتمر.</p>
         {/if}
+        <a class="btn" href={url("guest")}>العودة إلى لوحتك</a>
       {:else if state === "error"}
         <h1>تعذّر الإرسال</h1>
         <p class="note">تحقق من اتصالك ثم أعد تحميل الصفحة.</p>
