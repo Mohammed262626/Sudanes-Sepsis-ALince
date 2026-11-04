@@ -157,6 +157,7 @@
     );
     data = { ...data };
     flash(id);
+    if (status !== "pending") void showSends([id]);
   }
 
   // Re-sends the ticket QR for an approved registration (via the resend_ticket RPC).
@@ -167,7 +168,10 @@
     const { error } = await supabase.rpc("resend_ticket", { p_id: id });
     busyId = 0;
     if (error) actionError = "تعذّر إرسال التذكرة. حاول مرة أخرى.";
-    else flash(id);
+    else {
+      flash(id);
+      void showSends([id]);
+    }
   }
 
   // Clears a mistaken check-in. The attendance trigger only fires null -> value,
@@ -342,6 +346,7 @@
       `أُرسل ${sent} تذكيراً.` +
       (pendingReminders > sent ? " اضغط مرة أخرى للدفعة التالية." : "");
     await load();
+    void showSends();
   }
 
   async function saveTemplates() {    if (!supabase || saving) return;
@@ -386,6 +391,7 @@
     const sent = Number((data as { sent?: number } | null)?.sent ?? 0);
     notice = open && stage === "post" ? `فُتحت النهائية وأُرسل ${sent} رابطاً.` : "";
     if (stage === "post") await load();
+    if (open && stage === "post") void showSends();
   }
 
   async function sendInvite(stage: "pre" | "post") {
@@ -406,6 +412,51 @@
     }
     notice = `أُرسل ${Number(n ?? 0)} رابطاً.`;
     await load();
+    void showSends();
+  }
+
+  // WhatsApp runs inside the database trigger, so Green API's answer lands a
+  // moment later. Poll the log a few times and show the truth; no fake success.
+  let sendLines = $state<{ text: string; ok: boolean }[]>([]);
+
+  const SEND_KINDS: Record<string, string> = {
+    approval: "رسالة القبول",
+    ticket: "التذكرة",
+    buttons: "أزرار التذكرة",
+    rejection: "رسالة الرفض",
+    attended: "رسالة الحضور",
+    assessment: "رابط الاستبانة",
+    reminder: "التذكير",
+    declined: "رسالة الاعتذار",
+    confirmation: "تأكيد التسجيل",
+    admin: "تنبيه الأدمن",
+  };
+
+  async function showSends(ids: number[] = []) {
+    if (!supabase) return;
+    const since = new Date(Date.now() - 120_000).toISOString();
+    sendLines = [];
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const q = supabase
+        .from("notify_log")
+        .select("ref_id, kind, chat_id, ok, status, error")
+        .gte("created_at", since)
+        .order("created_at", { ascending: true })
+        .limit(8);
+      if (ids.length) q.in("ref_id", ids);
+      const { data } = await q;
+      if (!data?.length) continue;
+      sendLines = data.map((r) => {
+        const who = String(r.chat_id ?? "").replace("@c.us", "");
+        const what = SEND_KINDS[r.kind] ?? r.kind;
+        if (r.ok) return { ok: true, text: `تم إرسال ${what} إلى ${who}.` };
+        const why =
+          Number(r.status) === 466 ? "تجاوز حصة Green API الشهرية" : `رمز ${r.status}`;
+        return { ok: false, text: `تعذّر إرسال ${what} إلى ${who} — ${why}.` };
+      });
+      return;
+    }
   }
 
   // Wipes a guest's answers (both stages) so he can take it again.
@@ -685,6 +736,7 @@
     // Clears itself so the next guest starts from a clean card.
     clearTimeout(resultTimer);
     resultTimer = setTimeout(() => (scanResult = null), 4000);
+    void showSends([row.id]);
   }
 
   async function load() {
@@ -947,6 +999,10 @@
 {#if actionError}
   <p class="form-status" data-state="error">{actionError}</p>
 {/if}
+
+{#each sendLines as line, i (i)}
+  <p class="form-status" data-state={line.ok ? "ok" : "error"}>{line.text}</p>
+{/each}
 
 {#if loading}
   <div

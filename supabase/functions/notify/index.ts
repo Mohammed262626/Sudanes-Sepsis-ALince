@@ -55,7 +55,7 @@ function toChatId(phone: string): string {
 
 // One place that calls Green API: trims pasted secrets, logs the status and the
 // error body, and never collapses "no credentials" into a silent success.
-type GreenResult = { ok: boolean; status: number; error?: string };
+type GreenResult = { ok: boolean; status: number; chatId?: string; error?: string };
 
 async function greenApi(method: string, body: Record<string, unknown>): Promise<GreenResult> {
   const id = (await getSecret("green_api_instance"))?.trim();
@@ -74,9 +74,44 @@ async function greenApi(method: string, body: Record<string, unknown>): Promise<
   });
   const out = await res.text();
   console.log("green-api", method, body.chatId, res.status, out.slice(0, 300));
+  const chatId = String(body.chatId ?? "");
   return res.ok
-    ? { ok: true, status: res.status }
-    : { ok: false, status: res.status, error: out.slice(0, 300) };
+    ? { ok: true, status: res.status, chatId }
+    : { ok: false, status: res.status, chatId, error: out.slice(0, 300) };
+}
+
+// Stores what Green API actually answered for each message of this call, so the
+// admin dashboard can show it instead of a blind "sent".
+async function logWhats(
+  table: string,
+  record: Record<string, unknown>,
+  whatsapp: Record<string, GreenResult>,
+) {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const rows = Object.entries(whatsapp).map(([kind, r]) => ({
+    ref_table: table,
+    ref_id: Number(record?.id) || null,
+    kind,
+    chat_id: r.chatId ?? "",
+    ok: r.ok,
+    status: r.status,
+    error: r.error ?? null,
+  }));
+  if (!url || !key || rows.length === 0) return;
+  const res = await fetch(url + "/rest/v1/notify_log", {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: "Bearer " + key,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify(rows),
+  });
+  if (!res.ok) {
+    console.error("notify_log insert", res.status, (await res.text()).slice(0, 200));
+  }
 }
 
 const sendWhats = (chatId: string, message: string) =>
@@ -302,10 +337,9 @@ Deno.serve(async (req) => {
     // No hash means the column has not been migrated in; a closed window means
     // the button would dead-end. Both fall back to the plain thanks message.
     if (!hash || !(await assessmentOpen("pre"))) {
-      return json({
-        whatsapp: { attended: await sendWhats(chatId, body) },
-        preButton: false,
-      });
+      const whatsapp = { attended: await sendWhats(chatId, body) };
+      await logWhats(payload.table, payload.record, whatsapp);
+      return json({ whatsapp, preButton: false });
     }
     const result = await greenApi("sendInteractiveButtons", {
       chatId,
@@ -321,6 +355,7 @@ Deno.serve(async (req) => {
         },
       ],
     });
+    await logWhats(payload.table, payload.record, { attended: result });
     return json({ whatsapp: { attended: result }, preButton: true });
   }
 
@@ -357,6 +392,7 @@ Deno.serve(async (req) => {
             },
       ],
     });
+    await logWhats(payload.table, payload.record, { assessment: result });
     return json({ whatsapp: { assessment: result } });
   }
 
@@ -378,6 +414,7 @@ Deno.serve(async (req) => {
       "مؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026\nرقم تذكرتك: " + code
     );
     whatsapp.buttons = await sendTicketButtons(chatId, code, target);
+    await logWhats(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
 
@@ -398,6 +435,7 @@ Deno.serve(async (req) => {
           (payload.record.phone ? " — " + payload.record.phone : "")
       );
     }
+    await logWhats(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
 
@@ -432,6 +470,7 @@ Deno.serve(async (req) => {
         await template("registration_rejected", payload.record, rejection(payload.record))
       );
     }
+    await logWhats(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
 
@@ -452,6 +491,8 @@ Deno.serve(async (req) => {
       }
     })(),
   ]);
+
+  await logWhats(payload.table, payload.record, whatsapp);
 
   const mail = compose(payload.table, payload.record);
   if (!mail?.to) return json({ skipped: true, whatsapp });
