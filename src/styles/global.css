@@ -699,6 +699,16 @@ img {
   color: var(--ok);
 }
 
+/* Sent-push history under the composer. */
+.push-feed {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 0 0;
+  border-block-start: 2px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
+  display: grid;
+  gap: 0.4rem;
+}
+
 .contact-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

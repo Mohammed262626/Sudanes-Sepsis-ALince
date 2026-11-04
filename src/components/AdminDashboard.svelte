@@ -462,6 +462,9 @@
   let pushing = $state(false);
   let pushCount = $state(0);
 
+  // Session-only send log below the composer. Nothing to reload: just append.
+  let pushFeed = $state<{ text: string; ok: boolean }[]>([]);
+
   async function sendPush() {
     if (!supabase || pushing) return;
     const body = pushText.trim();
@@ -473,8 +476,10 @@
       body: { title: "التحالف السوداني للإنتان", body },
     });
     pushing = false;
+    const at = new Date().toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
     if (error) {
       pushNote = "تعذّر الإرسال. حاول مرة أخرى.";
+      pushFeed = [{ text: `${at} — فشل الإرسال`, ok: false }, ...pushFeed].slice(0, 8);
       pushToast(pushNote, false);
       return;
     }
@@ -483,8 +488,12 @@
     pushNote = `وصل ${sent} إشعاراً` + (failed ? `، وفشل ${failed}.` : ".");
     pushToast(pushNote, failed === 0);
     if (failed && notifyOn) new Notification("فشل بعض الإشعارات", { body: pushNote });
+    pushFeed = [
+      { text: `${at} — ${pushNote} «${body}»`, ok: failed === 0 },
+      ...pushFeed,
+    ].slice(0, 8);
     pushText = "";
-    await load();
+    void refreshSubscribers();
   }
 
   // Subscribers change on their own schedule; read the count when the tab opens.
@@ -1294,6 +1303,13 @@
           {pushNote || "يصل إلى كل من فعّل الإشعارات في متصفحه — حتى لو كان الموقع مغلقاً."}
         </p>
       </div>
+      {#if pushFeed.length}
+        <ul class="push-feed">
+          {#each pushFeed as item, i (i)}
+            <li class="form-status" data-state={item.ok ? "ok" : "error"}>{item.text}</li>
+          {/each}
+        </ul>
+      {/if}
     </div>
   {:else}
     {#if tab === "conference_registrations"}
