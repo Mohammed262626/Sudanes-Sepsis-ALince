@@ -1,47 +1,150 @@
 ---
-// One-time notice: the camera is used at check-in, and preferences live in the
-// browser. No tracking cookies, so there is nothing to ask beyond this.
+// One-time(ish) notice: the page needs the camera at check-in and notifications
+// for conference alerts. Until both are allowed the bar keeps coming back; once
+// everything is granted it never shows again.
 ---
 
-<aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية">
-  <p>
-    نستخدم كاميرا هاتفك لمسح رمز البوابة عند تسجيل الحضور، ونحفظ تفضيلاتك في
-    متصفحك. لا نستخدم كوكيز تتبّع. سنطلب أيضاً إذن إشعارات المتصفح، ويمكنك رفضه.
-  </p>
-  <button class="btn btn--ghost btn--sm" type="button" id="consent-ok">حسناً</button>
+<aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية والأذونات">
+  <div class="consent-body">
+    <p class="consent-title">نحتاج إذنكم مرة واحدة</p>
+    <p class="consent-lead">
+      لا نستخدم كوكيز تتبّع، ولا نطلب شيئاً لا تحتاجه الصفحة.
+    </p>
+    <ul class="consent-list">
+      <li data-item="camera">
+        <span class="consent-label">
+          <strong>الكاميرا</strong>
+          <span>لمسح رمز البوابة عند تسجيل الحضور.</span>
+        </span>
+        <span class="consent-state" data-state="prompt">بانتظار الإذن</span>
+      </li>
+      <li data-item="notify">
+        <span class="consent-label">
+          <strong>الإشعارات</strong>
+          <span>لتنبيهات المؤتمر حتى لو أغلقتم الموقع.</span>
+        </span>
+        <span class="consent-state" data-state="prompt">بانتظار الإذن</span>
+      </li>
+      <li data-item="store">
+        <span class="consent-label">
+          <strong>حفظ التفضيلات</strong>
+          <span>في متصفحكم فقط، بلا حساب.</span>
+        </span>
+        <span class="consent-state" data-state="ok">تلقائي</span>
+      </li>
+    </ul>
+  </div>
+  <div class="consent-actions">
+    <button class="btn" type="button" id="consent-all">السماح للكل</button>
+    <button class="btn btn--ghost" type="button" id="consent-later">لاحقاً</button>
+  </div>
 </aside>
 
 <script is:inline>
   (() => {
     const box = document.getElementById("consent");
     if (!box) return;
-    let seen = false;
+
+    let remembered = false;
     try {
-      seen = !!localStorage.getItem("sep-consent");
+      remembered = localStorage.getItem("sep-consent") === "1";
     } catch {
-      // Private mode: show it once, nothing to remember.
+      // Private mode: nothing to remember, the bar may return each visit.
     }
-    if (seen) return;
-    box.removeAttribute("hidden");
-    document.getElementById("consent-ok")?.addEventListener("click", () => {
+    if (remembered) return;
+
+    const cameraState = box.querySelector('[data-item="camera"] .consent-state');
+    const notifyState = box.querySelector('[data-item="notify"] .consent-state');
+
+    const labels = {
+      granted: "مسموح",
+      denied: "مرفوض — فعّله من إعدادات المتصفح",
+      prompt: "بانتظار الإذن",
+      unsupported: "غير متاح في هذا المتصفح",
+    };
+
+    const paint = (el, state) => {
+      el.dataset.state = state;
+      el.textContent = labels[state] ?? labels.prompt;
+    };
+
+    const queryCamera = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) return "unsupported";
       try {
-        localStorage.setItem("sep-consent", "1");
+        const status = await navigator.permissions.query({ name: "camera" });
+        return status.state;
       } catch {
-        // Nothing to store; the bar still closes.
+        return "prompt";
       }
-      // Ask inside the click, as browsers require. Refusal is fine.
-      if (typeof Notification !== "undefined") {
-        const subscribe = () => window.sepPush && window.sepPush();
-        if (Notification.permission === "default") {
-          Notification.requestPermission().then((state) => {
-            if (state === "granted") subscribe();
-          });
-        } else if (Notification.permission === "granted") {
-          subscribe();
+    };
+
+    const stateOfNotify = () => {
+      if (typeof Notification === "undefined") return "unsupported";
+      return Notification.permission; // granted | denied | default
+    };
+
+    const normal = (state) => (state === "default" ? "prompt" : state);
+
+    let camera = "prompt";
+    let notify = "prompt";
+
+    // Everything the page can actually use is allowed (or not offered here).
+    const settled = () =>
+      (camera === "granted" || camera === "unsupported") &&
+      (notify === "granted" || notify === "unsupported");
+
+    const refresh = async () => {
+      camera = normal(await queryCamera());
+      notify = normal(stateOfNotify());
+      paint(cameraState, camera);
+      paint(notifyState, notify);
+      if (notify === "granted") window.sepPush?.();
+      if (settled()) {
+        try {
+          localStorage.setItem("sep-consent", "1");
+        } catch {
+          // Nothing to store; the bar still closes for this visit.
         }
+        box.remove();
+        return true;
       }
-      box.remove();
-    });
+      return false;
+    };
+
+    // Browsers only prompt inside a click. Asking for the camera is the only
+    // honest way: open a stream and stop it at once.
+    async function allowAll() {
+      const button = document.getElementById("consent-all");
+      if (button) button.disabled = true;
+      try {
+        if (camera === "prompt") {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach((t) => t.stop());
+          } catch {
+            // Refused or no camera: the status line says so.
+          }
+        }
+        if (notify === "prompt") {
+          try {
+            await Notification.requestPermission();
+          } catch {
+            // Old Safari: nothing to ask.
+          }
+        }
+      } finally {
+        if (button) button.disabled = false;
+      }
+      await refresh();
+    }
+
+    document.getElementById("consent-all")?.addEventListener("click", allowAll);
+
+    // «لاحقاً» hides it for this page view only — the reminder returns next visit.
+    document.getElementById("consent-later")?.addEventListener("click", () => box.remove());
+
+    refresh();
+    box.removeAttribute("hidden");
   })();
 </script>
 
@@ -52,9 +155,9 @@
     inset-block-end: 0;
     z-index: 50;
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.85rem 1.25rem;
+    align-items: flex-end;
+    gap: 1.25rem;
+    padding: 1.15rem 1.5rem;
     border-block-start: 2px solid var(--ink);
     background: var(--paper);
   }
@@ -63,22 +166,90 @@
     display: none;
   }
 
-  .consent p {
-    margin: 0;
+  .consent-body {
     flex: 1;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .consent-title {
+    margin: 0;
+    font-family: var(--font-display, inherit);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .consent-lead {
+    margin: 0;
     font-size: 0.875rem;
-    line-height: 1.6;
+    color: color-mix(in srgb, var(--ink) 70%, var(--paper));
   }
 
-  .consent .btn {
+  .consent-list {
+    list-style: none;
+    margin: 0.15rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .consent-list li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 0.35rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--ink) 18%, var(--paper));
+    font-size: 0.9375rem;
+  }
+
+  .consent-label {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.5rem;
+  }
+
+  .consent-label span {
+    color: color-mix(in srgb, var(--ink) 65%, var(--paper));
+    font-size: 0.875rem;
+  }
+
+  .consent-state {
     flex: none;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--ink) 60%, var(--paper));
   }
 
-  @media (max-width: 40rem) {
+  .consent-state[data-state="granted"],
+  .consent-state[data-state="ok"] {
+    color: var(--ok);
+  }
+
+  .consent-state[data-state="denied"] {
+    color: var(--accent);
+  }
+
+  .consent-actions {
+    flex: none;
+    display: grid;
+    gap: 0.5rem;
+    min-inline-size: 10rem;
+  }
+
+  @media (max-width: 48rem) {
     .consent {
       flex-direction: column;
       align-items: stretch;
-      gap: 0.6rem;
+      gap: 0.85rem;
+      padding: 1rem 1.1rem;
+      max-block-size: 70vh;
+      overflow-y: auto;
+    }
+
+    .consent-actions {
+      grid-template-columns: 1fr 1fr;
+      min-inline-size: 0;
     }
   }
 </style>
