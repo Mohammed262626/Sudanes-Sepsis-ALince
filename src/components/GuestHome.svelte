@@ -15,7 +15,7 @@
     post_done: boolean;
   };
 
-  const STATUS: Record<string, string> = {
+  const STATUS = {
     pending: "قيد المراجعة",
     approved: "معتمد",
     rejected: "مرفوض",
@@ -30,7 +30,6 @@
   onMount(async () => {
     await loadGuest();
 
-    // Live refresh when the tab becomes visible again
     const onFocus = async () => {
       if (!loading && guest) {
         await loadGuest();
@@ -121,15 +120,12 @@
 </script>
 
 {#if loading}
-  <div class="guest-shell skeleton">
-    <div class="skeleton-row" style="height: 1.25rem; margin-block-end: 0.5rem;"></div>
-    <div class="skeleton-row wide" style="height: 3rem; margin-block-end: 0.75rem;"></div>
-    <div class="skeleton-row narrow" style="height: 2rem; margin-block-end: 1.25rem;"></div>
-    <div class="skeleton-row" style="height: 1rem;"></div>
+  <div class="guest-shell">
+    <p class="kicker">لوحتك</p>
+    <p class="note">جارٍ التحميل…</p>
   </div>
 {:else if guest}
   <div class="guest-shell" aria-labelledby="guest-title">
-    {/* Header: name + status chips */}
     <header class="guest-head" id="guest-title">
       <p class="kicker">لوحتك</p>
       <h1>{guest.name}</h1>
@@ -143,7 +139,6 @@
       </div>
     </header>
 
-    {/* Ticket code with copy button */}
     <section class="block" aria-labelledby="ticket-title">
       <h2 id="ticket-title">تذكرتك</h2>
       <div class="ticket-wrapper">
@@ -167,7 +162,6 @@
       {/if}
     </section>
 
-    {/* Assessments */}
     <section class="block" aria-labelledby="assess-title">
       <h2 id="assess-title">الاستبانات</h2>
       {#if !guest.attended_at}
@@ -202,7 +196,6 @@
       {/if}
     </section>
 
-    {/* Sign out */}
     <footer class="guest-foot">
       <button class="link" type="button" onclick={signOut}>
         تسجيل الخروج من هذا الجهاز
@@ -369,23 +362,5 @@
   .link:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-  }
-
-  .skeleton {
-    background: color-mix(in srgb, var(--ink) 12%, var(--paper));
-  }
-
-  .skeleton-row {
-    height: 1.25rem;
-    border-radius: 2px;
-    margin-block-end: 0.5rem;
-  }
-
-  .skeleton-row.wide {
-    width: 60%;
-  }
-
-  .skeleton-row.narrow {
-    width: 40%;
   }
 </style>
