@@ -60,6 +60,7 @@
 
     const labels = {
       granted: "مسموح",
+      warn: "مسموح — تعذّر تسجيل المتصفح. حدّث الصفحة وحاول مرة أخرى",
       denied: "مرفوض — فعّله من إعدادات المتصفح",
       prompt: "بانتظار الإذن",
       unsupported: "غير متاح في هذا المتصفح",
@@ -89,18 +90,27 @@
 
     let camera = "prompt";
     let notify = "prompt";
+    // null = not applicable here (no push API); false = allowed but not saved.
+    let subscribed = null;
 
     // Everything the page can actually use is allowed (or not offered here).
     const settled = () =>
       (camera === "granted" || camera === "unsupported") &&
-      (notify === "granted" || notify === "unsupported");
+      (notify === "granted" || notify === "unsupported") &&
+      subscribed !== false;
 
     const refresh = async () => {
       camera = normal(await queryCamera());
       notify = normal(stateOfNotify());
       paint(cameraState, camera);
-      paint(notifyState, notify);
-      if (notify === "granted") window.sepPush?.();
+      if (notify === "granted") {
+        const saved = await window.sepPush?.();
+        subscribed = saved === true;
+        paint(notifyState, subscribed ? "granted" : "warn");
+      } else {
+        subscribed = null;
+        paint(notifyState, notify);
+      }
       if (settled()) {
         try {
           localStorage.setItem("sep-consent", "granted");
@@ -230,6 +240,11 @@
 
   .consent-state[data-state="denied"] {
     color: var(--accent);
+  }
+
+  .consent-state[data-state="warn"] {
+    color: var(--accent);
+    white-space: normal;
   }
 
   .consent-actions {

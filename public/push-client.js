@@ -32,17 +32,19 @@
       const key = document.querySelector('meta[name="supabase-key"]')?.content;
       if (!url || !key) return false;
 
-      await fetch(`${url.replace(/\/$/, "")}/rest/v1/push_subscriptions?on_conflict=endpoint`, {
+      const saved = await fetch(`${url.replace(/\/$/, "")}/rest/v1/push_subscriptions`, {
         method: "POST",
         headers: {
           apikey: key,
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
-          Prefer: "resolution=ignore-duplicates,return=minimal",
+          Prefer: "return=minimal",
         },
         body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.toJSON().keys }),
       });
-      return true;
+      // 409: this browser is already saved. Anything else failing is the caller's
+      // problem to show, not to swallow.
+      return saved.ok || saved.status === 409;
     } catch (err) {
       console.warn("push subscribe failed", err);
       return false;

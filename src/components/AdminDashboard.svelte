@@ -487,8 +487,16 @@
     await load();
   }
 
-  async function askNotify() {
-    if (typeof Notification === "undefined") {
+  // Subscribers change on their own schedule; read the count when the tab opens.
+  async function refreshSubscribers() {
+    if (!supabase) return;
+    const { count } = await supabase
+      .from("push_subscriptions")
+      .select("endpoint", { count: "exact", head: true });
+    pushCount = count ?? 0;
+  }
+
+  async function askNotify() {    if (typeof Notification === "undefined") {
       pushToast("المتصفح لا يدعم الإشعارات.", false);
       return;
     }
@@ -914,7 +922,6 @@
       .from("push_subscriptions")
       .select("endpoint", { count: "exact", head: true });
     pushCount = subs.count ?? 0;
-
     data = next;
     loading = false;
   }
@@ -1133,7 +1140,10 @@
         role="tab"
         aria-selected={tab === t.id}
         class:active={tab === t.id}
-        onclick={() => (tab = t.id)}
+        onclick={() => {
+          tab = t.id;
+          if (t.id === "push") void refreshSubscribers();
+        }}
       >
         {t.label} <span class="tab-count">{count(t.id)}</span>
       </button>
