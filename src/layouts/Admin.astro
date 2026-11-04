@@ -29,8 +29,11 @@ const sha = (() => {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="supabase-url" content={import.meta.env.PUBLIC_SUPABASE_URL} />
+    <meta name="supabase-key" content={import.meta.env.PUBLIC_SUPABASE_ANON_KEY} />
     <title>{title} | التحالف السوداني للإنتان</title>
     <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
+    <script is:inline src={url("push-client.js")} defer></script>
   </head>
   <body>
     <main class="admin-shell">

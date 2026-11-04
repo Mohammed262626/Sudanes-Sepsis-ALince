@@ -34,8 +34,11 @@ const nav = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f7f5f0" />
+    <meta name="supabase-url" content={import.meta.env.PUBLIC_SUPABASE_URL} />
+    <meta name="supabase-key" content={import.meta.env.PUBLIC_SUPABASE_ANON_KEY} />
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
+    <script is:inline src={url("push-client.js")} defer></script>
   </head>
   <body>
     <a class="skip" href="#main">تجاوز إلى المحتوى</a>

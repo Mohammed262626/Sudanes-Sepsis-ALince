@@ -10,13 +10,14 @@
     { id: "conference_registrations", label: "التسجيلات" },
     { id: "scan", label: "الحضور" },
     { id: "assessments", label: "الاستبانات" },
+    { id: "push", label: "إشعارات" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
     { id: "templates", label: "قوالب واتساب" },
   ];
 
   const dataTabs = tabs.filter(
-    (t) => !["templates", "scan", "assessments"].includes(t.id),
+    (t) => !["templates", "scan", "assessments", "push"].includes(t.id),
   );
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
@@ -456,6 +457,36 @@
     typeof Notification !== "undefined" && Notification.permission === "granted",
   );
 
+  let pushText = $state("");
+  let pushNote = $state("");
+  let pushing = $state(false);
+  let pushCount = $state(0);
+
+  async function sendPush() {
+    if (!supabase || pushing) return;
+    const body = pushText.trim();
+    if (!body) return;
+    if (!confirm(`إرسال الإشعار إلى ${pushCount} مشتركاً؟`)) return;
+    pushing = true;
+    pushNote = "";
+    const { data, error } = await supabase.functions.invoke("push-send", {
+      body: { title: "التحالف السوداني للإنتان", body },
+    });
+    pushing = false;
+    if (error) {
+      pushNote = "تعذّر الإرسال. حاول مرة أخرى.";
+      pushToast(pushNote, false);
+      return;
+    }
+    const sent = Number((data as { sent?: number } | null)?.sent ?? 0);
+    const failed = Number((data as { failed?: number } | null)?.failed ?? 0);
+    pushNote = `وصل ${sent} إشعاراً` + (failed ? `، وفشل ${failed}.` : ".");
+    pushToast(pushNote, failed === 0);
+    if (failed && notifyOn) new Notification("فشل بعض الإشعارات", { body: pushNote });
+    pushText = "";
+    await load();
+  }
+
   async function askNotify() {
     if (typeof Notification === "undefined") {
       pushToast("المتصفح لا يدعم الإشعارات.", false);
@@ -463,11 +494,14 @@
     }
     const state = await Notification.requestPermission();
     notifyOn = state === "granted";
+    const joined = notifyOn && (await (window as any).sepPush?.());
     pushToast(
-      state === "granted"
-        ? "تم تفعيل إشعارات المتصفح."
-        : "لم يُسمح بالإشعارات — فعّلها من إعدادات المتصفح.",
-      state === "granted",
+      state !== "granted"
+        ? "لم يُسمح بالإشعارات — فعّلها من إعدادات المتصفح."
+        : joined
+          ? "تم تفعيل إشعارات المتصفح على هذا الجهاز."
+          : "سُمح بالإشعارات، لكن تعذّر تسجيل المتصفح.",
+      state === "granted" && !!joined,
     );
   }
 
@@ -876,6 +910,11 @@
     preOpen = !!config.data?.assessment_pre_open;
     postOpen = !!config.data?.assessment_post_open;
 
+    const subs = await supabase
+      .from("push_subscriptions")
+      .select("endpoint", { count: "exact", head: true });
+    pushCount = subs.count ?? 0;
+
     data = next;
     loading = false;
   }
@@ -989,7 +1028,9 @@
         ? present
         : id === "assessments"
           ? answeredPeople
-          : (data[id]?.length ?? 0);
+          : id === "push"
+            ? pushCount
+            : (data[id]?.length ?? 0);
 
   // Release the camera when leaving the attendance tab; focus the code field when
   // arriving so a USB/keyboard QR gun types straight into it.
@@ -1217,6 +1258,30 @@
         <p class="admin-note">
           {saveNote ||
             "المتغيّرات المتاحة: {{name}} و {{ticket_code}} — تُستبدل تلقائياً عند الإرسال."}
+        </p>
+      </div>
+    </div>
+  {:else if tab === "push"}
+    <div class="templates">
+      <label>
+        <span>نص الإشعار</span>
+        <textarea
+          rows="4"
+          bind:value={pushText}
+          placeholder="مثال: تذكير — الجلسة الأولى تبدأ الآن في القاعة الرئيسية."
+        ></textarea>
+      </label>
+      <div class="templates-foot">
+        <button
+          class="btn"
+          type="button"
+          onclick={sendPush}
+          disabled={pushing || pushCount === 0 || !pushText.trim()}
+        >
+          {pushing ? "جارٍ الإرسال…" : `إرسال إلى ${pushCount}`}
+        </button>
+        <p class="admin-note">
+          {pushNote || "يصل إلى كل من فعّل الإشعارات في متصفحه — حتى لو كان الموقع مغلقاً."}
         </p>
       </div>
     </div>

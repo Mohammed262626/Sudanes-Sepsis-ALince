@@ -30,8 +30,15 @@
         // Nothing to store; the bar still closes.
       }
       // Ask inside the click, as browsers require. Refusal is fine.
-      if (typeof Notification !== "undefined" && Notification.permission === "default") {
-        Notification.requestPermission();
+      if (typeof Notification !== "undefined") {
+        const subscribe = () => window.sepPush && window.sepPush();
+        if (Notification.permission === "default") {
+          Notification.requestPermission().then((state) => {
+            if (state === "granted") subscribe();
+          });
+        } else if (Notification.permission === "granted") {
+          subscribe();
+        }
       }
       box.remove();
     });
