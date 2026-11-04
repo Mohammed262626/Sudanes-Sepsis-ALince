@@ -2,10 +2,18 @@
 // must be a Supabase user whose email is in admin_emails.
 import webpush from "npm:web-push@3.6.7";
 
+// The dashboard calls this function from the browser, so it must allow the
+// preflight. The function is still admin-gated by JWT + admin_emails.
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...cors },
   });
 
 const url = Deno.env.get("SUPABASE_URL") ?? "";
@@ -24,6 +32,7 @@ async function getSecret(name: string): Promise<string | null> {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
