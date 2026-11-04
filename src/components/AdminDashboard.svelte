@@ -416,8 +416,27 @@
   }
 
   // WhatsApp runs inside the database trigger, so Green API's answer lands a
-  // moment later. Poll the log a few times and show the truth; no fake success.
-  let sendLines = $state<{ text: string; ok: boolean }[]>([]);
+  // moment later. Poll the log a few times and say the truth; no fake success.
+  type Toast = { id: number; text: string; ok: boolean };
+  let toasts = $state<Toast[]>([]);
+  let toastSeq = 0;
+  const toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+  function dismissToast(id: number) {
+    const timer = toastTimers.get(id);
+    if (timer) clearTimeout(timer);
+    toastTimers.delete(id);
+    toasts = toasts.filter((t) => t.id !== id);
+  }
+
+  function pushToast(text: string, ok: boolean) {
+    const id = ++toastSeq;
+    toasts = [...toasts, { id, text, ok }].slice(-4);
+    toastTimers.set(
+      id,
+      setTimeout(() => dismissToast(id), ok ? 6000 : 10000),
+    );
+  }
 
   const SEND_KINDS: Record<string, string> = {
     approval: "رسالة القبول",
@@ -432,10 +451,29 @@
     admin: "تنبيه الأدمن",
   };
 
+  // Browser notifications are for the failures you cannot sit and watch for.
+  let notifyOn = $state(
+    typeof Notification !== "undefined" && Notification.permission === "granted",
+  );
+
+  async function askNotify() {
+    if (typeof Notification === "undefined") {
+      pushToast("المتصفح لا يدعم الإشعارات.", false);
+      return;
+    }
+    const state = await Notification.requestPermission();
+    notifyOn = state === "granted";
+    pushToast(
+      state === "granted"
+        ? "تم تفعيل إشعارات المتصفح."
+        : "لم يُسمح بالإشعارات — فعّلها من إعدادات المتصفح.",
+      state === "granted",
+    );
+  }
+
   async function showSends(ids: number[] = []) {
     if (!supabase) return;
     const since = new Date(Date.now() - 120_000).toISOString();
-    sendLines = [];
     for (let attempt = 0; attempt < 4; attempt++) {
       await new Promise((r) => setTimeout(r, 2000));
       const q = supabase
@@ -447,14 +485,19 @@
       if (ids.length) q.in("ref_id", ids);
       const { data } = await q;
       if (!data?.length) continue;
-      sendLines = data.map((r) => {
+      for (const r of data) {
         const who = String(r.chat_id ?? "").replace("@c.us", "");
         const what = SEND_KINDS[r.kind] ?? r.kind;
-        if (r.ok) return { ok: true, text: `تم إرسال ${what} إلى ${who}.` };
+        if (r.ok) {
+          pushToast(`تم إرسال ${what} إلى ${who}.`, true);
+          continue;
+        }
         const why =
           Number(r.status) === 466 ? "تجاوز حصة Green API الشهرية" : `رمز ${r.status}`;
-        return { ok: false, text: `تعذّر إرسال ${what} إلى ${who} — ${why}.` };
-      });
+        const text = `تعذّر إرسال ${what} إلى ${who} — ${why}.`;
+        pushToast(text, false);
+        if (notifyOn) new Notification("تعذّر إرسال واتساب", { body: text });
+      }
       return;
     }
   }
@@ -967,6 +1010,17 @@
       <button
         class="btn btn--ghost btn--icon"
         type="button"
+        data-act={notifyOn ? "ok" : undefined}
+        title={notifyOn ? "الإشعارات مفعّلة" : "تفعيل إشعارات المتصفح"}
+        aria-label={notifyOn ? "الإشعارات مفعّلة" : "تفعيل إشعارات المتصفح"}
+        aria-pressed={notifyOn}
+        onclick={askNotify}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8" /><path d="M10.3 21a2 2 0 0 0 3.4 0" /></svg>
+      </button>
+      <button
+        class="btn btn--ghost btn--icon"
+        type="button"
         title="تحديث"
         aria-label="تحديث"
         onclick={load}
@@ -1000,9 +1054,16 @@
   <p class="form-status" data-state="error">{actionError}</p>
 {/if}
 
-{#each sendLines as line, i (i)}
-  <p class="form-status" data-state={line.ok ? "ok" : "error"}>{line.text}</p>
-{/each}
+{#if toasts.length}
+  <div class="toasts" aria-live="polite">
+    {#each toasts as t (t.id)}
+      <div class="toast" data-state={t.ok ? "ok" : "error"}>
+        <span>{t.text}</span>
+        <button type="button" aria-label="إغلاق" onclick={() => dismissToast(t.id)}>✕</button>
+      </div>
+    {/each}
+  </div>
+{/if}
 
 {#if loading}
   <div

@@ -6,7 +6,7 @@
 <aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية">
   <p>
     نستخدم كاميرا هاتفك لمسح رمز البوابة عند تسجيل الحضور، ونحفظ تفضيلاتك في
-    متصفحك. لا نستخدم كوكيز تتبّع.
+    متصفحك. لا نستخدم كوكيز تتبّع. سنطلب أيضاً إذن إشعارات المتصفح، ويمكنك رفضه.
   </p>
   <button class="btn btn--ghost btn--sm" type="button" id="consent-ok">حسناً</button>
 </aside>
@@ -28,6 +28,10 @@
         localStorage.setItem("sep-consent", "1");
       } catch {
         // Nothing to store; the bar still closes.
+      }
+      // Ask inside the click, as browsers require. Refusal is fine.
+      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+        Notification.requestPermission();
       }
       box.remove();
     });

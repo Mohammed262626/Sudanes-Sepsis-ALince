@@ -633,6 +633,72 @@ img {
   color: var(--accent);
 }
 
+/* Send results: what Green API actually answered. Fade only, no motion. */
+.toasts {
+  position: fixed;
+  inset-block-end: 1rem;
+  inset-inline-start: 1rem;
+  z-index: 70;
+  display: grid;
+  gap: 0.5rem;
+  inline-size: min(22rem, calc(100vw - 2rem));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  animation: toast-in 0.18s ease-out;
+}
+
+.toast span {
+  flex: 1;
+}
+
+.toast button {
+  flex: none;
+  border: 0;
+  padding: 0.1rem 0.2rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast[data-state="ok"] {
+  border-color: var(--ok);
+}
+
+.toast[data-state="error"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+.admin-actions .btn[data-act="ok"] {
+  color: var(--ok);
+}
+
 .contact-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
