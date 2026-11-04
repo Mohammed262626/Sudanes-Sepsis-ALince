@@ -45,9 +45,11 @@
     const box = document.getElementById("consent");
     if (!box) return;
 
+    // Only the fresh value counts. A legacy "=1" from the old bar is ignored, so
+    // it can finish deciding instead of being silently skipped forever.
     let remembered = false;
     try {
-      remembered = localStorage.getItem("sep-consent") === "1";
+      remembered = localStorage.getItem("sep-consent") === "granted";
     } catch {
       // Private mode: nothing to remember, the bar may return each visit.
     }
@@ -101,7 +103,7 @@
       if (notify === "granted") window.sepPush?.();
       if (settled()) {
         try {
-          localStorage.setItem("sep-consent", "1");
+          localStorage.setItem("sep-consent", "granted");
         } catch {
           // Nothing to store; the bar still closes for this visit.
         }
