@@ -157,18 +157,27 @@ const sendTicketQr = (chatId: string, code: string, target: string, caption: str
     caption,
   });
 
-// Three link buttons: the guest's page, the calendar file, and the decline path.
-const sendTicketButtons = (chatId: string, code: string, target: string) =>
+// Buttons roam with the door page: confirm attendance, the guest dashboard
+// (door + ticket + assessments live there), and the decline path. Max 3.
+const sendTicketButtons = (
+  chatId: string,
+  token: string,
+  target: string,
+  body: string,
+) =>
   greenApi("sendInteractiveButtons", {
     chatId,
     header: "مؤتمر كسلا للإنتان",
-    body:
-      `تذكرتك ${code} جاهزة.\n` +
-      "اضغط «تأكيد الحضور» عند وصولك، ثم امسح رمز البوابة بكاميرا هاتفك ليُسجَّل حضورك.",
+    body,
     footer: "الاثنين 16 نوفمبر 2026",
     buttons: [
       { type: "url", buttonId: "1", buttonText: "تأكيد الحضور", url: target },
-      { type: "url", buttonId: "2", buttonText: "أضف إلى التقويم", url: `${SITE}/calendar/` },
+      {
+        type: "url",
+        buttonId: "2",
+        buttonText: "افتح لوحتك",
+        url: `${SITE}/guest/?s=${encodeURIComponent(token)}`,
+      },
       { type: "url", buttonId: "3", buttonText: "لا أستطيع الحضور", url: target + "&d=1" },
     ],
   });
@@ -396,24 +405,27 @@ Deno.serve(async (req) => {
     return json({ whatsapp: { assessment: result } });
   }
 
-  // Evening-before nudge: the reminder text, then the ticket itself again.
+  // Evening-before nudge: two messages — ticket image (reminder as caption)
+  // and the buttons.
   if (payload.table === "conference_registrations" && payload.event === "REMIND") {
     if (!payload.record.phone) return json({ skipped: true });
     const chatId = toChatId(payload.record.phone);
     const code = payload.record.ticket_code;
-    const target = checkinUrl(code, String(payload.record.checkin_token ?? ""));
+    const token = String(payload.record.checkin_token ?? "");
+    const target = checkinUrl(code, token);
     const whatsapp: Record<string, GreenResult> = {};
-    whatsapp.reminder = await sendWhats(
-      chatId,
-      await template("registration_reminder", payload.record, reminderText(payload.record))
-    );
     whatsapp.ticket = await sendTicketQr(
       chatId,
       code,
       target,
-      "مؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026\nرقم تذكرتك: " + code
+      await template("registration_reminder", payload.record, reminderText(payload.record))
     );
-    whatsapp.buttons = await sendTicketButtons(chatId, code, target);
+    whatsapp.buttons = await sendTicketButtons(
+      chatId,
+      token,
+      target,
+      "غداً نلقاك. تذكرتك في الصورة أعلاه — أو من لوحتك."
+    );
     await logWhats(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
@@ -449,36 +461,22 @@ Deno.serve(async (req) => {
     if (!payload.record.phone) return json({ skipped: true });
     const whatsapp: Record<string, GreenResult> = {};
     if (payload.record.status === "approved") {
-      whatsapp.approval = await sendWhats(
-        chatId,
-        await template("registration_approved", payload.record, approval(payload.record))
-      );
+      const code = payload.record.ticket_code;
+      const token = String(payload.record.checkin_token ?? "");
+      const target = checkinUrl(code, token);
+      // Two messages: the approval text rides as the ticket image's caption.
       whatsapp.ticket = await sendTicketQr(
         chatId,
-        payload.record.ticket_code,
-        checkinUrl(payload.record.ticket_code, String(payload.record.checkin_token ?? "")),
-        "مؤتمر كسلا للإنتان — الاثنين 16 نوفمبر 2026\nرقم تذكرتك: " + payload.record.ticket_code
+        code,
+        target,
+        await template("registration_approved", payload.record, approval(payload.record))
       );
       whatsapp.buttons = await sendTicketButtons(
         chatId,
-        payload.record.ticket_code,
-        checkinUrl(payload.record.ticket_code, String(payload.record.checkin_token ?? ""))
+        token,
+        target,
+        "تذكرتك جاهزة. «لوحتك» فيها التذكرة والحضور والاستبانات — تُفتح بلا كلمة مرور."
       );
-      // One extra message: the guest's own page, opened once and remembered.
-      whatsapp.dashboard = await greenApi("sendInteractiveButtons", {
-        chatId,
-        header: "لوحتك",
-        body: "تذكرتك، حضورك، واستباناتك في صفحة واحدة.\nاحفظها على جهازك — تُفتح بلا كلمة مرور.",
-        footer: "التحالف السوداني للإنتان",
-        buttons: [
-          {
-            type: "url",
-            buttonId: "1",
-            buttonText: "افتح لوحتك",
-            url: `${SITE}/guest/?s=${encodeURIComponent(String(payload.record.checkin_token ?? ""))}`,
-          },
-        ],
-      });
     } else if (payload.record.status === "rejected") {
       whatsapp.rejection = await sendWhats(
         chatId,
