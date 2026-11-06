@@ -2,7 +2,7 @@
 // Triggered by public.notify_email() (see Supabase migrations); authenticated
 // with the x-webhook-secret header, compared against the value in Supabase Vault.
 // WhatsApp via Green API is the live channel (registrant confirmation + admin
-// alerts); Resend email stays dormant until a verified domain exists.
+// alerts); email goes through Brevo once its sender domain is verified.
 
 const FROM = "التحالف السوداني للإنتان <no-reply@sudansepsisalince.sd>";
 
@@ -510,24 +510,30 @@ Deno.serve(async (req) => {
   const mail = compose(payload.table, payload.record);
   if (!mail?.to) return json({ skipped: true, whatsapp });
 
-  const apiKey = await getSecret("resend_api_key");
-  if (!apiKey) return json({ error: "missing resend key", whatsapp }, 500);
+  const apiKey = (await getSecret("brevo_api_key"))?.trim();
+  if (!apiKey) return json({ error: "missing brevo key", whatsapp }, 500);
 
-  const res = await fetch("https://api.resend.com/emails", {
+  // Brevo wants the display name and the address separately.
+  const fromMatch = FROM.match(/^(.*)<(.+)>$/);
+  const senderName = (fromMatch?.[1] ?? "التحالف السوداني للإنتان").trim();
+  const senderEmail = (fromMatch?.[2] ?? FROM).trim();
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + apiKey,
+      "api-key": apiKey,
+      accept: "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: FROM,
-      to: [mail.to],
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email: mail.to }],
       subject: mail.subject,
-      html: mail.html,
+      htmlContent: mail.html,
     }),
   });
 
   const out = await res.text();
-  console.log("resend", payload.table, res.status, out);
+  console.log("brevo", payload.table, res.status, out);
   return json({ sent: res.ok, status: res.status, whatsapp });
 });
