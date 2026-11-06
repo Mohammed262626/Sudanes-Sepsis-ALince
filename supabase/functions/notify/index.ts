@@ -59,9 +59,15 @@ function layout(body: string, preheader = "") {
     '<tr><td align="center" style="padding:32px 16px">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;width:100%;background:#ffffff;border:2px solid ' + INK + '">' +
     '<tr><td dir="rtl" align="right" style="background:' + INK + ';padding:20px 24px;text-align:right">' +
+    '<table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="border-collapse:collapse">' +
+    '<tr>' +
+    '<td style="padding-left:14px;vertical-align:middle">' +
+    '<img src="' + SITE + '/logo.png" width="85" height="56" alt="" style="display:block;border:0;outline:none;text-decoration:none;width:85px;height:56px">' +
+    "</td>" +
+    '<td style="vertical-align:middle;text-align:right">' +
     '<div style="color:' + PAPER + ';font-size:17px;font-weight:bold">التحالف السوداني للإنتان</div>' +
     '<div style="color:#b9b3a7;font-size:12px;margin-top:4px">مؤتمر كسلا للإنتان — 30 نوفمبر 2026</div>' +
-    "</td></tr>" +
+    "</td></tr></table></td></tr>" +
     '<tr><td style="height:4px;line-height:4px;font-size:0;background:' + ACCENT + '">&nbsp;</td></tr>' +
     '<tr><td dir="rtl" align="right" style="padding:28px 24px 8px;font-size:16px;line-height:1.75;color:' + INK + ';text-align:right">' + body + "</td></tr>" +
     '<tr><td dir="rtl" align="right" style="padding:18px 24px 24px;border-top:2px solid ' + LINE + ';font-size:12px;line-height:1.8;color:' + MUTED + ';text-align:right">' +

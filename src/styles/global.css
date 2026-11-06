@@ -179,12 +179,9 @@ img {
   line-height: 1.3;
 }
 
-.brand::before {
-  content: "";
-  inline-size: 12px;
-  block-size: 12px;
-  background: var(--accent);
-  flex: none;
+.brand img {
+  inline-size: auto;
+  block-size: 34px;
 }
 
 .nav-links {
@@ -482,6 +479,10 @@ img {
 
 .footer .brand {
   color: var(--ink);
+}
+
+.footer .brand img {
+  block-size: 28px;
 }
 
 .footer-links {
