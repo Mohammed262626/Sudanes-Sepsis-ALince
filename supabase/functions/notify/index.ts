@@ -35,13 +35,50 @@ const esc = (v: string) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c
   );
 
-function layout(body: string) {
+// Email clients drop <style> blocks and ignore flex/grid, so the shell is
+// nested tables with inline styles only. Same palette as the site: paper
+// background, ink borders, one accent rule, no shadows or gradients.
+const PAPER = "#f7f5f0";
+const INK = "#15130f";
+const ACCENT = "#c0392b";
+const LINE = "#ddd8cf";
+const MUTED = "#6f6a62";
+
+function layout(body: string, preheader = "") {
   return (
-    '<!doctype html><html lang="ar" dir="rtl"><body style="margin:0;background:#f7f5f0;color:#15130f;font-family:Tahoma,Arial,sans-serif"><div style="max-width:560px;margin:0 auto;padding:32px 24px"><div style="height:4px;background:#c0392b;margin-bottom:28px"></div>' +
-    body +
-    '<p style="margin-top:32px;font-size:13px;color:#6f6a62">التحالف السوداني للإنتان</p></div></body></html>'
+    '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>التحالف السوداني للإنتان</title></head>' +
+    '<body style="margin:0;padding:0;background:' + PAPER + ';color:' + INK +
+    ';font-family:Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%">' +
+    (preheader
+      ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' + esc(preheader) + "</div>"
+      : "") +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + PAPER + '">' +
+    '<tr><td align="center" style="padding:32px 16px">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border:2px solid ' + INK + '">' +
+    '<tr><td style="background:' + INK + ';padding:20px 24px">' +
+    '<div style="color:' + PAPER + ';font-size:17px;font-weight:bold">التحالف السوداني للإنتان</div>' +
+    '<div style="color:#b9b3a7;font-size:12px;margin-top:4px">مؤتمر كسلا للإنتان — 30 نوفمبر 2026</div>' +
+    "</td></tr>" +
+    '<tr><td style="height:4px;line-height:4px;font-size:0;background:' + ACCENT + '">&nbsp;</td></tr>' +
+    '<tr><td style="padding:28px 24px 8px;font-size:16px;line-height:1.75;color:' + INK + '">' + body + "</td></tr>" +
+    '<tr><td style="padding:18px 24px 24px;border-top:2px solid ' + LINE + ';font-size:12px;line-height:1.8;color:' + MUTED + '">' +
+    '<a href="' + SITE + '" style="color:' + ACCENT + ';text-decoration:none">التحالف السوداني للإنتان</a><br>' +
+    "رسالة تلقائية — لا تُستخدم للإبلاغ عن حالات طبية طارئة." +
+    "</td></tr></table></td></tr></table></body></html>"
   );
 }
+
+// Bordered detail box with label/value rows, mirroring the site's row pattern.
+const row = (label: string, value: string) =>
+  '<tr><td style="padding:3px 0;color:' + MUTED + ';font-size:13px;width:84px;vertical-align:top">' + label +
+  '</td><td style="padding:3px 0;font-weight:bold">' + value + "</td></tr>";
+
+const box = (rows: string) =>
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0">' +
+  '<tr><td style="border:2px solid ' + LINE + ';padding:14px 16px;font-size:15px;line-height:1.8;color:' + INK + '">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' + rows + "</table>" +
+  "</td></tr></table>";
 
 type Record_ = Record<string, string>;
 
@@ -194,10 +231,14 @@ function compose(
       html: layout(
         '<h1 style="font-size:22px;margin:0 0 16px">استلمنا طلب تسجيلك</h1>' +
           "<p>أهلاً " + name + "،</p>" +
-          "<p>طلبك لمؤتمر <strong>كسلا للإنتان</strong> وصلنا:</p>" +
-          '<p style="margin:16px 0;padding:16px;border:1px solid #ddd8cf">' +
-          "الاثنين 30 نوفمبر 2026<br>9:00 صباحاً بتوقيت الخرطوم<br>كسلا</p>" +
-          "<p>سنتواصل معك قريباً لتأكيد القبول.</p>"
+          "<p style=\"margin:0 0 4px\">طلبك لمؤتمر <strong>كسلا للإنتان</strong> وصلنا.</p>" +
+          box(
+            row("التاريخ", "الاثنين 30 نوفمبر 2026") +
+              row("الوقت", "9:00 صباحاً بتوقيت الخرطوم") +
+              row("المكان", "كسلا")
+          ) +
+          "<p>سنتواصل معك قريباً لتأكيد القبول.</p>",
+        "استلمنا طلب تسجيلك في مؤتمر كسلا للإنتان"
       ),
     };
   }
@@ -208,7 +249,8 @@ function compose(
       html: layout(
         '<h1 style="font-size:22px;margin:0 0 16px">استلمنا رسالتك</h1>' +
           "<p>أهلاً " + name + "،</p>" +
-          "<p>شكراً لتواصلك مع التحالف السوداني للإنتان. سنعود إليك في أقرب وقت.</p>"
+          "<p>شكراً لتواصلك مع التحالف السوداني للإنتان. سنعود إليك في أقرب وقت.</p>",
+        "استلمنا رسالتك — التحالف السوداني للإنتان"
       ),
     };
   }
@@ -219,7 +261,8 @@ function compose(
       html: layout(
         '<h1 style="font-size:22px;margin:0 0 16px">شكراً لاهتمامك</h1>' +
           "<p>أهلاً " + name + "،</p>" +
-          "<p>سجّلنا اهتمامك بدعم التحالف السوداني للإنتان، وسنرسل لك تفاصيل الدعم فور جاهزيتها.</p>"
+          "<p>سجّلنا اهتمامك بدعم التحالف السوداني للإنتان، وسنرسل لك تفاصيل الدعم فور جاهزيتها.</p>",
+        "شكراً لاهتمامك بدعم التحالف السوداني للإنتان"
       ),
     };
   }
