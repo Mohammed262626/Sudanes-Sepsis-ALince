@@ -40,7 +40,7 @@ const esc = (v: string) =>
 // background, ink borders, one accent rule, no shadows or gradients.
 const PAPER = "#f7f5f0";
 const INK = "#15130f";
-const ACCENT = "#c0392b";
+const ACCENT = "#962567";
 const LINE = "#ddd8cf";
 const MUTED = "#6f6a62";
 
@@ -184,7 +184,7 @@ async function assessmentOpen(stage: "pre" | "post"): Promise<boolean> {
 }
 
 const qrImageUrl = (target: string) =>
-  `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=8B0000&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(target)}`;
+  `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&margin=20&color=962567&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(target)}`;
 
 // Sends the ticket QR as an image.
 // Brand colours: dark red on white keeps scanner contrast high.
