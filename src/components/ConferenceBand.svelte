@@ -21,7 +21,7 @@
     <div class="wrap conf-band-inner">
       <a class="conf-band-title" href={url("conference")}>
         <strong>مؤتمر كسلا للإنتان</strong>
-        <span>16 نوفمبر 2026 · 9:00 صباحاً · كسلا</span>
+        <span>30 نوفمبر 2026 · 9:00 صباحاً · كسلا</span>
       </a>
       <p class="conf-band-count">
         متبقٍ {days} يوم

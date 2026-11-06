@@ -2,7 +2,7 @@
   import { supabase } from "../lib/supabase";
   import { url } from "../lib/url";
 
-  const DEADLINE = new Date("2026-11-03T23:59:59+02:00").getTime();
+  const DEADLINE = new Date("2026-11-16T23:59:59+02:00").getTime();
 
   let now = $state(Date.now());
   $effect(() => {
@@ -103,7 +103,7 @@
   </form>
 {:else}
   <p>
-    انتهت فترة التسجيل في 3 نوفمبر 2026. للاستفسار،
+    انتهت فترة التسجيل في 16 نوفمبر 2026. للاستفسار،
     <a href={url("#contact")}>تواصل معنا</a>.
   </p>
 {/if}

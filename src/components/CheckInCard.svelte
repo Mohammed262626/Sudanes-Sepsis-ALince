@@ -15,7 +15,7 @@
     | "done"
     | "error";
 
-  const EVENT = "الاثنين 16 نوفمبر 2026";
+  const EVENT = "الاثنين 30 نوفمبر 2026";
   const dateFmt = new Intl.DateTimeFormat("ar", { dateStyle: "medium", timeStyle: "short" });
   const reduced = () =>
     typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
