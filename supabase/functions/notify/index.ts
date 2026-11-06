@@ -48,21 +48,23 @@ function layout(body: string, preheader = "") {
   return (
     '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1"><title>التحالف السوداني للإنتان</title></head>' +
-    '<body style="margin:0;padding:0;background:' + PAPER + ';color:' + INK +
-    ';font-family:Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%">' +
+    // Gmail drops <head> and anything on <html>, so direction lives on <body>
+    // and right-alignment is repeated on every text cell below.
+    '<body dir="rtl" style="margin:0;padding:0;background:' + PAPER + ';color:' + INK +
+    ';direction:rtl;text-align:right;font-family:Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%">' +
     (preheader
       ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' + esc(preheader) + "</div>"
       : "") +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:' + PAPER + '">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="background:' + PAPER + '">' +
     '<tr><td align="center" style="padding:32px 16px">' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border:2px solid ' + INK + '">' +
-    '<tr><td style="background:' + INK + ';padding:20px 24px">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;width:100%;background:#ffffff;border:2px solid ' + INK + '">' +
+    '<tr><td dir="rtl" align="right" style="background:' + INK + ';padding:20px 24px;text-align:right">' +
     '<div style="color:' + PAPER + ';font-size:17px;font-weight:bold">التحالف السوداني للإنتان</div>' +
     '<div style="color:#b9b3a7;font-size:12px;margin-top:4px">مؤتمر كسلا للإنتان — 30 نوفمبر 2026</div>' +
     "</td></tr>" +
     '<tr><td style="height:4px;line-height:4px;font-size:0;background:' + ACCENT + '">&nbsp;</td></tr>' +
-    '<tr><td style="padding:28px 24px 8px;font-size:16px;line-height:1.75;color:' + INK + '">' + body + "</td></tr>" +
-    '<tr><td style="padding:18px 24px 24px;border-top:2px solid ' + LINE + ';font-size:12px;line-height:1.8;color:' + MUTED + '">' +
+    '<tr><td dir="rtl" align="right" style="padding:28px 24px 8px;font-size:16px;line-height:1.75;color:' + INK + ';text-align:right">' + body + "</td></tr>" +
+    '<tr><td dir="rtl" align="right" style="padding:18px 24px 24px;border-top:2px solid ' + LINE + ';font-size:12px;line-height:1.8;color:' + MUTED + ';text-align:right">' +
     '<a href="' + SITE + '" style="color:' + ACCENT + ';text-decoration:none">التحالف السوداني للإنتان</a><br>' +
     "رسالة تلقائية — لا تُستخدم للإبلاغ عن حالات طبية طارئة." +
     "</td></tr></table></td></tr></table></body></html>"
@@ -71,13 +73,13 @@ function layout(body: string, preheader = "") {
 
 // Bordered detail box with label/value rows, mirroring the site's row pattern.
 const row = (label: string, value: string) =>
-  '<tr><td style="padding:3px 0;color:' + MUTED + ';font-size:13px;width:84px;vertical-align:top">' + label +
-  '</td><td style="padding:3px 0;font-weight:bold">' + value + "</td></tr>";
+  '<tr><td align="right" style="padding:3px 0;color:' + MUTED + ';font-size:13px;width:84px;vertical-align:top;text-align:right">' + label +
+  '</td><td align="right" style="padding:3px 0;font-weight:bold;text-align:right">' + value + "</td></tr>";
 
 const box = (rows: string) =>
-  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0">' +
-  '<tr><td style="border:2px solid ' + LINE + ';padding:14px 16px;font-size:15px;line-height:1.8;color:' + INK + '">' +
-  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' + rows + "</table>" +
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="margin:20px 0">' +
+  '<tr><td dir="rtl" align="right" style="border:2px solid ' + LINE + ';padding:14px 16px;font-size:15px;line-height:1.8;color:' + INK + ';text-align:right">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" dir="rtl">' + rows + "</table>" +
   "</td></tr></table>";
 
 type Record_ = Record<string, string>;
