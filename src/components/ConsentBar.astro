@@ -1,10 +1,19 @@
 ---
 // One-time(ish) notice: the page needs the camera at check-in and notifications
 // for conference alerts. Until both are allowed the bar keeps coming back; once
-// everything is granted it never shows again.
+// everything is granted it never shows again. If the browser allows
+// notifications but cannot save the push subscription, the bar demotes itself
+// to one quiet line for 24h instead of repeating a failing attempt every visit.
 ---
 
 <aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية والأذونات">
+  <div class="consent-quiet" hidden>
+    <p id="consent-quiet-text">الإشعارات مسموحة، لكن المتصفح لم يُكمل تسجيلها على هذا الجهاز.</p>
+    <div class="consent-quiet-actions">
+      <button class="btn btn--sm" type="button" data-retry>أعد المحاولة</button>
+      <button class="btn btn--ghost btn--sm" type="button" data-hide>لاحقاً</button>
+    </div>
+  </div>
   <div class="consent-body">
     <p class="consent-title">نحتاج إذنكم مرة واحدة</p>
     <p class="consent-lead">
@@ -50,10 +59,12 @@
 
     const cameraState = box.querySelector('[data-item="camera"] .consent-state');
     const notifyState = box.querySelector('[data-item="notify"] .consent-state');
+    const quietNote = box.querySelector(".consent-quiet");
+    const quietText = box.querySelector("#consent-quiet-text");
 
     const labels = {
       granted: "مسموح",
-      warn: "مسموح — تعذّر تسجيل المتصفح. حدّث الصفحة وحاول مرة أخرى",
+      warn: "مسموح — تعذّر تسجيل التنبيهات",
       denied: "مرفوض — فعّله من إعدادات المتصفح",
       prompt: "بانتظار الإذن",
       unsupported: "غير متاح في هذا المتصفح",
@@ -62,6 +73,29 @@
     const paint = (el, state) => {
       el.dataset.state = state;
       el.textContent = labels[state] ?? labels.prompt;
+    };
+
+    const PUSH_FAIL = "sep-push-fail";
+    const DAY = 24 * 60 * 60 * 1000;
+
+    const isIOS = () =>
+      /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isStandalone = () =>
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      navigator.standalone === true;
+    // Links opened from WhatsApp/Instagram and other apps run in a webview,
+    // where web push cannot be registered at all.
+    const isWebview = () => /; wv\)|FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
+
+    const pushHint = () => {
+      if (isIOS() && !isStandalone()) {
+        return "للآيفون: أضِف الموقع إلى الشاشة الرئيسية (مشاركة ← إضافة إلى الشاشة الرئيسية) ثم افتحه من هناك لتصل التنبيهات.";
+      }
+      if (isWebview()) {
+        return "افتح الرابط في متصفح كامل (Chrome أو Safari) لتصل التنبيهات.";
+      }
+      return "مسموح — تعذّر تسجيل التنبيهات على هذا الجهاز. سنحاول تلقائياً لاحقاً.";
     };
 
     const queryCamera = async () => {
@@ -92,27 +126,80 @@
       (notify === "granted" || notify === "unsupported") &&
       subscribed !== false;
 
+    const rememberFail = () => {
+      try {
+        localStorage.setItem(PUSH_FAIL, String(Date.now()));
+      } catch {
+        // Nothing to store; the hint still shows this visit.
+      }
+    };
+
+    const forgetFail = () => {
+      try {
+        localStorage.removeItem(PUSH_FAIL);
+      } catch {
+        // Nothing stored.
+      }
+    };
+
     const refresh = async () => {
       camera = normal(await queryCamera());
       notify = normal(stateOfNotify());
       paint(cameraState, camera);
+
+      let subscriptionBlocked = false;
       if (notify === "granted") {
-        const saved = await window.sepPush?.();
-        subscribed = saved === true;
+        let failedAt = 0;
+        try {
+          failedAt = Number(localStorage.getItem(PUSH_FAIL) || 0);
+        } catch {
+          // Treat as no previous failure.
+        }
+        // A failure in the last 24h: skip the attempt that we know fails, keep
+        // the note quiet. Older than that: try again by itself.
+        if (failedAt > 0 && Date.now() - failedAt < DAY) {
+          subscribed = false;
+          subscriptionBlocked = true;
+        } else {
+          const saved = await window.sepPush?.();
+          subscribed = saved === true;
+          subscriptionBlocked = !subscribed;
+          if (subscribed) forgetFail();
+          else rememberFail();
+        }
         paint(notifyState, subscribed ? "granted" : "warn");
+        if (subscriptionBlocked) notifyState.textContent = pushHint();
       } else {
         subscribed = null;
         paint(notifyState, notify);
       }
+
       if (settled()) {
         try {
           localStorage.setItem("sep-consent", "granted");
         } catch {
           // Nothing to store; the bar still closes for this visit.
         }
+        forgetFail();
         box.remove();
         return true;
       }
+
+      // Only the browser's own push registration is missing (permission is
+      // already granted): one quiet line, not the full ask.
+      const quiet =
+        (camera === "granted" || camera === "unsupported") &&
+        notify === "granted" &&
+        subscriptionBlocked;
+      if (quiet && quietNote) {
+        if (quietText) quietText.textContent = pushHint();
+        box.dataset.mode = "quiet";
+        quietNote.hidden = false;
+      } else {
+        box.dataset.mode = "";
+        if (quietNote) quietNote.hidden = true;
+      }
+
       // Missing anything (revoked, never asked, or subscribe failed): show it.
       box.removeAttribute("hidden");
       return false;
@@ -149,6 +236,13 @@
 
     // «لاحقاً» hides it for this page view only — the reminder returns next visit.
     document.getElementById("consent-later")?.addEventListener("click", () => box.remove());
+
+    // Retry now — e.g. after adding the site to the home screen on iOS.
+    quietNote?.querySelector("[data-retry]")?.addEventListener("click", async () => {
+      forgetFail();
+      await refresh();
+    });
+    quietNote?.querySelector("[data-hide]")?.addEventListener("click", () => box.remove());
 
     refresh();
   })();
@@ -248,6 +342,41 @@
     min-inline-size: 10rem;
   }
 
+  /* Quiet mode: permission is fine, only the browser's push registration is
+     not — one line instead of the whole ask. */
+  .consent[data-mode="quiet"] {
+    padding-block: 0.9rem;
+  }
+
+  .consent[data-mode="quiet"] .consent-body,
+  .consent[data-mode="quiet"] .consent-actions {
+    display: none;
+  }
+
+  .consent-quiet {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .consent-quiet[hidden] {
+    display: none;
+  }
+
+  .consent-quiet p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+
+  .consent-quiet-actions {
+    flex: none;
+    display: flex;
+    gap: 0.5rem;
+  }
+
   @media (max-width: 48rem) {
     .consent {
       flex-direction: column;
@@ -261,6 +390,12 @@
     .consent-actions {
       grid-template-columns: 1fr 1fr;
       min-inline-size: 0;
+    }
+
+    .consent-quiet {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
     }
   }
 </style>
