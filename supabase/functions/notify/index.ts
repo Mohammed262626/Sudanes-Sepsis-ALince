@@ -4,7 +4,7 @@
 // WhatsApp via Green API is the live channel (registrant confirmation + admin
 // alerts); email goes through Brevo once its sender domain is verified.
 
-const FROM = "التحالف السوداني للإنتان <muhasalahsuliman@gmail.com>";
+const FROM = "Sudan Sepsis Alliance <muhasalahsuliman@gmail.com>";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
