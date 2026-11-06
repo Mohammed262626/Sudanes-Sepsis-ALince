@@ -449,6 +449,7 @@
     reminder: "التذكير",
     declined: "رسالة الاعتذار",
     confirmation: "تأكيد التسجيل",
+    email: "البريد الإلكتروني",
     admin: "تنبيه الأدمن",
   };
 
@@ -547,7 +548,7 @@
           Number(r.status) === 466 ? "تجاوز حصة Green API الشهرية" : `رمز ${r.status}`;
         const text = `تعذّر إرسال ${what} إلى ${who} — ${why}.`;
         pushToast(text, false);
-        if (notifyOn) new Notification("تعذّر إرسال واتساب", { body: text });
+        if (notifyOn) new Notification("تعذّر إرسال رسالة", { body: text });
       }
       return;
     }

@@ -21,7 +21,7 @@ RTL. Stack: Astro 7 + Svelte 5 islands + Supabase. Static output (`npm run build
 
 ## Supabase
 
-Project ref `dzruizrqvzrxrjaucyie`. Tables: `activities` (public read),
+Project ref `hdoylixxljkimdypfomp` (`supabase/config.toml`, `init.sql`, live REST URL). Tables: `activities` (public read),
 `contact_messages` and `donation_interests` (insert-only; no public reads).
 `admin_emails` lists the addresses allowed to read submissions; `/admin` is the
 submissions dashboard (Supabase Auth email+password, data access gated by RLS).

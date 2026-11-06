@@ -127,7 +127,7 @@ async function greenApi(method: string, body: Record<string, unknown>): Promise<
 
 // Stores what Green API actually answered for each message of this call, so the
 // admin dashboard can show it instead of a blind "sent".
-async function logWhats(
+async function logSends(
   table: string,
   record: Record<string, unknown>,
   whatsapp: Record<string, GreenResult>,
@@ -161,6 +161,45 @@ async function logWhats(
 
 const sendWhats = (chatId: string, message: string) =>
   greenApi("sendMessage", { chatId, message });
+
+// Email goes through Brevo. Same contract as greenApi: a missing Vault secret or
+// a rejected sender returns a status, so notify_log shows the failure instead of
+// the call pretending to succeed.
+type MailResult = { ok: boolean; status: number; chatId?: string; error?: string };
+
+async function sendMail(to: string, subject: string, html: string): Promise<MailResult> {
+  const apiKey = (await getSecret("brevo_api_key"))?.trim();
+  if (!apiKey) {
+    console.error("brevo: Vault secret missing", { brevo_api_key: !!apiKey });
+    return { ok: false, status: 0, chatId: to, error: "missing brevo_api_key in Vault" };
+  }
+
+  // Brevo wants the display name and the address separately.
+  const fromMatch = FROM.match(/^(.*)<(.+)>$/);
+  const senderName = (fromMatch?.[1] ?? "التحالف السوداني للإنتان").trim();
+  const senderEmail = (fromMatch?.[2] ?? FROM).trim();
+
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  const out = await res.text();
+  console.log("brevo", subject, res.status, out.slice(0, 300));
+  return res.ok
+    ? { ok: true, status: res.status, chatId: to }
+    : { ok: false, status: res.status, chatId: to, error: out.slice(0, 300) };
+}
 
 // The QR points at the guest's own check-in page. The pass (checkin_token) is
 // what opens it; the readable code rides along for the door scanner.
@@ -315,6 +354,33 @@ function approval(r: Record_): string {
   );
 }
 
+// Acceptance email: the same ticket the guest gets on WhatsApp, so the QR still
+// reaches him if the app is gone, the phone changed, or Green API is out of quota.
+function approvalEmail(r: Record_): string {
+  const code = String(r.ticket_code ?? "");
+  const target = checkinUrl(code, String(r.checkin_token ?? ""));
+  return (
+    '<h1 style="font-size:22px;margin:0 0 16px">تم قبول تسجيلك</h1>' +
+    "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
+    '<p style="margin:0 0 4px">يسعدنا قبول تسجيلك في مؤتمر <strong>كسلا للإنتان</strong>.</p>' +
+    box(
+      row("التاريخ", "الاثنين 30 نوفمبر 2026") +
+        row("الوقت", "9:00 صباحاً بتوقيت الخرطوم") +
+        row("المكان", "كسلا") +
+        row("رقم التذكرة", esc(code))
+    ) +
+    '<div style="text-align:center;margin:24px 0">' +
+    '<img src="' + esc(qrImageUrl(target)) + '" width="220" height="220" alt="رمز QR للتذكرة" ' +
+    'style="display:inline-block;border:2px solid ' + INK + ';padding:8px;background:#ffffff">' +
+    "</div>" +
+    "<p>رمز QR أعلاه هو تذكرتك — أظهره عند الدخول. بعض برامج البريد لا تعرض الصور " +
+    "تلقائياً، لذا يمكنك دائماً فتح تذكرتك من الرابط أدناه.</p>" +
+    '<p style="margin:24px 0"><a href="' + esc(target) + '" ' +
+    'style="background:' + ACCENT + ';color:#ffffff;text-decoration:none;padding:12px 22px;' +
+    'display:inline-block;font-weight:bold">فتح التذكرة</a></p>'
+  );
+}
+
 function attended(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
@@ -398,7 +464,7 @@ Deno.serve(async (req) => {
     // the button would dead-end. Both fall back to the plain thanks message.
     if (!hash || !(await assessmentOpen("pre"))) {
       const whatsapp = { attended: await sendWhats(chatId, body) };
-      await logWhats(payload.table, payload.record, whatsapp);
+      await logSends(payload.table, payload.record, whatsapp);
       return json({ whatsapp, preButton: false });
     }
     const result = await greenApi("sendInteractiveButtons", {
@@ -415,7 +481,7 @@ Deno.serve(async (req) => {
         },
       ],
     });
-    await logWhats(payload.table, payload.record, { attended: result });
+    await logSends(payload.table, payload.record, { attended: result });
     return json({ whatsapp: { attended: result }, preButton: true });
   }
 
@@ -452,7 +518,7 @@ Deno.serve(async (req) => {
             },
       ],
     });
-    await logWhats(payload.table, payload.record, { assessment: result });
+    await logSends(payload.table, payload.record, { assessment: result });
     return json({ whatsapp: { assessment: result } });
   }
 
@@ -477,7 +543,7 @@ Deno.serve(async (req) => {
       target,
       "غداً نلقاك. تذكرتك في الصورة أعلاه — أو من لوحتك."
     );
-    await logWhats(payload.table, payload.record, whatsapp);
+    await logSends(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
 
@@ -498,7 +564,7 @@ Deno.serve(async (req) => {
           (payload.record.phone ? " — " + payload.record.phone : "")
       );
     }
-    await logWhats(payload.table, payload.record, whatsapp);
+    await logSends(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
 
@@ -528,13 +594,24 @@ Deno.serve(async (req) => {
         target,
         "تذكرتك جاهزة. «لوحتك» فيها التذكرة والحضور والاستبانات — تُفتح بلا كلمة مرور."
       );
+      // Email runs alongside WhatsApp. Neither channel gates the other: a guest
+      // who never installed WhatsApp, or a Green API quota error, still gets a
+      // ticket he can open and print.
+      if (payload.record.email) {
+        const mail = await sendMail(
+          String(payload.record.email),
+          "تم قبول تسجيلك في مؤتمر كسلا للإنتان — تذكرتك",
+          layout(approvalEmail(payload.record), "تذكرتك لمؤتمر كسلا للإنتان")
+        );
+        await logSends(payload.table, payload.record, { email: mail });
+      }
     } else if (payload.record.status === "rejected") {
       whatsapp.rejection = await sendWhats(
         chatId,
         await template("registration_rejected", payload.record, rejection(payload.record))
       );
     }
-    await logWhats(payload.table, payload.record, whatsapp);
+    await logSends(payload.table, payload.record, whatsapp);
     return json({ whatsapp });
   }
 
@@ -556,35 +633,12 @@ Deno.serve(async (req) => {
     })(),
   ]);
 
-  await logWhats(payload.table, payload.record, whatsapp);
+  await logSends(payload.table, payload.record, whatsapp);
 
   const mail = compose(payload.table, payload.record);
   if (!mail?.to) return json({ skipped: true, whatsapp });
 
-  const apiKey = (await getSecret("brevo_api_key"))?.trim();
-  if (!apiKey) return json({ error: "missing brevo key", whatsapp }, 500);
-
-  // Brevo wants the display name and the address separately.
-  const fromMatch = FROM.match(/^(.*)<(.+)>$/);
-  const senderName = (fromMatch?.[1] ?? "التحالف السوداني للإنتان").trim();
-  const senderEmail = (fromMatch?.[2] ?? FROM).trim();
-
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "api-key": apiKey,
-      accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sender: { name: senderName, email: senderEmail },
-      to: [{ email: mail.to }],
-      subject: mail.subject,
-      htmlContent: mail.html,
-    }),
-  });
-
-  const out = await res.text();
-  console.log("brevo", payload.table, res.status, out);
-  return json({ sent: res.ok, status: res.status, whatsapp });
+  const mailResult = await sendMail(mail.to, mail.subject, mail.html);
+  if (mailResult.status === 0) return json({ error: "missing brevo key", whatsapp }, 500);
+  return json({ sent: mailResult.ok, status: mailResult.status, whatsapp });
 });
