@@ -29,6 +29,10 @@
   let loading = $state(true);
   let failed = $state(false);
   let copied = $state(false);
+  let loginContact = $state("");
+  let loginCode = $state("");
+  let loginBusy = $state(false);
+  let loginError = $state("");
 
   const timeFmt = new Intl.DateTimeFormat("ar-SD", {
     hour: "numeric",
@@ -88,15 +92,52 @@
       return;
     }
     guest = data[0] as Guest;
+    await loadProgram();
+    loading = false;
+  }
 
+  async function loadProgram() {
+    if (!supabase) return;
     // Public read; the schedule lives in the database so it updates without a
     // rebuild. A failure here must not block the ticket.
-    const { data: prog } = await supabase
+    const { data } = await supabase
       .from("conference_program")
       .select("title,starts_at,notes")
       .order("starts_at");
-    program = (prog ?? []) as Session[];
-    loading = false;
+    program = (data ?? []) as Session[];
+  }
+
+  // Contact + the 6 characters after "SX-" on the ticket; returns the same row
+  // as guest_me plus the check-in token, which is what the link carries too.
+  async function login() {
+    if (!supabase || loginBusy) return;
+    if (!loginContact.trim() || loginCode.trim().length !== 6) {
+      loginError = "أدخل الرقم أو البريد، وآخر 6 أحرف من رمز التذكرة.";
+      return;
+    }
+    loginBusy = true;
+    loginError = "";
+    const { data, error } = await supabase.rpc("guest_login", {
+      p_contact: loginContact.trim(),
+      p_code: loginCode.trim(),
+    });
+    const row = (Array.isArray(data) ? data[0] : null) as
+      | (Guest & { token: string })
+      | null;
+    if (error || !row?.token) {
+      loginBusy = false;
+      loginError = "تعذّر الدخول — تأكد من الرقم أو البريد ورمز التذكرة.";
+      return;
+    }
+    token = row.token;
+    try {
+      localStorage.setItem("sep-guest", token);
+    } catch {
+      // Private mode: the session lasts for this visit.
+    }
+    guest = row;
+    await loadProgram();
+    loginBusy = false;
   }
 
   async function copyTicketCode() {
@@ -258,13 +299,43 @@
   </div>
 {:else}
   <div class="empty">
-    <h1>الدخول عبر رسالة القبول</h1>
+    <h1>دخول لوحتك</h1>
     <p class="note">
-      افتح زر «افتح لوحتك» في رسالة القبول التي وصلتك على واتساب. تُحفظ اللوحة على هذا
-      الجهاز، فلا تحتاج للرابط مرة أخرى.
+      أدخل رقم هاتفك أو بريدك مع رمز تذكارتك، أو افتح زر «افتح لوحتك» في رسالة
+      القبول على واتساب.
     </p>
+    <form
+      class="login"
+      onsubmit={(e) => {
+        e.preventDefault();
+        void login();
+      }}
+    >
+      <label>
+        <span>رقم الهاتف أو البريد</span>
+        <input bind:value={loginContact} autocomplete="username" required />
+      </label>
+      <label>
+        <span>آخر 6 أحرف من رمز التذكرة (بعد SX-)</span>
+        <input
+          bind:value={loginCode}
+          dir="ltr"
+          maxlength="6"
+          autocapitalize="characters"
+          autocomplete="one-time-code"
+          placeholder="A812DD"
+          required
+        />
+      </label>
+      <button class="btn" type="submit" disabled={loginBusy}>
+        {loginBusy ? "جارٍ الدخول…" : "دخول"}
+      </button>
+      {#if loginError}
+        <p class="note" role="alert">{loginError}</p>
+      {/if}
+    </form>
     {#if failed}
-      <p class="note" role="alert">لم يُعرَف الرابط. افتح الزر من الرسالة الأصلية.</p>
+      <p class="note" role="alert">لم يُعرَف الرابط. افتح الزر من الرسالة الأصلية أو ادخل يدوياً.</p>
     {/if}
   </div>
 {/if}
@@ -277,8 +348,43 @@
 
   .empty {
     display: grid;
-    gap: 0.75rem;
-    max-inline-size: 34rem;
+    gap: 0.9rem;
+    max-inline-size: 24rem;
+  }
+
+  .login {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .login label {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .login label span {
+    font-size: 0.8125rem;
+    color: color-mix(in srgb, var(--ink) 65%, var(--paper));
+  }
+
+  .login input {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    min-block-size: 2.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 2px solid var(--ink);
+    border-radius: 0;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .login input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .login .btn {
+    inline-size: 100%;
   }
 
   h1 {
