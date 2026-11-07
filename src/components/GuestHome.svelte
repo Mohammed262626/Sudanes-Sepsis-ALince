@@ -99,17 +99,6 @@
     loading = false;
   }
 
-  function signOut() {
-    try {
-      localStorage.removeItem("sep-guest");
-    } catch {
-      // Nothing stored.
-    }
-    token = "";
-    guest = null;
-    copied = false;
-  }
-
   async function copyTicketCode() {
     if (!guest) return;
     try {
@@ -137,14 +126,14 @@
     `${url("assessment")}/?t=${encodeURIComponent(guest?.assessment_token ?? "")}&s=${stage}`;
 
   // Certificate status is derived, not stored: attendance plus both assessments
-  // is the promise made on the site. No PDF yet — the card states readiness.
+  // is the promise made on the site. No PDF yet — the strip states readiness.
   const cert = $derived.by(() => {
     if (!guest) return { state: "wait", label: "", text: "" };
     if (!guest.attended_at)
       return {
         state: "wait",
         label: "بانتظار الحضور",
-        text: "تُنشأ شهادة الحضور بعد تسجيل حضورك عند البوابة.",
+        text: "تُنشأ بعد تسجيل حضورك عند البوابة.",
       };
     if (!guest.pre_done || !guest.post_done)
       return {
@@ -157,129 +146,118 @@
             : !guest.pre_done
               ? "الاستبانة الأولى"
               : "الاستبانة النهائية") +
-          " لتصبح شهادتك جاهزة.",
+          " لتصبح جاهزة.",
       };
     return {
       state: "ok",
       label: "جاهزة",
-      text: "استوفيت الحضور والاستبانتين — شهادة الحضور جاهزة وتُسلَّم بعد المؤتمر.",
+      text: "استوفيت الحضور والاستبانتين — تُسلَّم بعد المؤتمر.",
     };
   });
 </script>
 
 {#if loading}
-  <div class="guest-shell">
-    <p class="kicker">لوحتك</p>
-    <p class="note">جارٍ التحميل…</p>
-  </div>
+  <p class="note">جارٍ التحميل…</p>
 {:else if guest}
   <div class="guest-shell" aria-labelledby="guest-title">
-    <header class="guest-head" id="guest-title">
-      <p class="kicker">لوحتك</p>
-      <h1>{guest.name}</h1>
-      <div class="chips">
-        <span class="chip" data-state={guest.status === "approved" ? "ok" : "wait"}>
-          {STATUS[guest.status] ?? guest.status}
-        </span>
-        {#if guest.attended_at}
-          <span class="chip" data-state="ok">حاضر</span>
+    <article class="pass">
+      <p class="pass-band">مؤتمر كسلا للإنتان</p>
+      <div class="pass-body">
+        <div>
+          <h1 id="guest-title">{guest.name}</h1>
+          <div class="chips">
+            <span class="chip" data-state={guest.status === "approved" ? "ok" : "wait"}>
+              {STATUS[guest.status] ?? guest.status}
+            </span>
+            {#if guest.attended_at}
+              <span class="chip" data-state="ok">حاضر</span>
+            {/if}
+          </div>
+        </div>
+
+        <div class="pass-ticket">
+          <div class="ticket-id">
+            <span class="pass-label">رقم التذكرة</span>
+            <p class="ticket" dir="ltr">{guest.ticket_code}</p>
+          </div>
+          <button
+            class="btn btn--ghost btn--sm"
+            type="button"
+            onclick={copyTicketCode}
+            aria-label={copied ? "Already copied" : "Copy ticket code"}
+          >
+            {copied ? "نُسخ" : "نسخ"}
+          </button>
+          {#if guest.status === "approved"}
+            <a class="btn btn--sm" href={doorUrl}>صفحة البوابة</a>
+          {/if}
+        </div>
+      </div>
+    </article>
+
+    <div class="cols">
+      <section class="card" aria-labelledby="program-title">
+        <h2 id="program-title">برنامج اليوم</h2>
+        {#if program.length}
+          <ol class="program">
+            {#each program as s (s.starts_at + s.title)}
+              <li>
+                <time datetime={s.starts_at}>{timeFmt.format(new Date(s.starts_at))}</time>
+                <span class="what">
+                  {s.title}
+                  {#if s.notes}<small>{s.notes}</small>{/if}
+                </span>
+              </li>
+            {/each}
+          </ol>
+        {:else}
+          <p class="note">لم يُدرج البرنامج بعد.</p>
         {/if}
-      </div>
-    </header>
+      </section>
 
-    <section class="block" aria-labelledby="ticket-title">
-      <h2 id="ticket-title">تذكرتك</h2>
-      <div class="ticket-wrapper">
-        <p class="ticket" dir="ltr">{guest.ticket_code}</p>
-        <button
-          class="btn btn--ghost"
-          type="button"
-          onclick={copyTicketCode}
-          aria-label={copied ? "Already copied" : "Copy ticket code"}
-        >
-          {copied ? "نسخت" : "نسخ"}
-        </button>
-      </div>
-      <p class="note">
-        في يوم المؤتمر افتح صفحة البوابة من هنا، ثم امسح رمز المدخل بكاميرا هاتفك.
-      </p>
-      {#if guest.status === "approved"}
-        <a class="btn" href={doorUrl}>افتح صفحة البوابة</a>
-      {:else}
-        <p class="note">تُفتح صفحة البوابة بعد قبول التسجيل.</p>
-      {/if}
-    </section>
-
-    <section class="block" aria-labelledby="program-title">
-      <h2 id="program-title">برنامج اليوم</h2>
-      {#if program.length}
-        <ol class="program">
-          {#each program as s (s.starts_at + s.title)}
+      <section class="card" aria-labelledby="assess-title">
+        <h2 id="assess-title">الاستبيانات</h2>
+        {#if !guest.attended_at}
+          <p class="note">تظهر بعد تسجيل حضورك عند البوابة.</p>
+        {:else}
+          <ul class="assess">
             <li>
-              <time datetime={s.starts_at}>{timeFmt.format(new Date(s.starts_at))}</time>
-              <span class="what">
-                {s.title}
-                {#if s.notes}<small>{s.notes}</small>{/if}
-              </span>
+              <span>الاستبانة الأولى</span>
+              {#if guest.pre_done}
+                <span class="chip" data-state="ok">تمت</span>
+              {:else if guest.assessment_pre_open}
+                <a class="btn btn--sm" href={assessmentHref("pre")}>ابدأ</a>
+              {:else}
+                <span class="chip" data-state="wait">مغلقة الآن</span>
+              {/if}
             </li>
-          {/each}
-        </ol>
-      {:else}
-        <p class="note">لم يُدرج البرنامج بعد.</p>
-      {/if}
-    </section>
+            <li>
+              <span>الاستبانة النهائية</span>
+              {#if guest.post_done}
+                <span class="chip" data-state="ok">تمت</span>
+              {:else if guest.assessment_post_open && guest.pre_done}
+                <a class="btn btn--sm" href={assessmentHref("post")}>ابدأ</a>
+              {:else if guest.assessment_post_open}
+                <span class="chip" data-state="wait">بعد إتمام الأولى</span>
+              {:else}
+                <span class="chip" data-state="wait">لم تُفتح بعد</span>
+              {/if}
+            </li>
+          </ul>
+        {/if}
+      </section>
+    </div>
 
-    <section class="block" aria-labelledby="assess-title">
-      <h2 id="assess-title">الاستبانات</h2>
-      {#if !guest.attended_at}
-        <p class="note">
-          تظهر الاستبانات بعد تسجيل حضورك عند البوابة.
-        </p>
-      {:else}
-        <ul class="assess">
-          <li>
-            <span>الاستبانة الأولى</span>
-            {#if guest.pre_done}
-              <span class="chip" data-state="ok">تمت</span>
-            {:else if guest.assessment_pre_open}
-              <a class="btn btn--sm" href={assessmentHref("pre")}>ابدأ</a>
-            {:else}
-              <span class="chip" data-state="wait">مغلقة الآن</span>
-            {/if}
-          </li>
-          <li>
-            <span>الاستبانة النهائية</span>
-            {#if guest.post_done}
-              <span class="chip" data-state="ok">تمت</span>
-            {:else if guest.assessment_post_open && guest.pre_done}
-              <a class="btn btn--sm" href={assessmentHref("post")}>ابدأ</a>
-            {:else if guest.assessment_post_open}
-              <span class="chip" data-state="wait">بعد إتمام الأولى</span>
-            {:else}
-              <span class="chip" data-state="wait">لم تُفتح بعد</span>
-            {/if}
-          </li>
-        </ul>
-      {/if}
-    </section>
-
-    <section class="block" aria-labelledby="cert-title">
+    <section class="cert" aria-labelledby="cert-title">
       <h2 id="cert-title">الشهادة</h2>
-      <div class="chips">
-        <span class="chip" data-state={cert.state}>{cert.label}</span>
-      </div>
-      <p class="note">{cert.text}</p>
+      <p class="cert-line">
+        <span class="dot" data-state={cert.state} aria-hidden="true"></span>
+        <span><strong>{cert.label}</strong> — {cert.text}</span>
+      </p>
     </section>
-
-    <footer class="guest-foot">
-      <button class="link" type="button" onclick={signOut}>
-        تسجيل الخروج من هذا الجهاز
-      </button>
-    </footer>
   </div>
 {:else}
-  <div class="guest-shell">
-    <p class="kicker">لوحتك</p>
+  <div class="empty">
     <h1>الدخول عبر رسالة القبول</h1>
     <p class="note">
       افتح زر «افتح لوحتك» في رسالة القبول التي وصلتك على واتساب. تُحفظ اللوحة على هذا
@@ -292,41 +270,54 @@
 {/if}
 
 <style>
-  h1 {
-    font-size: clamp(1.75rem, 5vw, 2.25rem);
-    margin: 0.4rem 0 0;
-  }
-
   .guest-shell {
-    padding: 1.5rem 1.25rem;
-    max-inline-size: 46rem;
-    margin-inline: auto;
+    display: grid;
+    gap: 1.5rem;
   }
 
-  .guest-head {
-    padding-block-end: 1rem;
-    border-block-end: 2px solid var(--ink);
-    margin-block-end: 1.25rem;
+  .empty {
+    display: grid;
+    gap: 0.75rem;
+    max-inline-size: 34rem;
   }
 
-  .kicker {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    margin-block-end: 0.5rem;
+  h1 {
+    font-size: clamp(1.6rem, 6vw, 2.25rem);
+    line-height: 1.15;
+    margin: 0 0 0.75rem;
+  }
+
+  .pass {
+    border: 2px solid var(--ink);
+    background: var(--paper);
+  }
+
+  .pass-band {
+    margin: 0;
+    padding: 0.5rem 1.25rem;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    letter-spacing: 0.04em;
+  }
+
+  .pass-body {
+    padding: 1.25rem;
+    display: grid;
+    gap: 1.25rem;
   }
 
   .chips {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-block-start: 0.75rem;
   }
 
   .chip {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
+    padding: 0.2rem 0.65rem;
     border: 2px solid color-mix(in srgb, var(--ink) 25%, var(--paper));
     font-size: 0.8125rem;
     white-space: nowrap;
@@ -341,33 +332,60 @@
     color: color-mix(in srgb, var(--ink) 60%, var(--paper));
   }
 
-  .block {
-    padding-block: 1.25rem;
-    border-block-end: 2px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
-    margin-block-end: 1rem;
-    display: grid;
-    gap: 0.75rem;
-    justify-items: start;
-  }
-
-  .block h2 {
-    font-size: 1rem;
-    margin: 0 0 0.5rem;
-  }
-
-  .ticket-wrapper {
+  .pass-ticket {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
-    margin-block-end: 0.75rem;
+    gap: 0.6rem;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
+  }
+
+  .ticket-id {
+    flex: 1 1 9rem;
+    min-inline-size: 0;
+  }
+
+  .pass-label {
+    display: block;
+    font-size: 0.75rem;
+    color: color-mix(in srgb, var(--ink) 60%, var(--paper));
   }
 
   .ticket {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-weight: 700;
+    font-size: 1.4rem;
     letter-spacing: 0.02em;
-    flex: 1;
+    text-align: start;
+  }
+
+  .cols {
+    display: grid;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (min-width: 720px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .card {
+    border: 2px solid var(--ink);
+    padding: 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1rem;
+    padding-block-end: 0.6rem;
+    border-block-end: 2px solid var(--ink);
   }
 
   .note {
@@ -377,47 +395,27 @@
     color: color-mix(in srgb, var(--ink) 72%, var(--paper));
   }
 
+  .program,
   .assess {
     list-style: none;
     margin: 0;
     padding: 0;
-    inline-size: 100%;
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .assess li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding-block: 0.5rem;
-    border-block-start: 1px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
-  }
-
-  .assess li > span:first-child {
-    font-size: 0.9375rem;
-  }
-
-  .program {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    inline-size: 100%;
     display: grid;
   }
 
   .program li {
     display: grid;
-    grid-template-columns: 5.5rem 1fr;
-    gap: 1rem;
-    padding-block: 0.6rem;
+    grid-template-columns: 5rem 1fr;
+    gap: 0.75rem;
+    padding-block: 0.5rem;
     border-block-start: 1px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
     font-size: 0.9375rem;
   }
 
-  .program li:first-child {
-    border-block-start: 2px solid var(--ink);
+  .program li:first-child,
+  .assess li:first-child {
+    border-block-start: 0;
+    padding-block-start: 0;
   }
 
   .program time {
@@ -436,43 +434,59 @@
     font-size: 0.8125rem;
   }
 
-  .btn--sm {
-    min-height: 2.25rem;
-    padding-inline: 1rem;
-    font-size: 0.875rem;
+  .assess li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-block: 0.55rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
   }
 
-  .btn--ghost {
-    background: none;
+  .assess li > span:first-child {
+    font-size: 0.9375rem;
+  }
+
+  .cert {
     border: 2px solid var(--ink);
-    color: var(--ink);
-    padding: 0.5rem 1rem;
-    font: inherit;
-    cursor: pointer;
+    padding: 0.9rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .btn--ghost:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .btn--ghost:hover {
-    background: color-mix(in srgb, var(--ink) 5%, var(--paper));
-  }
-
-  .link {
+  .cert h2 {
     border: 0;
     padding: 0;
-    background: none;
-    font: inherit;
     font-size: 0.875rem;
-    color: color-mix(in srgb, var(--ink) 60%, var(--paper));
-    text-decoration: underline;
-    cursor: pointer;
   }
 
-  .link:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+  .cert-line {
+    margin: 0;
+    flex: 1 1 14rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .dot {
+    flex: none;
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    background: color-mix(in srgb, var(--ink) 35%, var(--paper));
+  }
+
+  .dot[data-state="ok"] {
+    background: var(--ok);
+  }
+
+  /* Sits after global.css: a touch-size small button inside the cards. */
+  .btn--sm {
+    padding: 0.5rem 1rem;
+    min-block-size: 2.75rem;
+    font-size: 0.875rem;
   }
 </style>
