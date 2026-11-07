@@ -47,11 +47,17 @@ const MUTED = "#6f6a62";
 function layout(body: string, preheader = "") {
   return (
     '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">' +
-    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>التحالف السوداني للإنتان</title></head>' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>التحالف السوداني للإنتان</title>' +
+    // Cairo self-hosted on the site. Clients with webfont support (Apple Mail,
+    // iOS, Outlook for Mac) pick it up; Gmail/Outlook desktop strip <style> and
+    // fall back to the stack declared inline on <body>.
+    '<style>@font-face{font-family:Cairo;src:url(' + SITE + '/fonts/cairo-arabic-wght-normal.woff2) format("woff2");font-weight:200 1000;font-style:normal;font-display:swap}' +
+    '@font-face{font-family:Cairo;src:url(' + SITE + '/fonts/cairo-latin-wght-normal.woff2) format("woff2");font-weight:200 1000;font-style:normal;font-display:swap}</style>' +
+    "</head>" +
     // Gmail drops <head> and anything on <html>, so direction lives on <body>
     // and right-alignment is repeated on every text cell below.
     '<body dir="rtl" style="margin:0;padding:0;background:' + PAPER + ';color:' + INK +
-    ';direction:rtl;text-align:right;font-family:Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%">' +
+    ";direction:rtl;text-align:right;font-family:'Cairo',Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%\">" +
     (preheader
       ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' + esc(preheader) + "</div>"
       : "") +
