@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T00:00:00Z",
+  "title": "Design System: Sudanese Sepsis Alliance",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Warm Paper",
+        "canonical": "#f7f5f0",
+        "tonalRamp": ["#2b2823", "#4a453d", "#6f6a62", "#94908a", "#b8b3aa", "#d6d1c7", "#e8e4db", "#f7f5f0"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ledger Ink",
+        "canonical": "#15130f",
+        "tonalRamp": ["#15130f", "#2c2822", "#45403a", "#5f594f", "#7d766b", "#a29a8d", "#c9c2b6", "#efebe2"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Pencil Gray",
+        "canonical": "#6f6a62",
+        "tonalRamp": ["#3f3b35", "#544f47", "#6f6a62", "#8a847b", "#a6a097", "#c3bdb2", "#ded9cf", "#f2eee7"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Rule Line",
+        "canonical": "#ddd8cf",
+        "tonalRamp": ["#5c574f", "#78726a", "#938d83", "#aea79c", "#c6c0b5", "#ddd8cf", "#ece8e0", "#f9f7f2"]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Clinical Magenta",
+        "canonical": "#962567",
+        "tonalRamp": ["#3a0e27", "#571539", "#731c4b", "#962567", "#b93b87", "#d268a7", "#e69cc5", "#f6d3e4"]
+      },
+      "ok": {
+        "role": "secondary",
+        "displayName": "Confirmed Green",
+        "canonical": "#2e6b3e",
+        "tonalRamp": ["#12301b", "#1d4728", "#2e6b3e", "#3f8b52", "#61a975", "#8cc79c", "#bde0c6", "#e5f3e8"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Homepage hero only." },
+      "headline": { "displayName": "Headline", "purpose": "Interior page titles, capped at 22ch." },
+      "title": { "displayName": "Title", "purpose": "Section headings in prose and major blocks." },
+      "body": { "displayName": "Body", "purpose": "All paragraphs, form values, table cells." },
+      "label": { "displayName": "Label", "purpose": "Kickers, table headers, chips, badges, tabs." },
+      "button": { "displayName": "Button", "purpose": "Buttons and links styled as actions." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "ease-out-fast", "value": "0.15s ease-out", "purpose": "Button and link state transitions." },
+      { "name": "press", "value": "translateY(1px)", "purpose": "Active press on buttons; never moves surrounding layout." },
+      { "name": "toast-in", "value": "0.18s ease-out", "purpose": "Toast entrance; disabled under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "admin-sidebar", "value": "1100px" },
+      { "name": "marketing-stack", "value": "800px" },
+      { "name": "app-stack", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink-filled action; inverts to paper on hover.",
+      "html": "<button class=\"ds-btn\">سجّل حضورك</button>",
+      "css": ".ds-btn { font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 700; font-size: 1rem; padding: 0.9rem 1.75rem; border: 2px solid #15130f; background: #15130f; color: #f7f5f0; border-radius: 0; cursor: pointer; transition: background 0.15s ease-out, color 0.15s ease-out, border-color 0.15s ease-out, transform 0.08s ease-out; } .ds-btn:hover { background: transparent; color: #15130f; } .ds-btn:active { transform: translateY(1px); } .ds-btn:focus-visible { outline: 3px solid #962567; outline-offset: 3px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Paper-filled secondary action; fills with ink on hover.",
+      "html": "<button class=\"ds-btn-ghost\">نسخ</button>",
+      "css": ".ds-btn-ghost { font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 700; font-size: 1rem; padding: 0.9rem 1.75rem; border: 2px solid #15130f; background: transparent; color: #15130f; border-radius: 0; cursor: pointer; transition: background 0.15s ease-out, color 0.15s ease-out; } .ds-btn-ghost:hover { background: #15130f; color: #f7f5f0; } .ds-btn-ghost:focus-visible { outline: 3px solid #962567; outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Square ink-bordered field with an accent focus outline.",
+      "html": "<label class=\"ds-field\"><span>رقم الهاتف أو البريد</span><input type=\"text\" placeholder=\"0967827496\" /></label>",
+      "css": ".ds-field { display: grid; gap: 0.45rem; font-family: 'Tajawal', system-ui, sans-serif; color: #15130f; } .ds-field span { font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 700; font-size: 0.8125rem; } .ds-field input { font: inherit; font-size: 1rem; min-height: 2.75rem; padding: 0.65rem 0.75rem; border: 2px solid #15130f; border-radius: 0; background: #f7f5f0; color: #15130f; } .ds-field input:focus-visible { outline: 2px solid #962567; outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Square outlined status label; green for confirmed, muted for pending.",
+      "html": "<span class=\"ds-chip\">تمت</span> <span class=\"ds-chip ds-chip-ok\">جاهزة</span>",
+      "css": ".ds-chip { display: inline-block; padding: 0.2rem 0.65rem; border: 2px solid color-mix(in srgb, #15130f 25%, #f7f5f0); font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 700; font-size: 0.8125rem; color: #6f6a62; white-space: nowrap; } .ds-chip-ok { border-color: #2e6b3e; color: #2e6b3e; }"
+    },
+    {
+      "name": "Ledger Card",
+      "kind": "card",
+      "description": "Paper surface defined by a 2px ink border; no shadow, no radius.",
+      "html": "<section class=\"ds-card\"><h3>برنامج اليوم</h3><p>09:00 — تسجيل الحضور والافتتاح</p></section>",
+      "css": ".ds-card { border: 2px solid #15130f; background: #f7f5f0; padding: 1.25rem; display: grid; gap: 0.75rem; } .ds-card h3 { margin: 0; padding-bottom: 0.6rem; border-bottom: 2px solid #15130f; font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 800; font-size: 1rem; color: #15130f; } .ds-card p { margin: 0; font-family: 'Tajawal', system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.8; color: #15130f; }"
+    },
+    {
+      "name": "Guest Pass",
+      "kind": "custom",
+      "description": "Attendee identity card: ink band, name, chips, ruled ticket row.",
+      "html": "<article class=\"ds-pass\"><p class=\"ds-pass-band\">مؤتمر كسلا للإنتان</p><div class=\"ds-pass-body\"><h3>محمد صالح</h3><p class=\"ds-pass-ticket\"><span dir=\"ltr\">SX-A812DD</span></p></div></article>",
+      "css": ".ds-pass { border: 2px solid #15130f; background: #f7f5f0; } .ds-pass-band { margin: 0; padding: 0.5rem 1.25rem; background: #15130f; color: #f7f5f0; font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 700; font-size: 0.8125rem; } .ds-pass-body { padding: 1.25rem; } .ds-pass-body h3 { margin: 0 0 0.75rem; font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 800; font-size: 1.6rem; color: #15130f; } .ds-pass-ticket { margin: 0; padding-top: 1rem; border-top: 1px solid color-mix(in srgb, #15130f 15%, #f7f5f0); font-family: 'Cairo Variable', system-ui, sans-serif; font-weight: 700; font-size: 1.4rem; letter-spacing: 0.02em; color: #15130f; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Clinical Ledger",
+    "overview": "The site reads like a well-kept clinical record: warm paper, dark ink, ruled edges, and numbers that line up. Nothing floats. Every boundary is a drawn line — 1px hairlines between sections, 2px ink rules around anything you can press or fill in — so the page feels documented rather than decorated.\n\nThe subject is life-threatening, so the interface stays quiet and certain: one chromatic voice, generous Arabic leading, and typography that does the work that imagery usually does. Earned seriousness, never alarm.\n\nDepth is paper, not shadow. A surface rises by gaining a border, an ink fill, or white space around it. There is exactly one exception in the whole system: the sticky site header, which blurs whatever is scrolled beneath it.",
+    "keyCharacteristics": [
+      "Warm off-white paper #f7f5f0 against near-black ink #15130f",
+      "One accent, #962567, used sparingly and purposefully",
+      "2px borders on interactive surfaces; 1px hairlines for structure",
+      "Zero corner radius, zero drop shadows, zero gradients",
+      "Cairo for anything that speaks; Tajawal for anything that reads",
+      "RTL native: logical properties everywhere, taller Arabic line-height"
+    ],
+    "rules": [
+      { "name": "The Rationed Mark Rule", "body": "The accent may cover no more than roughly a tenth of any screen. If a screen needs more emphasis, use ink weight and size first; the magenta is a signature, not a highlighter.", "section": "colors" },
+      { "name": "The No Second Hue Rule", "body": "There are exactly two colors of meaning besides ink and paper: magenta for attention and green for confirmation. No amber, no blue, no teal.", "section": "colors" },
+      { "name": "The Arabic Leading Rule", "body": "Body leading never drops below 1.7. If a component feels loose, reduce the measure, not the line-height.", "section": "typography" },
+      { "name": "The No Tracking Rule", "body": "Never apply letter-spacing to Arabic text. Letter spacing is reserved for Latin ticket codes rendered with dir=\"ltr\".", "section": "typography" },
+      { "name": "The Two-Voice Rule", "body": "Cairo speaks (headings, buttons, labels, numbers that carry meaning); Tajawal reads (paragraphs, form values, table cells). Never set a paragraph in Cairo or a heading in Tajawal.", "section": "typography" },
+      { "name": "The Flat By Default Rule", "body": "If a surface needs to feel raised, give it a border, not a shadow.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do default every surface to Warm Paper with a drawn border; depth comes from rules and ink fills.",
+      "Do use 2px ink borders on interactive elements and 1px Rule Line for structure.",
+      "Do keep the accent rare, semantic, and purposeful — attention, confirmation contrast, focus.",
+      "Do write layout with logical properties (margin-inline, padding-block, inset-inline-start) so RTL is native.",
+      "Do keep body leading at 1.8 and cap measures at 68ch for prose.",
+      "Do give every control a 44px touch height and a visible accent focus ring.",
+      "Do use real photographs, the alliance logo assets, and Cairo/Tajawal only."
+    ],
+    "donts": [
+      "Don't add shadows, blurs (beyond the header), or gradients.",
+      "Don't round corners or introduce a second accent hue.",
+      "Don't set Arabic text in uppercase, letter-spaced, or below 1.7 leading.",
+      "Don't use emoji as icons or mix icon libraries.",
+      "Don't fill cards with white or a tint — paper plus a border is the card.",
+      "Don't invent statistics, testimonials, partner logos, or donation channels to fill a layout.",
+      "Don't add a new breakpoint before checking 720px and 1100px."
+    ]
+  }
+}
