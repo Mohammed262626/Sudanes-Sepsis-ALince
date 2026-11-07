@@ -94,6 +94,20 @@ const box = (rows: string) =>
   '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" dir="rtl">' + rows + "</table>" +
   "</td></tr></table>";
 
+// Email clone of a WhatsApp action button: full width, 2px border, no radius
+// (Outlook ignores most of that anyway, so the table cell carries the box).
+const cta = (label: string, href: string, kind: "primary" | "ghost" = "ghost") => {
+  const primary = kind === "primary";
+  return (
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="margin:0 0 10px">' +
+    '<tr><td align="center" style="background:' + (primary ? ACCENT : "#ffffff") +
+    ";border:2px solid " + (primary ? ACCENT : INK) + '">' +
+    '<a href="' + esc(href) + '" style="display:block;padding:14px 18px;font-size:15px;font-weight:bold;text-decoration:none;color:' +
+    (primary ? "#ffffff" : INK) + '">' + label + "</a>" +
+    "</td></tr></table>"
+  );
+};
+
 type Record_ = Record<string, string>;
 
 // "0127575701" → "249127575701@c.us" (Sudan country code; other formats as typed).
@@ -364,7 +378,11 @@ function approval(r: Record_): string {
 // reaches him if the app is gone, the phone changed, or Green API is out of quota.
 function approvalEmail(r: Record_): string {
   const code = String(r.ticket_code ?? "");
-  const target = checkinUrl(code, String(r.checkin_token ?? ""));
+  const pass = String(r.checkin_token ?? "");
+  const target = checkinUrl(code, pass);
+  // Same three intents as the WhatsApp buttons. Email clients cannot render
+  // interactive buttons, so each becomes a full-width link in the same order.
+  const dashboard = SITE + "/guest/?s=" + encodeURIComponent(pass);
   return (
     '<h1 style="font-size:22px;margin:0 0 16px">تم قبول تسجيلك</h1>' +
     "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
@@ -380,10 +398,12 @@ function approvalEmail(r: Record_): string {
     'style="display:inline-block;border:2px solid ' + INK + ';padding:8px;background:#ffffff">' +
     "</div>" +
     "<p>رمز QR أعلاه هو تذكرتك — أظهره عند الدخول. بعض برامج البريد لا تعرض الصور " +
-    "تلقائياً، لذا يمكنك دائماً فتح تذكرتك من الرابط أدناه.</p>" +
-    '<p style="margin:24px 0"><a href="' + esc(target) + '" ' +
-    'style="background:' + ACCENT + ';color:#ffffff;text-decoration:none;padding:12px 22px;' +
-    'display:inline-block;font-weight:bold">فتح التذكرة</a></p>'
+    "تلقائياً، لذا يمكنك دائماً فتح تذكرتك من الروابط أدناه.</p>" +
+    '<div style="margin:24px 0 8px">' +
+    cta("تأكيد الحضور", target, "primary") +
+    cta("افتح لوحتك", dashboard) +
+    cta("لا أستطيع الحضور", target + "&d=1") +
+    "</div>"
   );
 }
 
