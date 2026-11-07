@@ -10,6 +10,7 @@
     { id: "conference_registrations", label: "التسجيلات" },
     { id: "scan", label: "الحضور" },
     { id: "assessments", label: "الاستبانات" },
+    { id: "program", label: "البرنامج" },
     { id: "push", label: "إشعارات" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
@@ -17,7 +18,7 @@
   ];
 
   const dataTabs = tabs.filter(
-    (t) => !["templates", "scan", "assessments", "push"].includes(t.id),
+    (t) => !["templates", "scan", "assessments", "push", "program"].includes(t.id),
   );
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
@@ -64,6 +65,20 @@
   let templates = $state<Template[]>([]);
   let saving = $state(false);
   let saveNote = $state("");
+
+  // Day program: rows live in the database and the guest dashboard reads them
+  // directly, so adding a session is visible to guests without a rebuild.
+  type ProgramRow = { id: number; title: string; starts_at: string; notes: string | null };
+  let program = $state<ProgramRow[]>([]);
+  let programBusy = $state(false);
+  let programNote = $state("");
+  let draft = $state({ title: "", starts_at: "", notes: "" });
+
+  const timeFmt = new Intl.DateTimeFormat("ar-SD", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Africa/Khartoum",
+  });
 
   const dateFmt = new Intl.DateTimeFormat("ar-SD", {
     dateStyle: "medium",
@@ -348,6 +363,48 @@
       (pendingReminders > sent ? " اضغط مرة أخرى للدفعة التالية." : "");
     await load();
     void showSends();
+  }
+
+  async function saveProgram() {
+    if (!supabase || programBusy) return;
+    if (!draft.title.trim() || !draft.starts_at) {
+      programNote = "اكتب عنوان الفقرة ووقتها.";
+      return;
+    }
+    programBusy = true;
+    programNote = "";
+    const { data: row, error } = await supabase
+      .from("conference_program")
+      .insert({
+        title: draft.title.trim(),
+        starts_at: new Date(draft.starts_at).toISOString(),
+        notes: draft.notes.trim() || null,
+      })
+      .select("id,title,starts_at,notes")
+      .single();
+    programBusy = false;
+    if (error || !row) {
+      programNote = "تعذّر الحفظ. حاول مرة أخرى.";
+      return;
+    }
+    program = ([...program, row as ProgramRow] as ProgramRow[]).sort((a, b) =>
+      a.starts_at.localeCompare(b.starts_at),
+    );
+    draft = { title: "", starts_at: "", notes: "" };
+    programNote = "أُضيفت الفقرة وبدأ يراها الضيوف.";
+  }
+
+  async function removeProgram(id: number) {
+    if (!supabase || programBusy || !confirm("حذف هذه الفقرة من البرنامج؟")) return;
+    programBusy = true;
+    programNote = "";
+    const { error } = await supabase.from("conference_program").delete().eq("id", id);
+    programBusy = false;
+    if (error) {
+      programNote = "تعذّر الحذف. حاول مرة أخرى.";
+      return;
+    }
+    program = program.filter((p) => p.id !== id);
   }
 
   async function saveTemplates() {    if (!supabase || saving) return;
@@ -932,6 +989,14 @@
       .from("push_subscriptions")
       .select("endpoint", { count: "exact", head: true });
     pushCount = subs.count ?? 0;
+
+    const prog = await supabase
+      .from("conference_program")
+      .select("id,title,starts_at,notes")
+      .order("starts_at");
+    if (prog.error) failed = true;
+    program = (prog.data ?? []) as ProgramRow[];
+
     data = next;
     loading = false;
   }
@@ -1045,9 +1110,11 @@
         ? present
         : id === "assessments"
           ? answeredPeople
-          : id === "push"
-            ? pushCount
-            : (data[id]?.length ?? 0);
+          : id === "program"
+            ? program.length
+            : id === "push"
+              ? pushCount
+              : (data[id]?.length ?? 0);
 
   // Release the camera when leaving the attendance tab; focus the code field when
   // arriving so a USB/keyboard QR gun types straight into it.
@@ -1263,6 +1330,50 @@
         </div>
       {/if}
     </div>
+  {:else if tab === "program"}
+    <div class="templates">
+      <div class="program-add">
+        <label>
+          <span>العنوان</span>
+          <input type="text" maxlength="120" bind:value={draft.title} placeholder="مثال: جلسة علمية" />
+        </label>
+        <label>
+          <span>الوقت</span>
+          <input type="datetime-local" bind:value={draft.starts_at} />
+        </label>
+        <label>
+          <span>ملاحظة (اختياري)</span>
+          <input type="text" maxlength="160" bind:value={draft.notes} />
+        </label>
+      </div>
+      <div class="templates-foot">
+        <button class="btn" type="button" onclick={saveProgram} disabled={programBusy}>
+          إضافة الفقرة
+        </button>
+        <p class="admin-note">
+          {programNote || "يظهر البرنامج في صفحة كل ضيف، والتغيير فوري بلا إعادة بناء."}
+        </p>
+      </div>
+    </div>
+    <ul class="program-list">
+      {#each program as p (p.id)}
+        <li>
+          <span class="when">{timeFmt.format(new Date(p.starts_at))}</span>
+          <span class="what">
+            {p.title}
+            {#if p.notes}<small>{p.notes}</small>{/if}
+          </span>
+          <button
+            class="btn btn--ghost btn--sm"
+            type="button"
+            onclick={() => removeProgram(p.id)}
+            disabled={programBusy}
+          >
+            حذف
+          </button>
+        </li>
+      {/each}
+    </ul>
   {:else if tab === "templates"}
     <div class="templates">
       {#each templates as t (t.key)}

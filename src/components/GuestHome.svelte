@@ -21,11 +21,20 @@
     rejected: "مرفوض",
   };
 
+  type Session = { title: string; starts_at: string; notes: string | null };
+
   let token = $state("");
   let guest = $state<Guest | null>(null);
+  let program = $state<Session[]>([]);
   let loading = $state(true);
   let failed = $state(false);
   let copied = $state(false);
+
+  const timeFmt = new Intl.DateTimeFormat("ar-SD", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Africa/Khartoum",
+  });
 
   onMount(async () => {
     await loadGuest();
@@ -73,12 +82,21 @@
       return;
     }
     const { data, error } = await supabase.rpc("guest_me", { p_token: token });
-    loading = false;
     if (error || !Array.isArray(data) || data.length === 0) {
+      loading = false;
       failed = true;
       return;
     }
     guest = data[0] as Guest;
+
+    // Public read; the schedule lives in the database so it updates without a
+    // rebuild. A failure here must not block the ticket.
+    const { data: prog } = await supabase
+      .from("conference_program")
+      .select("title,starts_at,notes")
+      .order("starts_at");
+    program = (prog ?? []) as Session[];
+    loading = false;
   }
 
   function signOut() {
@@ -117,6 +135,36 @@
 
   const assessmentHref = (stage: "pre" | "post") =>
     `${url("assessment")}/?t=${encodeURIComponent(guest?.assessment_token ?? "")}&s=${stage}`;
+
+  // Certificate status is derived, not stored: attendance plus both assessments
+  // is the promise made on the site. No PDF yet — the card states readiness.
+  const cert = $derived.by(() => {
+    if (!guest) return { state: "wait", label: "", text: "" };
+    if (!guest.attended_at)
+      return {
+        state: "wait",
+        label: "بانتظار الحضور",
+        text: "تُنشأ شهادة الحضور بعد تسجيل حضورك عند البوابة.",
+      };
+    if (!guest.pre_done || !guest.post_done)
+      return {
+        state: "wait",
+        label: "لم تكتمل",
+        text:
+          "أكمل " +
+          (!guest.pre_done && !guest.post_done
+            ? "الاستبانتين"
+            : !guest.pre_done
+              ? "الاستبانة الأولى"
+              : "الاستبانة النهائية") +
+          " لتصبح شهادتك جاهزة.",
+      };
+    return {
+      state: "ok",
+      label: "جاهزة",
+      text: "استوفيت الحضور والاستبانتين — شهادة الحضور جاهزة وتُسلَّم بعد المؤتمر.",
+    };
+  });
 </script>
 
 {#if loading}
@@ -162,6 +210,25 @@
       {/if}
     </section>
 
+    <section class="block" aria-labelledby="program-title">
+      <h2 id="program-title">برنامج اليوم</h2>
+      {#if program.length}
+        <ol class="program">
+          {#each program as s (s.starts_at + s.title)}
+            <li>
+              <time datetime={s.starts_at}>{timeFmt.format(new Date(s.starts_at))}</time>
+              <span class="what">
+                {s.title}
+                {#if s.notes}<small>{s.notes}</small>{/if}
+              </span>
+            </li>
+          {/each}
+        </ol>
+      {:else}
+        <p class="note">لم يُدرج البرنامج بعد.</p>
+      {/if}
+    </section>
+
     <section class="block" aria-labelledby="assess-title">
       <h2 id="assess-title">الاستبانات</h2>
       {#if !guest.attended_at}
@@ -194,6 +261,14 @@
           </li>
         </ul>
       {/if}
+    </section>
+
+    <section class="block" aria-labelledby="cert-title">
+      <h2 id="cert-title">الشهادة</h2>
+      <div class="chips">
+        <span class="chip" data-state={cert.state}>{cert.label}</span>
+      </div>
+      <p class="note">{cert.text}</p>
     </section>
 
     <footer class="guest-foot">
@@ -322,6 +397,43 @@
 
   .assess li > span:first-child {
     font-size: 0.9375rem;
+  }
+
+  .program {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    inline-size: 100%;
+    display: grid;
+  }
+
+  .program li {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 1rem;
+    padding-block: 0.6rem;
+    border-block-start: 1px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
+    font-size: 0.9375rem;
+  }
+
+  .program li:first-child {
+    border-block-start: 2px solid var(--ink);
+  }
+
+  .program time {
+    font-family: var(--font-display);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .program .what {
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .program small {
+    color: color-mix(in srgb, var(--ink) 65%, var(--paper));
+    font-size: 0.8125rem;
   }
 
   .btn--sm {
