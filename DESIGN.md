@@ -37,6 +37,26 @@ typography:
     fontSize: "0.8125rem"
     fontWeight: 700
     lineHeight: 1.3
+  small:
+    fontFamily: "Tajawal, system-ui, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 400
+    lineHeight: 1.6
+  caption:
+    fontFamily: "Cairo Variable, system-ui, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 700
+    lineHeight: 1.4
+  ui:
+    fontFamily: "Cairo Variable, system-ui, sans-serif"
+    fontSize: "0.9375rem"
+    fontWeight: 600
+    lineHeight: 1.3
+  subhead:
+    fontFamily: "Cairo Variable, system-ui, sans-serif"
+    fontSize: "1.25rem"
+    fontWeight: 700
+    lineHeight: 1.3
   button:
     fontFamily: "Cairo Variable, system-ui, sans-serif"
     fontSize: "1rem"
@@ -170,6 +190,19 @@ at phone distance. Both are self-hosted; the pairing never touches the network.
   leading is deliberate — Arabic needs the air; 1.5 is a Latin habit.
 - **Label** (Cairo 700, `0.8125rem`, 1.3): kickers, table headers, chips, badges,
   tab labels. The only place small bold Cairo appears.
+- **Small** (Tajawal 400, `0.875rem`, 1.6): timestamps, table cells, toast text,
+  helper notes inside dense surfaces.
+- **Caption** (Cairo 700, `0.75rem`, 1.4): the smallest step — ticket-row labels,
+  admin counters, meta above a value.
+
+**Scale:** the fixed steps in use are `0.75` · `0.8125` · `0.875` · `0.9375` (nav
+and dense UI) · `1` (buttons) · `1.0625` (body) · `1.125` / `1.25` (subheads) ·
+`1.5`–`2` (titles). Anything larger is fluid and belongs to one of the display
+roles; do not add a new fixed step between these unless the role genuinely
+differs. Display sizes are deliberately fluid and page-scoped — each surface sets
+its own `clamp()` within the 1.6rem–7rem band (hero 3→6.5rem, stats 4.5→7rem,
+conference band 3.5→5.5rem, page heads 2.5→4.75rem) — so a clamp endpoint is not
+drift unless it lands inside the fixed scale above.
 
 ### Named Rules
 
@@ -192,9 +225,10 @@ sections are separated by a 1px `Rule Line` rather than by background changes.
 
 Marketing pages use an asymmetric two-column split (roughly 1.35fr / 0.65fr) that
 collapses to one column at 800px. Admin and guest surfaces collapse at 720px;
-the admin sidebar only appears at 1100px. Breakpoints in the codebase are not yet
-unified — treat 720px and 1100px as canonical and 800px as the marketing
-exception, and consolidate rather than adding a new value.
+the admin table drops columns at 900px and the admin sidebar only appears at
+1100px. Those four values — 720, 800, 900, 1100 — are the whole breakpoint set:
+720 is the app/phone stack, 800 the marketing stack, 900 the admin table, 1100
+the admin sidebar. Do not introduce a fifth.
 
 Reading measures are capped: `34ch` for hero ledes, `62ch` for page ledes, `68ch`
 for prose. Content never runs edge to edge on a wide screen.
@@ -242,8 +276,8 @@ Icons are line icons at a consistent stroke, sized 24–34px in navigation and
   is a 3px accent outline at 3px offset, never removed.
 - **Ghost:** paper fill at rest, flips to ink fill on hover — same geometry.
 - **Light:** for use on ink or photo surfaces; paper fill with ink text.
-- **Small:** `0.45rem 0.9rem`, but any small button on a guest-facing screen must
-  still be 44px tall (`min-block-size: 2.75rem`).
+- **Small:** same geometry, `0.45rem 0.9rem` padding and a 44px minimum height —
+  small changes the density, never the target size.
 
 ### Chips & Badges
 
@@ -302,7 +336,8 @@ pass is the one place where an ink field is used at component scale.
 - **Do** write layout with logical properties (`margin-inline`, `padding-block`,
   `inset-inline-start`) so RTL is native.
 - **Do** keep body leading at 1.8 and cap measures at `68ch` for prose.
-- **Do** give every control a 44px touch height and a visible accent focus ring.
+- **Do** give every guest-facing control a 44px touch height and a visible accent
+  focus ring. Admin icon buttons may stay 36px inside dense tables.
 - **Do** use real photographs, the alliance logo assets, and Cairo/Tajawal only.
 
 ### Don't:

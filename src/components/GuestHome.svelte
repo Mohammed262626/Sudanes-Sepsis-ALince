@@ -588,11 +588,4 @@
   .dot[data-state="ok"] {
     background: var(--ok);
   }
-
-  /* Sits after global.css: a touch-size small button inside the cards. */
-  .btn--sm {
-    padding: 0.5rem 1rem;
-    min-block-size: 2.75rem;
-    font-size: 0.875rem;
-  }
 </style>

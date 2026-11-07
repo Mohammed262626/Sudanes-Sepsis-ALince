@@ -47,6 +47,10 @@
       "title": { "displayName": "Title", "purpose": "Section headings in prose and major blocks." },
       "body": { "displayName": "Body", "purpose": "All paragraphs, form values, table cells." },
       "label": { "displayName": "Label", "purpose": "Kickers, table headers, chips, badges, tabs." },
+      "small": { "displayName": "Small", "purpose": "Timestamps, table cells, toast text, helper notes." },
+      "caption": { "displayName": "Caption", "purpose": "Ticket-row labels, admin counters, meta above a value." },
+      "ui": { "displayName": "UI", "purpose": "Navigation links and dense admin UI." },
+      "subhead": { "displayName": "Subhead", "purpose": "Card and row headings below Title." },
       "button": { "displayName": "Button", "purpose": "Buttons and links styled as actions." }
     },
     "shadows": [],
