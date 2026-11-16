@@ -13,7 +13,7 @@ export default defineConfig({
   integrations: [
     svelte(),
     sitemap({
-      filter: (page) => !/\/(admin|guest|assessment|checkin|calendar)\b/.test(page),
+      filter: (page) => !/\/(admin|guest|assessment|checkin|calendar|404)\b/.test(page),
     }),
   ],
 });

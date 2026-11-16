@@ -10,11 +10,13 @@ import ConsentBar from "../components/ConsentBar.astro";
 interface Props {
   title?: string;
   description?: string;
+  noindex?: boolean;
 }
 
 const {
   title = "التحالف السوداني للإنتان",
   description = "التحالف السوداني للإنتان: التوعية والتعليم والوقاية من الإنتان (تعفن الدم) في السودان.",
+  noindex = false,
 } = Astro.props;
 
 const nav = [
@@ -33,6 +35,7 @@ const nav = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content="#f7f5f0" />
     <meta name="supabase-url" content={import.meta.env.PUBLIC_SUPABASE_URL} />
     <meta name="supabase-key" content={import.meta.env.PUBLIC_SUPABASE_ANON_KEY} />
