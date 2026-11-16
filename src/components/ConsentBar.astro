@@ -8,7 +8,7 @@
 
 <aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية والأذونات">
   <div class="consent-quiet" hidden>
-    <p id="consent-quiet-text">الإشعارات مسموحة، لكن المتصفح لم يُكمل تسجيلها على هذا الجهاز.</p>
+    <p>مسموح</p>
     <div class="consent-quiet-actions">
       <button class="btn btn--sm" type="button" data-retry>أعد المحاولة</button>
       <button class="btn btn--ghost btn--sm" type="button" data-hide>لاحقاً</button>
@@ -60,11 +60,10 @@
     const cameraState = box.querySelector('[data-item="camera"] .consent-state');
     const notifyState = box.querySelector('[data-item="notify"] .consent-state');
     const quietNote = box.querySelector(".consent-quiet");
-    const quietText = box.querySelector("#consent-quiet-text");
 
     const labels = {
       granted: "مسموح",
-      warn: "مسموح — تعذّر تسجيل التنبيهات",
+      warn: "مسموح",
       denied: "مرفوض — فعّله من إعدادات المتصفح",
       prompt: "بانتظار الإذن",
       unsupported: "غير متاح في هذا المتصفح",
@@ -77,26 +76,6 @@
 
     const PUSH_FAIL = "sep-push-fail";
     const DAY = 24 * 60 * 60 * 1000;
-
-    const isIOS = () =>
-      /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isStandalone = () =>
-      window.matchMedia?.("(display-mode: standalone)").matches ||
-      navigator.standalone === true;
-    // Links opened from WhatsApp/Instagram and other apps run in a webview,
-    // where web push cannot be registered at all.
-    const isWebview = () => /; wv\)|FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
-
-    const pushHint = () => {
-      if (isIOS() && !isStandalone()) {
-        return "للآيفون: أضِف الموقع إلى الشاشة الرئيسية (مشاركة ← إضافة إلى الشاشة الرئيسية) ثم افتحه من هناك لتصل التنبيهات.";
-      }
-      if (isWebview()) {
-        return "افتح الرابط في متصفح كامل (Chrome أو Safari) لتصل التنبيهات.";
-      }
-      return "مسموح — تعذّر تسجيل التنبيهات على هذا الجهاز. سنحاول تلقائياً لاحقاً.";
-    };
 
     const queryCamera = async () => {
       if (!navigator.mediaDevices?.getUserMedia) return "unsupported";
@@ -171,7 +150,6 @@
           else rememberFail();
         }
         paint(notifyState, subscribed ? "granted" : "warn");
-        if (subscriptionBlocked) notifyState.textContent = pushHint();
       } else {
         subscribed = null;
         paint(notifyState, notify);
@@ -195,7 +173,6 @@
         notify === "granted" &&
         subscriptionBlocked;
       if (quiet && quietNote) {
-        if (quietText) quietText.textContent = pushHint();
         box.dataset.mode = "quiet";
         quietNote.hidden = false;
       } else {
