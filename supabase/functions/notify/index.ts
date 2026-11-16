@@ -4,7 +4,7 @@
 // WhatsApp via Green API is the live channel (registrant confirmation + admin
 // alerts); email goes through Brevo once its sender domain is verified.
 
-const FROM = "Sudan Sepsis Alliance <muhasalahsuliman@gmail.com>";
+const FROM = "Sudan Sepsis Alliance <info@sudansepsisalliance.com>";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -223,7 +223,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<Mail
 
 // The QR points at the guest's own check-in page. The pass (checkin_token) is
 // what opens it; the readable code rides along for the door scanner.
-const SITE = "https://mohammed262626.github.io/Sudanes-Sepsis-ALince";
+const SITE = "https://sudansepsisalliance.com";
 
 const checkinUrl = (code: string, pass: string) =>
   `${SITE}/checkin/?${pass ? "k=" + encodeURIComponent(pass) + "&" : ""}t=${encodeURIComponent(code)}`;
