@@ -149,6 +149,9 @@
 
       let subscriptionBlocked = false;
       if (notify === "granted") {
+        // push-client.js hasn't loaded yet; the DOMContentLoaded handler retries.
+        if (typeof window.sepPush !== "function") return;
+
         let failedAt = 0;
         try {
           failedAt = Number(localStorage.getItem(PUSH_FAIL) || 0);
@@ -244,7 +247,9 @@
     });
     quietNote?.querySelector("[data-hide]")?.addEventListener("click", () => box.remove());
 
-    refresh();
+    const init = () => refresh();
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
   })();
 </script>
 
