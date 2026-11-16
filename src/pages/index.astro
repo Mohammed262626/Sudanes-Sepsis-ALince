@@ -4,21 +4,6 @@ import { url } from "../lib/url";
 import ConferenceBand from "../components/ConferenceBand.svelte";
 import ContactForm from "../components/ContactForm.svelte";
 import SupportForm from "../components/SupportForm.svelte";
-import { supabase } from "../lib/supabase";
-
-const { data: activities } = supabase
-  ? await supabase
-      .from("activities")
-      .select("id, title, excerpt, published_at")
-      .order("published_at", { ascending: false })
-      .limit(6)
-  : { data: [] };
-
-const dateFmt = new Intl.DateTimeFormat("ar-SD", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
 ---
 
 <Base>
@@ -212,31 +197,6 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
     </div>
     <a class="btn btn--ghost" href={url("conference")}>تفاصيل المؤتمر</a>
   </section>
-
-  {
-    activities && activities.length > 0 && (
-      <section class="section wrap lazy" id="activities">
-        <div class="split">
-          <h2>آخر الأنشطة</h2>
-          <p>
-            ورش تدريبية، حملات توعية مجتمعية، وشراكات — تابع ما يقوم به
-            التحالف.
-          </p>
-        </div>
-        <div class="activity-grid">
-          {activities.map((a) => (
-            <article class="activity">
-              <time datetime={a.published_at}>
-                {dateFmt.format(new Date(a.published_at))}
-              </time>
-              <h3>{a.title}</h3>
-              <p>{a.excerpt}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    )
-  }
 
   <section class="section wrap lazy" id="about">
     <div class="split">
