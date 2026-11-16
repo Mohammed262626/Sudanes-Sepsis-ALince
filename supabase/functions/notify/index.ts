@@ -665,6 +665,7 @@ Deno.serve(async (req) => {
   if (!mail?.to) return json({ skipped: true, whatsapp });
 
   const mailResult = await sendMail(mail.to, mail.subject, mail.html);
+  await logSends(payload.table, payload.record, { email: mailResult });
   if (mailResult.status === 0) return json({ error: "missing brevo key", whatsapp }, 500);
   return json({ sent: mailResult.ok, status: mailResult.status, whatsapp });
 });
