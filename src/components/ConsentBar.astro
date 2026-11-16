@@ -2,18 +2,11 @@
 // One-time(ish) notice: the page needs the camera at check-in and notifications
 // for conference alerts. Until both are allowed the bar keeps coming back; once
 // everything is granted it never shows again. If the browser allows
-// notifications but cannot save the push subscription, the bar demotes itself
-// to one quiet line for 24h instead of repeating a failing attempt every visit.
+// notifications but cannot save the push subscription, the bar stays
+// hidden instead of repeating a failing attempt every visit.
 ---
 
 <aside class="consent" id="consent" hidden aria-label="إشعار الخصوصية والأذونات">
-  <div class="consent-quiet" hidden>
-    <p>مسموح</p>
-    <div class="consent-quiet-actions">
-      <button class="btn btn--sm" type="button" data-retry>أعد المحاولة</button>
-      <button class="btn btn--ghost btn--sm" type="button" data-hide>لاحقاً</button>
-    </div>
-  </div>
   <div class="consent-body">
     <p class="consent-title">نحتاج إذنكم مرة واحدة</p>
     <p class="consent-lead">
@@ -59,8 +52,6 @@
 
     const cameraState = box.querySelector('[data-item="camera"] .consent-state');
     const notifyState = box.querySelector('[data-item="notify"] .consent-state');
-    const quietNote = box.querySelector(".consent-quiet");
-
     const labels = {
       granted: "مسموح",
       warn: "مسموح",
@@ -137,8 +128,8 @@
         } catch {
           // Treat as no previous failure.
         }
-        // A failure in the last 24h: skip the attempt that we know fails, keep
-        // the note quiet. Older than that: try again by itself.
+        // A failure in the last 24h: skip the attempt we know fails.
+        // Older than that: try again by itself.
         if (failedAt > 0 && Date.now() - failedAt < DAY) {
           subscribed = false;
           subscriptionBlocked = true;
@@ -167,20 +158,17 @@
       }
 
       // Only the browser's own push registration is missing (permission is
-      // already granted): one quiet line, not the full ask.
+      // already granted): hide the bar instead of repeating a failing attempt.
       const quiet =
         (camera === "granted" || camera === "unsupported") &&
         notify === "granted" &&
         subscriptionBlocked;
-      if (quiet && quietNote) {
-        box.dataset.mode = "quiet";
-        quietNote.hidden = false;
-      } else {
-        box.dataset.mode = "";
-        if (quietNote) quietNote.hidden = true;
+      if (quiet) {
+        box.remove();
+        return false;
       }
 
-      // Missing anything (revoked, never asked, or subscribe failed): show it.
+      // Missing something real (revoked, never asked): show the full ask.
       box.removeAttribute("hidden");
       return false;
     };
@@ -216,13 +204,6 @@
 
     // «لاحقاً» hides it for this page view only — the reminder returns next visit.
     document.getElementById("consent-later")?.addEventListener("click", () => box.remove());
-
-    // Retry now — e.g. after adding the site to the home screen on iOS.
-    quietNote?.querySelector("[data-retry]")?.addEventListener("click", async () => {
-      forgetFail();
-      await refresh();
-    });
-    quietNote?.querySelector("[data-hide]")?.addEventListener("click", () => box.remove());
 
     const init = () => refresh();
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
@@ -324,41 +305,6 @@
     min-inline-size: 10rem;
   }
 
-  /* Quiet mode: permission is fine, only the browser's push registration is
-     not — one line instead of the whole ask. */
-  .consent[data-mode="quiet"] {
-    padding-block: 0.9rem;
-  }
-
-  .consent[data-mode="quiet"] .consent-body,
-  .consent[data-mode="quiet"] .consent-actions {
-    display: none;
-  }
-
-  .consent-quiet {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .consent-quiet[hidden] {
-    display: none;
-  }
-
-  .consent-quiet p {
-    margin: 0;
-    font-size: 0.9375rem;
-    line-height: 1.55;
-  }
-
-  .consent-quiet-actions {
-    flex: none;
-    display: flex;
-    gap: 0.5rem;
-  }
-
   @media (max-width: 48rem) {
     .consent {
       flex-direction: column;
@@ -372,12 +318,6 @@
     .consent-actions {
       grid-template-columns: 1fr 1fr;
       min-inline-size: 0;
-    }
-
-    .consent-quiet {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
     }
   }
 </style>
