@@ -31,7 +31,7 @@ declare
   subject text;
   html_body text;
   preheader text;
-  name text;
+  v_name text;
 begin
   select decrypted_secret into api_key
   from vault.decrypted_secrets
@@ -41,21 +41,21 @@ begin
     return NEW;
   end if;
 
-  name := coalesce(NEW.name, '');
+  v_name := coalesce(NEW.name, '');
 
   if TG_TABLE_NAME = 'contact_messages' then
     subject := 'استلمنا رسالتك';
     preheader := 'استلمنا رسالتك — التحالف السوداني للإنتان';
     html_body :=
       '<h1 style="font-size:22px;margin:0 0 16px;color:#15130f">استلمنا رسالتك</h1>' ||
-      '<p style="margin:0 0 16px;color:#15130f;line-height:1.7">أهلاً ' || name || '،</p>' ||
+      '<p style="margin:0 0 16px;color:#15130f;line-height:1.7">أهلاً ' || v_name || '،</p>' ||
       '<p style="margin:0;color:#15130f;line-height:1.7">شكراً لتواصلك مع التحالف السوداني للإنتان. سنعود إليك في أقرب وقت.</p>';
   elsif TG_TABLE_NAME = 'donation_interests' then
     subject := 'شكراً لاهتمامك بدعم التحالف';
     preheader := 'شكراً لاهتمامك بدعم التحالف السوداني للإنتان';
     html_body :=
       '<h1 style="font-size:22px;margin:0 0 16px;color:#15130f">شكراً لاهتمامك</h1>' ||
-      '<p style="margin:0 0 16px;color:#15130f;line-height:1.7">أهلاً ' || name || '،</p>' ||
+      '<p style="margin:0 0 16px;color:#15130f;line-height:1.7">أهلاً ' || v_name || '،</p>' ||
       '<p style="margin:0;color:#15130f;line-height:1.7">سجّلنا اهتمامك بدعم التحالف السوداني للإنتان، وسنرسل لك تفاصيل الدعم فور جاهزيتها.</p>';
   else
     return NEW;
