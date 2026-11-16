@@ -1,8 +1,8 @@
-// Sends Arabic transactional messages when a row is inserted.
+// Sends WhatsApp transactional messages when a row is inserted.
 // Triggered by public.notify_email() (see Supabase migrations); authenticated
 // with the x-webhook-secret header, compared against the value in Supabase Vault.
 // WhatsApp via Green API is the live channel (registrant confirmation + admin
-// alerts); email goes through Brevo once its sender domain is verified.
+// alerts); email auto-replies are handled by database triggers directly.
 
 const FROM = "Sudan Sepsis Alliance <muhasalahsuliman@gmail.com>";
 
@@ -30,10 +30,7 @@ async function getSecret(name: string): Promise<string | null> {
   return typeof value === "string" ? value : null;
 }
 
-const esc = (v: string) =>
-  v.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c
-  );
+
 
 // Email clients drop <style> blocks and ignore flex/grid, so the shell is
 // nested tables with inline styles only. Same palette as the site: paper
@@ -83,16 +80,7 @@ function layout(body: string, preheader = "") {
   );
 }
 
-// Bordered detail box with label/value rows, mirroring the site's row pattern.
-const row = (label: string, value: string) =>
-  '<tr><td align="right" style="padding:3px 0;color:' + MUTED + ';font-size:13px;width:84px;vertical-align:top;text-align:right">' + label +
-  '</td><td align="right" style="padding:3px 0;font-weight:bold;text-align:right">' + value + "</td></tr>";
 
-const box = (rows: string) =>
-  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="margin:20px 0">' +
-  '<tr><td dir="rtl" align="right" style="border:2px solid ' + LINE + ';padding:14px 16px;font-size:15px;line-height:1.8;color:' + INK + ';text-align:right">' +
-  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" dir="rtl">' + rows + "</table>" +
-  "</td></tr></table>";
 
 // Email clone of a WhatsApp action button: full width, 2px border, no radius
 // (Outlook ignores most of that anyway, so the table cell carries the box).
@@ -286,55 +274,7 @@ const sendTicketButtons = (
     ],
   });
 
-function compose(
-  table: string,
-  r: Record_
-): { to: string; subject: string; html: string } | null {
-  const name = esc(r.name ?? "");
-  if (table === "conference_registrations") {
-    return {
-      to: r.email,
-      subject: "استلمنا طلب تسجيلك في مؤتمر كسلا للإنتان",
-      html: layout(
-        '<h1 style="font-size:22px;margin:0 0 16px">استلمنا طلب تسجيلك</h1>' +
-          "<p>أهلاً " + name + "،</p>" +
-          "<p style=\"margin:0 0 4px\">طلبك لمؤتمر <strong>كسلا للإنتان</strong> وصلنا.</p>" +
-          box(
-            row("التاريخ", "الاثنين 30 نوفمبر 2026") +
-              row("الوقت", "9:00 صباحاً بتوقيت الخرطوم") +
-              row("المكان", "كسلا")
-          ) +
-          "<p>سنتواصل معك قريباً لتأكيد القبول.</p>",
-        "استلمنا طلب تسجيلك في مؤتمر كسلا للإنتان"
-      ),
-    };
-  }
-  if (table === "contact_messages") {
-    return {
-      to: r.email,
-      subject: "استلمنا رسالتك",
-      html: layout(
-        '<h1 style="font-size:22px;margin:0 0 16px">استلمنا رسالتك</h1>' +
-          "<p>أهلاً " + name + "،</p>" +
-          "<p>شكراً لتواصلك مع التحالف السوداني للإنتان. سنعود إليك في أقرب وقت.</p>",
-        "استلمنا رسالتك — التحالف السوداني للإنتان"
-      ),
-    };
-  }
-  if (table === "donation_interests") {
-    return {
-      to: r.email,
-      subject: "شكراً لاهتمامك بدعم التحالف",
-      html: layout(
-        '<h1 style="font-size:22px;margin:0 0 16px">شكراً لاهتمامك</h1>' +
-          "<p>أهلاً " + name + "،</p>" +
-          "<p>سجّلنا اهتمامك بدعم التحالف السوداني للإنتان، وسنرسل لك تفاصيل الدعم فور جاهزيتها.</p>",
-        "شكراً لاهتمامك بدعم التحالف السوداني للإنتان"
-      ),
-    };
-  }
-  return null;
-}
+
 
 // Admin-editable template from public.message_templates; falls back to the
 // built-in text when the row is missing or blank.
@@ -661,10 +601,5 @@ Deno.serve(async (req) => {
 
   await logSends(payload.table, payload.record, whatsapp);
 
-  const mail = compose(payload.table, payload.record);
-  if (!mail?.to) return json({ skipped: true, whatsapp });
-
-  const mailResult = await sendMail(mail.to, mail.subject, mail.html);
-  if (mailResult.status === 0) return json({ error: "missing brevo key", whatsapp }, 500);
-  return json({ sent: mailResult.ok, status: mailResult.status, whatsapp });
+  return json({ whatsapp });
 });
