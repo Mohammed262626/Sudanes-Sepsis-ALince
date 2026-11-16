@@ -3,7 +3,9 @@
 -- tables; this trigger takes over the email leg for contact_messages and
 -- donation_interests so that no Vault secret chaining is needed.
 
--- HTML layout matching the site palette, sans webfonts (clients have their own).
+-- Branded HTML layout matching the site palette: logo header, Cairo webfont,
+-- ink-white card, accent stripe, footer with disclaimer. Fonts served from the
+-- production domain so they work in clients with @font-face support.
 create or replace function public.email_layout(body text, preheader text default '')
 returns text
 language sql
@@ -12,12 +14,29 @@ as $$
 select
   '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">' ||
   '<meta name="viewport" content="width=device-width,initial-scale=1">' ||
-  '<title>' || preheader || '</title></head>' ||
-  '<body style="margin:0;padding:0;background:#f7f5f0;color:#15130f;direction:rtl;text-align:right;font-family:Tahoma,Arial,sans-serif;font-size:16px;line-height:1.6">' ||
-  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f5f0"><tr><td align="center" style="padding:32px 16px">' ||
-  '<table role="presentation" width="100%" style="max-width:540px;background:#f7f5f0;border:2px solid #ddd8cf;padding:32px">' ||
-  body ||
-  '</table></td></tr></table></body></html>'
+  '<title>التحالف السوداني للإنتان</title>' ||
+  '<style>@font-face{font-family:Cairo;src:url(https://sudansepsisalliance.com/fonts/cairo-arabic-wght-normal.woff2) format("woff2");font-weight:200 1000;font-style:normal;font-display:swap}' ||
+  '@font-face{font-family:Cairo;src:url(https://sudansepsisalliance.com/fonts/cairo-latin-wght-normal.woff2) format("woff2");font-weight:200 1000;font-style:normal;font-display:swap}</style>' ||
+  '</head>' ||
+  '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' || preheader || '</div>' ||
+  '<body dir="rtl" style="margin:0;padding:0;background:#f7f5f0;color:#15130f;direction:rtl;text-align:right;font-family:Cairo,Tahoma,Arial,sans-serif;font-size:16px;-webkit-text-size-adjust:100%">' ||
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="background:#f7f5f0"><tr><td align="center" style="padding:32px 16px">' ||
+  '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;width:100%;background:#ffffff;border:2px solid #15130f">' ||
+  '<tr><td dir="rtl" align="right" style="background:#15130f;padding:20px 24px;text-align:right">' ||
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="border-collapse:collapse"><tr>' ||
+  '<td style="padding-left:14px;vertical-align:middle">' ||
+  '<img src="https://sudansepsisalliance.com/logo.png" width="85" height="56" alt="" style="display:block;border:0;outline:none;text-decoration:none;width:85px;height:56px">' ||
+  '</td>' ||
+  '<td style="vertical-align:middle;text-align:right">' ||
+  '<div style="color:#f7f5f0;font-size:17px;font-weight:bold">التحالف السوداني للإنتان</div>' ||
+  '<div style="color:#b9b3a7;font-size:12px;margin-top:4px">مؤتمر كسلا للإنتان — 30 نوفمبر 2026</div>' ||
+  '</td></tr></table></td></tr>' ||
+  '<tr><td style="height:4px;line-height:4px;font-size:0;background:#962567">&nbsp;</td></tr>' ||
+  '<tr><td dir="rtl" align="right" style="padding:28px 24px 8px;font-size:16px;line-height:1.75;color:#15130f;text-align:right">' || body || '</td></tr>' ||
+  '<tr><td dir="rtl" align="right" style="padding:18px 24px 24px;border-top:2px solid #ddd8cf;font-size:12px;line-height:1.8;color:#6f6a62;text-align:right">' ||
+  '<a href="https://sudansepsisalliance.com" style="color:#962567;text-decoration:none">التحالف السوداني للإنتان</a><br>' ||
+  'رسالة تلقائية — لا تُستخدم للإبلاغ عن حالات طبية طارئة.' ||
+  '</td></tr></table></td></tr></table></body></html>'
 $$;
 
 create or replace function public.send_auto_reply()
