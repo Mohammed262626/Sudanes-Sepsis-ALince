@@ -2,8 +2,6 @@
 import Base from "../layouts/Base.astro";
 import { url } from "../lib/url";
 import ConferenceBand from "../components/ConferenceBand.svelte";
-import Countdown from "../components/Countdown.svelte";
-import ConferenceForm from "../components/ConferenceForm.svelte";
 import ContactForm from "../components/ContactForm.svelte";
 import SupportForm from "../components/SupportForm.svelte";
 import { supabase } from "../lib/supabase";
@@ -211,31 +209,27 @@ const dateFmt = new Intl.DateTimeFormat("ar-SD", {
         <div class="rows">
           <div class="row" style="grid-template-columns: 8rem 1fr;">
             <span class="idx">التاريخ</span>
-            <h3>الاثنين 30 نوفمبر 2026</h3>
+            <h3>قريباً</h3>
           </div>
           <div class="row" style="grid-template-columns: 8rem 1fr;">
             <span class="idx">الوقت</span>
-            <h3>9:00 صباحاً بتوقيت الخرطوم</h3>
+            <h3>قريباً</h3>
           </div>
           <div class="row" style="grid-template-columns: 8rem 1fr;">
             <span class="idx">المكان</span>
-            <h3>كسلا — يُعلن الموقع الدقيق قريباً</h3>
+            <h3>قريباً</h3>
           </div>
           <div class="row" style="grid-template-columns: 8rem 1fr;">
             <span class="idx">التسجيل</span>
-            <h3>مفتوح حتى 16 نوفمبر 2026</h3>
+            <h3>قريباً</h3>
           </div>
-        </div>
-        <div style="margin-top: 1.5rem;">
-          <Countdown client:visible />
         </div>
       </div>
       <div>
-        <h3 style="font-size: 1.25rem; margin-bottom: .75rem;">سجّل حضورك</h3>
+        <h3 style="font-size: 1.25rem; margin-bottom: .75rem;">قريباً</h3>
         <p style="color: var(--muted); margin-bottom: 1.5rem;">
-          بعد إتمام التسجيل سنرسل تفاصيل الحضور والبرنامج إلى بريدك الإلكتروني.
+          التفاصيل والتسجيل قريباً. تابعونا للإعلان عن موعد فتح التسجيل.
         </p>
-        <ConferenceForm client:visible />
       </div>
     </div>
   </section>

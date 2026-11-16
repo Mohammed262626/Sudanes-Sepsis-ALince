@@ -1,8 +1,8 @@
-name: Deploy to GitHub Pages
+name: Deploy dev preview to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
@@ -29,6 +29,7 @@ jobs:
         env:
           SITE_BASE: /Sudanes-Sepsis-ALince
           SITE_URL: https://mohammed262626.github.io
+          PUBLIC_PREVIEW: "true"
           # Publishable values are already in the browser bundle; secrets can override them.
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL || 'https://hdoylixxljkimdypfomp.supabase.co' }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_ULV57VKYbZqJOc9nqj_yrg_ShaVf0z9' }}
