@@ -19,6 +19,9 @@ const {
   noindex = false,
 } = Astro.props;
 
+// The GitHub Pages build sets PUBLIC_PREVIEW; keep that mirror out of search.
+const preview = import.meta.env.PUBLIC_PREVIEW === "true";
+
 const nav = [
   { href: url("#sepsis"), label: "ما هو الإنتان" },
   { href: url("#symptoms"), label: "الأعراض والوقاية" },
@@ -35,7 +38,7 @@ const nav = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {(noindex || preview) && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content="#f7f5f0" />
     <meta name="supabase-url" content={import.meta.env.PUBLIC_SUPABASE_URL} />
     <meta name="supabase-key" content={import.meta.env.PUBLIC_SUPABASE_ANON_KEY} />
