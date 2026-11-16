@@ -68,34 +68,9 @@ const nav = [
       </nav>
     </header>
 
-    <main id="main">
+    <main id="main" style="padding-bottom: 3rem;">
       <slot />
     </main>
-
-    <footer class="footer wrap">
-      <div class="footer-top">
-        <div>
-          <a class="brand" href={url()}>
-            <img src={url("logo-mark.png")} alt="" width="28" height="28" />
-            <span>التحالف السوداني للإنتان</span>
-          </a>
-          <p style="margin-top: .75rem; max-width: 34ch;">
-            نعمل على خفض الوفيات الناتجة عن الإنتان في السودان من خلال
-            التوعية، التدريب، والمناصرة.
-          </p>
-        </div>
-        <ul class="footer-links">
-          {nav.map((item) => (
-            <li><a href={item.href}>{item.label}</a></li>
-          ))}
-          <li><a href={url("#support")}>ادعمنا</a></li>
-        </ul>
-      </div>
-      <div class="footer-bottom">
-        <span>© {new Date().getFullYear()} التحالف السوداني للإنتان</span>
-        <span>جميع الحقوق محفوظة</span>
-      </div>
-    </footer>
 
     <ConsentBar />
 
