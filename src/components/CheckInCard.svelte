@@ -353,7 +353,7 @@
 </script>
 
 <div class="checkin">
-  <p class="kicker">مؤتمر كسلا للإنتان</p>
+  <p class="kicker">مؤتمر كسلا للتسمم الدموي</p>
 
   {#if state === "ready" || state === "done"}
     <ol class="steps" aria-label="خطوات تسجيل الحضور">
@@ -492,7 +492,7 @@
     </div>
   {/key}
 
-  <p class="brand">صفحة رسمية — التحالف السوداني للإنتان</p>
+  <p class="brand">صفحة رسمية — التحالف السوداني للتسمم الدموي</p>
 </div>
 
 <style>

@@ -202,7 +202,7 @@
 {:else if guest}
   <div class="guest-shell" aria-labelledby="guest-title">
     <article class="pass">
-      <p class="pass-band">مؤتمر كسلا للإنتان</p>
+      <p class="pass-band">مؤتمر كسلا للتسمم الدموي</p>
       <div class="pass-body">
         <div>
           <h1 id="guest-title">{guest.name}</h1>

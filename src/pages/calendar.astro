@@ -1,6 +1,7 @@
 ---
-import "@fontsource-variable/cairo";
-import "@fontsource/tajawal/400.css";
+import "@fontsource/ibm-plex-sans-arabic/400.css";
+import "@fontsource/ibm-plex-sans-arabic/600.css";
+import "@fontsource/ibm-plex-sans-arabic/700.css";
 import "../styles/global.css";
 import { url } from "../lib/url";
 
@@ -9,11 +10,11 @@ import { url } from "../lib/url";
 const ics = url("conference.ics");
 const google =
   "https://calendar.google.com/calendar/render?action=TEMPLATE" +
-  "&text=" + encodeURIComponent("مؤتمر كسلا للإنتان") +
+  "&text=" + encodeURIComponent("مؤتمر كسلا للتسمم الدموي") +
   "&dates=20261130T090000/20261130T150000" +
   "&ctz=Africa/Khartoum" +
   "&location=" + encodeURIComponent("كسلا، السودان") +
-  "&details=" + encodeURIComponent("التحالف السوداني للإنتان — 9:00 صباحاً إلى 3:00 عصراً بتوقيت الخرطوم.");
+  "&details=" + encodeURIComponent("التحالف السوداني للتسمم الدموي — 9:00 صباحاً إلى 3:00 عصراً بتوقيت الخرطوم.");
 ---
 
 <!doctype html>
@@ -28,7 +29,7 @@ const google =
   </head>
   <body>
     <main>
-      <p class="kicker">مؤتمر كسلا للإنتان</p>
+      <p class="kicker">مؤتمر كسلا للتسمم الدموي</p>
       <h1>جارٍ فتح التقويم...</h1>
       <p class="links">
         <a href={ics}>تقويم آبل</a>

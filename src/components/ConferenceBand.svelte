@@ -17,10 +17,10 @@
 </script>
 
 {#if remaining > 0}
-  <section class="conf-band" aria-label="مؤتمر كسلا للإنتان">
+  <section class="conf-band" aria-label="مؤتمر كسلا للتسمم الدموي">
     <div class="wrap conf-band-inner">
       <a class="conf-band-title" href={url("conference")}>
-        <strong>مؤتمر كسلا للإنتان</strong>
+        <strong>مؤتمر كسلا للتسمم الدموي</strong>
         <span>30 نوفمبر 2026 · 9:00 صباحاً · كسلا</span>
       </a>
       <p class="conf-band-count">

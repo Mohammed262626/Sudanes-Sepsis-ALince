@@ -47,10 +47,19 @@ Admins can re-send an approved ticket (`resend_ticket` RPC, sends the QR again) 
 
 ## Design rules
 
-Modern-minimal NGO: off-white `--paper`, ink `--ink`, one accent (`--accent` is a
-placeholder until brand colors arrive), Cairo display + Tajawal body (self-hosted),
-2px borders instead of shadows/cards, no gradients. Real photos only. Keep new UI
-consistent with the existing tokens and classes.
+Bold two-tone NGO: off-white `--paper`, ink `--ink`, brand magenta `--accent`
+(#962567, sampled from `public/gradient_background.png`) plus its tints
+`--tint-pink` / `--tint-rose` and slate `--impact-slate`. The homepage follows the
+UK Sepsis Trust layout: paper "check symptoms" strip, solid-accent hero cut by a
+diagonal with a paper card floating over the cut, three-line tone-shifted
+headline, three 200px photo cards (hover zoom), a stacked three-tone "what we do"
+heading, an accent story carousel with split background, floating news card, and
+an ink footer. IBM Plex Sans Arabic only (self-hosted; 700 display, 400 body, 600
+compact UI — never 800/900). Homepage blocks are borderless; interior pages keep
+2px ink rules. Borders instead of shadows. Motion: entrances rise (opacity + translateY) and
+card photos zoom on hover; both off under `prefers-reduced-motion`. Real photos
+only — credits live in `public/img/CREDITS.md`. Breakpoints stay 720 / 800 / 900 /
+1100.
 
 ## Content
 

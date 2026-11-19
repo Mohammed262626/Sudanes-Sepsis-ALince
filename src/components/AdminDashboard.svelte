@@ -531,7 +531,7 @@
     pushing = true;
     pushNote = "";
     const { data, error } = await supabase.functions.invoke("push-send", {
-      body: { title: "التحالف السوداني للإنتان", body },
+      body: { title: "التحالف السوداني للتسمم الدموي", body },
     });
     pushing = false;
     const at = new Date().toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
