@@ -1029,15 +1029,10 @@ body.home .section + .section {
   border-width: 1px;
 }
 
-/* One-page anchors and offscreen rendering skip */
+/* One-page anchors */
 section[id],
 #prevention {
   scroll-margin-top: 88px;
-}
-
-.lazy {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 680px;
 }
 
 /* Nav: conference link + scroll-active state */
