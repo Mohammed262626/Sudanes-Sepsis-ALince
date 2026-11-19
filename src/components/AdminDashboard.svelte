@@ -12,13 +12,14 @@
     { id: "assessments", label: "الاستبانات" },
     { id: "program", label: "البرنامج" },
     { id: "push", label: "إشعارات" },
+    { id: "settings", label: "المؤتمر" },
     { id: "contact_messages", label: "الرسائل" },
     { id: "donation_interests", label: "الدعم" },
     { id: "templates", label: "قوالب واتساب" },
   ];
 
   const dataTabs = tabs.filter(
-    (t) => !["templates", "scan", "assessments", "push", "program"].includes(t.id),
+    (t) => !["templates", "scan", "assessments", "push", "program", "settings"].includes(t.id),
   );
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
@@ -496,6 +497,30 @@
     );
   }
 
+  // Conference config.
+  let bandEnabled = $state(true);
+  let confSoon = $state(true);
+  let confEventDate = $state("");
+  let confEventTime = $state("9:00 صباحاً بتوقيت الخرطوم");
+  let confRegDeadline = $state("");
+  let savingConfig = $state(false);
+  let configNote = $state("");
+
+  async function saveConferenceConfig() {
+    if (!supabase || savingConfig) return;
+    savingConfig = true;
+    configNote = "";
+    const { error } = await supabase.rpc("set_conference_config", {
+      p_band_enabled: bandEnabled,
+      p_soon: confSoon,
+      p_event_date: confEventDate,
+      p_event_time: confEventTime,
+      p_reg_deadline: confRegDeadline,
+    });
+    savingConfig = false;
+    configNote = error ? "تعذّر الحفظ. حاول مرة أخرى." : "تم الحفظ.";
+  }
+
   const SEND_KINDS: Record<string, string> = {
     approval: "رسالة القبول",
     ticket: "التذكرة",
@@ -531,7 +556,7 @@
     pushing = true;
     pushNote = "";
     const { data, error } = await supabase.functions.invoke("push-send", {
-      body: { title: "التحالف السوداني للإنتان", body },
+      body: { title: "التحالف السوداني للتسمم الدموي", body },
     });
     pushing = false;
     const at = new Date().toLocaleTimeString("ar", { hour: "2-digit", minute: "2-digit" });
@@ -985,6 +1010,20 @@
     preOpen = !!config.data?.assessment_pre_open;
     postOpen = !!config.data?.assessment_post_open;
 
+    const cfgRes = await supabase
+      .from("event_config")
+      .select("band_enabled,soon,event_date,event_time,reg_deadline")
+      .eq("id", 1)
+      .maybeSingle();
+    if (!cfgRes.error && cfgRes.data) {
+      const c = cfgRes.data;
+      bandEnabled = c.band_enabled !== false;
+      confSoon = c.soon === true;
+      confEventDate = String(c.event_date ?? "");
+      confEventTime = String(c.event_time ?? "9:00 صباحاً بتوقيت الخرطوم");
+      confRegDeadline = String(c.reg_deadline ?? "").replace(/\+00$/, "Z");
+    }
+
     const subs = await supabase
       .from("push_subscriptions")
       .select("endpoint", { count: "exact", head: true });
@@ -1422,6 +1461,47 @@
           {/each}
         </ul>
       {/if}
+    </div>
+  {:else if tab === "settings"}
+    <div class="templates">
+      <div class="filters">
+        <button
+          type="button"
+          aria-pressed={bandEnabled}
+          disabled={savingConfig}
+          onclick={() => { bandEnabled = !bandEnabled; }}
+        >
+          شريط المؤتمر: {bandEnabled ? "ظاهر" : "مخفي"}
+        </button>
+        <button
+          type="button"
+          aria-pressed={confSoon}
+          disabled={savingConfig}
+          onclick={() => { confSoon = !confSoon; }}
+        >
+          الحالة: {confSoon ? "قريباً" : "مجدول"}
+        </button>
+      </div>
+      <label>
+        <span>تاريخ المؤتمر</span>
+        <input type="date" bind:value={confEventDate} />
+      </label>
+      <label>
+        <span>وقت المؤتمر</span>
+        <input type="text" bind:value={confEventTime} dir="rtl" />
+      </label>
+      <label>
+        <span>آخر موعد للتسجيل</span>
+        <input type="datetime-local" bind:value={confRegDeadline} />
+      </label>
+      <div class="templates-foot">
+        <button class="btn" type="button" onclick={saveConferenceConfig} disabled={savingConfig}>
+          {savingConfig ? "جارٍ الحفظ…" : "حفظ الإعدادات"}
+        </button>
+        {#if configNote}
+          <p class="form-status">{configNote}</p>
+        {/if}
+      </div>
     </div>
   {:else}
     {#if tab === "conference_registrations"}

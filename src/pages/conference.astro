@@ -1,68 +1,55 @@
 ---
 import Base from "../layouts/Base.astro";
 import { url } from "../lib/url";
+import Countdown from "../components/Countdown.svelte";
+import ConferenceForm from "../components/ConferenceForm.svelte";
+import EventDates from "../components/EventDates.svelte";
 ---
 
 <Base
-  title="مؤتمر كسلا للإنتان 2026 | التحالف السوداني للإنتان"
-  description="مؤتمر كسلا للإنتان — التفاصيل والتسجيل قريباً."
+  title="مؤتمر كسلا للتسمم الدموي 2026 | التحالف السوداني للتسمم الدموي"
+  description="مؤتمر كسلا للتسمم الدموي — 30 نوفمبر 2026، 9 صباحاً. لقاء وطني للكوادر الصحية حول الكشف المبكر والاستجابة السريعة للتسمم الدموي."
 >
-  <article class="soon">
-    <p class="kicker">التحالف السوداني للإنتان</p>
-    <h2 class="soon-title">مؤتمر كسلا للإنتان</h2>
-    <h1 class="soon-headline">قريباً.</h1>
-    <p class="soon-lede">
-      لقاء وطني يجمع الكوادر الصحية وصنّاع القرار لمناقشة الكشف المبكر عن
-      الإنتان والاستجابة السريعة له في السودان.
-    </p>
-    <hr class="soon-rule" />
-    <p class="soon-note">
-      سيُعلن هنا التاريخ والمكان وفتح التسجيل.
-      <a href={url("#contact")}>تواصل معنا</a> للاستفسار.
-    </p>
-  </article>
+  <section class="hero wrap">
+    <div>
+      <p class="kicker">كسلا · السودان</p>
+      <h1>مؤتمر كسلا<br />للتسمم الدموي.</h1>
+      <p class="lede">
+        لقاء وطني يجمع الكوادر الصحية وصنّاع القرار لمناقشة الكشف المبكر عن
+        التسمم الدموي والاستجابة السريعة له في السودان.
+      </p>
+      <div class="actions">
+        <a class="btn" href="#register">سجّل حضورك</a>
+      </div>
+    </div>
+    <Countdown client:load />
+  </section>
+
+  <section class="section wrap">
+    <div class="split">
+      <h2>عن المؤتمر</h2>
+      <p>
+        يوم واحد يجمع الأطباء والممرضين والصيادلة والطلاب حول بروتوكولات
+        الكشف المبكر، تجارب الميدان، وخطط تحسين الاستجابة في المستشفيات
+        السودانية.
+      </p>
+    </div>
+    <EventDates client:load />
+  </section>
+
+  <section class="section wrap" id="register">
+    <div class="contact-grid">
+      <div class="prose">
+        <h2>التسجيل</h2>
+        <p>
+          سجّل حضورك في مؤتمر كسلا للتسمم الدموي. بعد إتمام التسجيل سنرسل تفاصيل
+          الحضور والبرنامج إلى بريدك الإلكتروني.
+        </p>
+        <p>
+          لأي استفسار، <a href={url("#contact")}>تواصل معنا</a>.
+        </p>
+      </div>
+      <ConferenceForm client:load />
+    </div>
+  </section>
 </Base>
-
-<style>
-  .soon {
-    max-width: 44rem;
-    margin: 0 auto;
-    padding-block: clamp(4rem, 10vw, 8rem);
-    text-align: center;
-  }
-
-  .soon-title {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: clamp(1.25rem, 3vw, 1.75rem);
-    margin-block: 0 0.5rem;
-  }
-
-  .soon-headline {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: clamp(4.5rem, 15vw, 9rem);
-    line-height: 1;
-    margin-block: 0.5rem 1rem;
-  }
-
-  .soon-lede {
-    max-width: 38rem;
-    margin-inline: auto;
-    color: var(--muted);
-    font-size: clamp(1.0625rem, 2vw, 1.1875rem);
-    margin-bottom: 2.5rem;
-  }
-
-  .soon-rule {
-    border: none;
-    border-top: 1px solid var(--line);
-    max-width: 12rem;
-    margin-block: 0 1.5rem;
-  }
-
-  .soon-note {
-    color: var(--muted);
-    font-size: 0.9375rem;
-  }
-</style>

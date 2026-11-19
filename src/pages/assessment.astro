@@ -1,8 +1,7 @@
 ---
-import "@fontsource-variable/cairo";
-import "@fontsource/tajawal/400.css";
-import "@fontsource/tajawal/500.css";
-import "@fontsource/tajawal/700.css";
+import arabic400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2?url";
+import arabic600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2?url";
+import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
 import "../styles/global.css";
 import AssessmentForm from "../components/AssessmentForm.svelte";
 ---
@@ -15,7 +14,30 @@ import AssessmentForm from "../components/AssessmentForm.svelte";
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#f7f5f0" />
-    <title>استبانة المؤتمر | التحالف السوداني للإنتان</title>
+    <title>استبانة المؤتمر | التحالف السوداني للتسمم الدموي</title>
+    <style is:inline>
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 400;
+        font-display: optional;
+        src: url({arabic400}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 600;
+        font-display: optional;
+        src: url({arabic600}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 700;
+        font-display: optional;
+        src: url({arabic700}) format("woff2");
+      }
+    </style>
   </head>
   <body>
     <main>

@@ -1,8 +1,10 @@
 ---
-import "@fontsource-variable/cairo";
-import "@fontsource/tajawal/400.css";
-import "@fontsource/tajawal/500.css";
-import "@fontsource/tajawal/700.css";
+import arabic400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2?url";
+import arabic600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2?url";
+import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
+import latin400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-400-normal.woff2?url";
+import latin600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-600-normal.woff2?url";
+import latin700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-700-normal.woff2?url";
 import "../styles/global.css";
 import { url } from "../lib/url";
 import ConsentBar from "../components/ConsentBar.astro";
@@ -11,19 +13,25 @@ interface Props {
   title?: string;
   description?: string;
   noindex?: boolean;
+  home?: boolean;
 }
 
 const {
-  title = "التحالف السوداني للإنتان",
-  description = "التحالف السوداني للإنتان: التوعية والتعليم والوقاية من الإنتان (تعفن الدم) في السودان.",
+  title = "التحالف السوداني للتسمم الدموي",
+  description = "التحالف السوداني للتسمم الدموي: التوعية والتعليم والوقاية من التسمم الدموي (الإنتان) في السودان.",
   noindex = false,
+  home = false,
 } = Astro.props;
 
 // The GitHub Pages build sets PUBLIC_PREVIEW; keep that mirror out of search.
 const preview = import.meta.env.PUBLIC_PREVIEW === "true";
 
+// Canonical/OG need absolute URLs; Astro.url.pathname already carries the base.
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).href;
+const ogImage = new URL(url("og.jpg"), Astro.site ?? Astro.url.origin).href;
+
 const nav = [
-  { href: url("#sepsis"), label: "ما هو الإنتان" },
+  { href: url("#sepsis"), label: "ما هو التسمم الدموي" },
   { href: url("#symptoms"), label: "الأعراض والوقاية" },
   { href: url("#conference"), label: "المؤتمر" },
   
@@ -41,20 +49,84 @@ const nav = [
     <meta name="theme-color" content="#f7f5f0" />
     <meta name="supabase-url" content={import.meta.env.PUBLIC_SUPABASE_URL} />
     <meta name="supabase-key" content={import.meta.env.PUBLIC_SUPABASE_ANON_KEY} />
+    {
+      import.meta.env.PUBLIC_SUPABASE_URL && (
+        <link rel="preconnect" href={import.meta.env.PUBLIC_SUPABASE_URL} crossorigin />
+      )
+    }
     <title>{title}</title>
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="التحالف السوداني للتسمم الدموي" />
+    <meta property="og:locale" content="ar_SD" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
+    <link rel="preload" href={arabic700} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={arabic600} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={arabic400} as="font" type="font/woff2" crossorigin />
     <link rel="apple-touch-icon" href={url("icon-192.png")} />
     <link rel="manifest" href={url("manifest.webmanifest")} />
     <script is:inline src={url("push-client.js")} defer></script>
+    <style is:inline>
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 400;
+        font-display: optional;
+        src: url({arabic400}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 600;
+        font-display: optional;
+        src: url({arabic600}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 700;
+        font-display: optional;
+        src: url({arabic700}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 400;
+        font-display: optional;
+        src: url({latin400}) format("woff2");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 600;
+        font-display: optional;
+        src: url({latin600}) format("woff2");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 700;
+        font-display: optional;
+        src: url({latin700}) format("woff2");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+    </style>
   </head>
-  <body>
+  <body class={home ? "home" : undefined}>
     <a class="skip" href="#main">تجاوز إلى المحتوى</a>
 
     <header class="site-header">
       <nav class="nav wrap" aria-label="التنقل الرئيسي">
         <a class="brand" href={url()}>
           <img src={url("logo-mark.png")} alt="" width="34" height="34" />
-          <span>التحالف السوداني للإنتان</span>
+          <span>التحالف السوداني للتسمم الدموي</span>
         </a>
         <ul class="nav-links">
           <li class="nav-special"><a href={url("conference")}>مؤتمر كسلا</a></li>
@@ -66,7 +138,7 @@ const nav = [
             ))
           }
         </ul>
-        <a class="btn" href={url("#contact")}>اتصل بنا</a>
+        <a class="btn btn--accent" href={url("conference")}>سجّل في المؤتمر</a>
       </nav>
     </header>
 
@@ -75,6 +147,28 @@ const nav = [
     </main>
 
     <ConsentBar />
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="footer-top">
+          <a class="brand" href={url()}>
+            <img src={url("logo-mark.png")} alt="" width="28" height="28" />
+            <span>التحالف السوداني للتسمم الدموي</span>
+          </a>
+          <ul class="footer-links">
+            <li><a href={url("#sepsis")}>ما هو التسمم الدموي</a></li>
+            <li><a href={url("#symptoms")}>الأعراض والوقاية</a></li>
+            <li><a href={url("#conference")}>المؤتمر</a></li>
+            <li><a href={url("#about")}>من نحن</a></li>
+            <li><a href={url("#contact")}>اتصل بنا</a></li>
+          </ul>
+        </div>
+        <div class="footer-bottom">
+          <p>ملاحظة: هذه الصفحة ليست قناة طوارئ طبية. إذا كنت تشك في إصابة شخص بالتسمم الدموي، فتوجّه فوراً إلى أقرب مستشفى.</p>
+          <p>© {new Date().getFullYear()} التحالف السوداني للتسمم الدموي</p>
+        </div>
+      </div>
+    </footer>
 
     <script>
       const links = Array.from(
@@ -115,6 +209,31 @@ const nav = [
         { passive: true },
       );
       update();
+
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const reveals = document.querySelectorAll<HTMLElement>(".reveal");
+        if (reveals.length && "IntersectionObserver" in window) {
+          const obs = new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (entry.isIntersecting) {
+                  (entry.target as HTMLElement).classList.add("visible");
+                  obs.unobserve(entry.target);
+                }
+              }
+            },
+            { threshold: 0.12 },
+          );
+          for (const el of reveals) {
+            if (el.getBoundingClientRect().top < window.innerHeight * 0.85) {
+              el.classList.add("visible");
+            } else {
+              el.setAttribute("data-observe", "");
+              obs.observe(el);
+            }
+          }
+        }
+      }
     </script>
   </body>
 </html>

@@ -1,13 +1,47 @@
 <script lang="ts">
   import { url } from "../lib/url";
+  import { fetchEventConfig } from "../lib/event";
+  import type { EventConfig } from "../lib/event";
+
+  let cfg = $state<EventConfig | null>(null);
+
+  $effect(() => {
+    fetchEventConfig().then((c) => (cfg = c));
+  });
+
+  let now = $state(Date.now());
+  $effect(() => {
+    const id = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(id);
+  });
 </script>
 
-<section class="conf-band" aria-label="مؤتمر كسلا للإنتان">
-  <div class="wrap conf-band-inner">
-    <a class="conf-band-title" href={url("conference")}>
-      <strong>مؤتمر كسلا للإنتان</strong>
-      <span>التفاصيل قريباً</span>
-    </a>
-    <a class="btn btn--light" href={url("conference")}>تفاصيل المؤتمر</a>
-  </div>
-</section>
+{#if cfg && cfg.bandEnabled}
+  <section class="conf-band" aria-label="مؤتمر كسلا للتسمم الدموي">
+    <div class="wrap conf-band-inner">
+      <a class="conf-band-title" href={url("conference")}>
+        <strong>مؤتمر كسلا للتسمم الدموي</strong>
+        {#if !cfg.soon}
+          <span>{cfg.eventTime}</span>
+        {:else}
+          <span>قريباً</span>
+        {/if}
+      </a>
+      {#if !cfg.soon}
+        <p class="conf-band-count">
+          متبقٍ {Math.max(0, Math.floor((cfg.eventDate - now) / 86_400_000))} يوم
+          <span class="conf-clock" dir="ltr" aria-hidden="true">
+            {String(Math.max(0, Math.floor((cfg.eventDate - now) / 3_600_000) % 24)).padStart(2, "0")}:
+            {String(Math.max(0, Math.floor((cfg.eventDate - now) / 60_000) % 60)).padStart(2, "0")}:
+            {String(Math.max(0, Math.floor((cfg.eventDate - now) / 1_000) % 60)).padStart(2, "0")}
+          </span>
+        </p>
+        <a class="btn btn--light" href={url("conference")}>
+          {now < cfg.regDeadline ? "سجّل حضورك" : "تفاصيل المؤتمر"}
+        </a>
+      {:else}
+        <a class="btn btn--light" href={url("conference")}>التفاصيل</a>
+      {/if}
+    </div>
+  </section>
+{/if}

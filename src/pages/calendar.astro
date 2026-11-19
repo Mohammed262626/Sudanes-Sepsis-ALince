@@ -1,6 +1,7 @@
 ---
-import "@fontsource-variable/cairo";
-import "@fontsource/tajawal/400.css";
+import arabic400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2?url";
+import arabic600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2?url";
+import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
 import "../styles/global.css";
 import { url } from "../lib/url";
 
@@ -9,11 +10,11 @@ import { url } from "../lib/url";
 const ics = url("conference.ics");
 const google =
   "https://calendar.google.com/calendar/render?action=TEMPLATE" +
-  "&text=" + encodeURIComponent("مؤتمر كسلا للإنتان") +
+  "&text=" + encodeURIComponent("مؤتمر كسلا للتسمم الدموي") +
   "&dates=20261130T090000/20261130T150000" +
   "&ctz=Africa/Khartoum" +
   "&location=" + encodeURIComponent("كسلا، السودان") +
-  "&details=" + encodeURIComponent("التحالف السوداني للإنتان — 9:00 صباحاً إلى 3:00 عصراً بتوقيت الخرطوم.");
+  "&details=" + encodeURIComponent("التحالف السوداني للتسمم الدموي — 9:00 صباحاً إلى 3:00 عصراً بتوقيت الخرطوم.");
 ---
 
 <!doctype html>
@@ -25,10 +26,33 @@ const google =
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#f7f5f0" />
     <title>إضافة الموعد إلى التقويم</title>
+    <style is:inline>
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 400;
+        font-display: optional;
+        src: url({arabic400}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 600;
+        font-display: optional;
+        src: url({arabic600}) format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans Arabic";
+        font-style: normal;
+        font-weight: 700;
+        font-display: optional;
+        src: url({arabic700}) format("woff2");
+      }
+    </style>
   </head>
   <body>
     <main>
-      <p class="kicker">مؤتمر كسلا للإنتان</p>
+      <p class="kicker">مؤتمر كسلا للتسمم الدموي</p>
       <h1>جارٍ فتح التقويم...</h1>
       <p class="links">
         <a href={ics}>تقويم آبل</a>

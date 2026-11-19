@@ -44,7 +44,7 @@ const MUTED = "#6f6a62";
 function layout(body: string, preheader = "") {
   return (
     '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">' +
-    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>التحالف السوداني للإنتان</title>' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"><title>التحالف السوداني للتسمم الدموي</title>' +
     // Cairo self-hosted on the site. Clients with webfont support (Apple Mail,
     // iOS, Outlook for Mac) pick it up; Gmail/Outlook desktop strip <style> and
     // fall back to the stack declared inline on <body>.
@@ -54,7 +54,8 @@ function layout(body: string, preheader = "") {
     // Gmail drops <head> and anything on <html>, so direction lives on <body>
     // and right-alignment is repeated on every text cell below.
     '<body dir="rtl" style="margin:0;padding:0;background:' + PAPER + ';color:' + INK +
-    ";direction:rtl;text-align:right;font-family:'Cairo',Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%\">" +
+    ";direction:rtl;text-align:right;font-family:'Cairo',Tahoma,Arial,sans-serif;-webkit-text-size-adjust:100%" +
+    '">' +
     (preheader
       ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0">' + esc(preheader) + "</div>"
       : "") +
@@ -68,13 +69,13 @@ function layout(body: string, preheader = "") {
     '<img src="' + SITE + '/logo.png" width="85" height="56" alt="" style="display:block;border:0;outline:none;text-decoration:none;width:85px;height:56px">' +
     "</td>" +
     '<td style="vertical-align:middle;text-align:right">' +
-    '<div style="color:' + PAPER + ';font-size:17px;font-weight:bold">التحالف السوداني للإنتان</div>' +
-    '<div style="color:#b9b3a7;font-size:12px;margin-top:4px">مؤتمر كسلا للإنتان — 30 نوفمبر 2026</div>' +
+    '<div style="color:' + PAPER + ';font-size:17px;font-weight:bold">التحالف السوداني للتسمم الدموي</div>' +
+    '<div style="color:#b9b3a7;font-size:12px;margin-top:4px">مؤتمر كسلا للتسمم الدموي — 30 نوفمبر 2026</div>' +
     "</td></tr></table></td></tr>" +
     '<tr><td style="height:4px;line-height:4px;font-size:0;background:' + ACCENT + '">&nbsp;</td></tr>' +
     '<tr><td dir="rtl" align="right" style="padding:28px 24px 8px;font-size:16px;line-height:1.75;color:' + INK + ';text-align:right">' + body + "</td></tr>" +
     '<tr><td dir="rtl" align="right" style="padding:18px 24px 24px;border-top:2px solid ' + LINE + ';font-size:12px;line-height:1.8;color:' + MUTED + ';text-align:right">' +
-    '<a href="' + SITE + '" style="color:' + ACCENT + ';text-decoration:none">التحالف السوداني للإنتان</a><br>' +
+    '<a href="' + SITE + '" style="color:' + ACCENT + ';text-decoration:none">التحالف السوداني للتسمم الدموي</a><br>' +
     "رسالة تلقائية — لا تُستخدم للإبلاغ عن حالات طبية طارئة." +
     "</td></tr></table></td></tr></table></body></html>"
   );
@@ -184,7 +185,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<Mail
 
   // Brevo wants the display name and the address separately.
   const fromMatch = FROM.match(/^(.*)<(.+)>$/);
-  const senderName = (fromMatch?.[1] ?? "التحالف السوداني للإنتان").trim();
+  const senderName = (fromMatch?.[1] ?? "التحالف السوداني للتسمم الدموي").trim();
   const senderEmail = (fromMatch?.[2] ?? FROM).trim();
 
   const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -259,7 +260,7 @@ const sendTicketButtons = (
 ) =>
   greenApi("sendInteractiveButtons", {
     chatId,
-    header: "مؤتمر كسلا للإنتان",
+    header: "مؤتمر كسلا للتسمم الدموي",
     body,
     footer: "الاثنين 30 نوفمبر 2026",
     buttons: [
@@ -297,20 +298,20 @@ async function template(key: string, r: Record_, fallback: string): Promise<stri
 function confirmation(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "استلمنا طلب تسجيلك في مؤتمر كسلا للإنتان ✅\n" +
+    "استلمنا طلب تسجيلك في مؤتمر كسلا للتسمم الدموي ✅\n" +
     "سنتواصل معك قريباً لتأكيد القبول.\n" +
-    "— التحالف السوداني للإنتان"
+    "— التحالف السوداني للتسمم الدموي"
   );
 }
 
 function approval(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "تم قبول تسجيلك في مؤتمر كسلا للإنتان ✅\n" +
+    "تم قبول تسجيلك في مؤتمر كسلا للتسمم الدموي ✅\n" +
     "الاثنين 30 نوفمبر 2026 — 9:00 صباحاً — كسلا\n" +
     "رقم تذكرتك: " + (r.ticket_code ?? "") + "\n" +
     "رمز QR المرفق هو تذكرتك — أظهره عند الدخول.\n" +
-    "— التحالف السوداني للإنتان"
+    "— التحالف السوداني للتسمم الدموي"
   );
 }
 
@@ -326,7 +327,7 @@ function approvalEmail(r: Record_): string {
   return (
     '<h1 style="font-size:22px;margin:0 0 16px">تم قبول تسجيلك</h1>' +
     "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
-    '<p style="margin:0 0 4px">يسعدنا قبول تسجيلك في مؤتمر <strong>كسلا للإنتان</strong>.</p>' +
+    '<p style="margin:0 0 4px">يسعدنا قبول تسجيلك في مؤتمر <strong>كسلا للتسمم الدموي</strong>.</p>' +
     box(
       row("التاريخ", "الاثنين 30 نوفمبر 2026") +
         row("الوقت", "9:00 صباحاً بتوقيت الخرطوم") +
@@ -350,38 +351,38 @@ function approvalEmail(r: Record_): string {
 function attended(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "تم تسجيل حضورك في مؤتمر كسلا للإنتان بنجاح ✅\n" +
+    "تم تسجيل حضورك في مؤتمر كسلا للتسمم الدموي بنجاح ✅\n" +
     "رقم تذكرتك: " + (r.ticket_code ?? "") + "\n" +
     "نتمنى لك مؤتمراً مفيداً.\n" +
-    "— التحالف السوداني للإنتان"
+    "— التحالف السوداني للتسمم الدموي"
   );
 }
 
 function rejection(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "نشكرك على اهتمامك بمؤتمر كسلا للإنتان. للأسف لم نتمكن من قبول تسجيلك في هذه الدورة.\n" +
+    "نشكرك على اهتمامك بمؤتمر كسلا للتسمم الدموي. للأسف لم نتمكن من قبول تسجيلك في هذه الدورة.\n" +
     "نأمل أن نلتقي في فعاليات قادمة.\n" +
-    "— التحالف السوداني للإنتان"
+    "— التحالف السوداني للتسمم الدموي"
   );
 }
 
 function reminderText(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "تذكير بمؤتمر كسلا للإنتان — الاثنين 30 نوفمبر 2026 — 9:00 صباحاً — كسلا.\n" +
+    "تذكير بمؤتمر كسلا للتسمم الدموي — الاثنين 30 نوفمبر 2026 — 9:00 صباحاً — كسلا.\n" +
     "رقم تذكرتك: " + (r.ticket_code ?? "") + "\n" +
     "اضغط «تأكيد الحضور» عند وصولك، أو «لا أستطيع الحضور» إن تعذّر مجيئك.\n" +
-    "— التحالف السوداني للإنتان"
+    "— التحالف السوداني للتسمم الدموي"
   );
 }
 
 function declinedText(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
-    "سجّلنا اعتذارك عن حضور مؤتمر كسلا للإنتان، وأتحنا مقعدك لضيف آخر.\n" +
+    "سجّلنا اعتذارك عن حضور مؤتمر كسلا للتسمم الدموي، وأتحنا مقعدك لضيف آخر.\n" +
     "شكراً لإبلاغنا، ونأمل أن نلتقي بك في فعالية قادمة.\n" +
-    "— التحالف السوداني للإنتان"
+    "— التحالف السوداني للتسمم الدموي"
   );
 }
 
@@ -435,7 +436,7 @@ Deno.serve(async (req) => {
     }
     const result = await greenApi("sendInteractiveButtons", {
       chatId,
-      header: "مؤتمر كسلا للإنتان",
+      header: "مؤتمر كسلا للتسمم الدموي",
       body,
       footer: "الاستبانة الأولى",
       buttons: [
@@ -460,11 +461,11 @@ Deno.serve(async (req) => {
     const stage = payload.stage === "post" ? "post" : "pre";
     const result = await greenApi("sendInteractiveButtons", {
       chatId: toChatId(payload.record.phone),
-      header: "مؤتمر كسلا للإنتان",
+      header: "مؤتمر كسلا للتسمم الدموي",
       body:
         "أهلاً " + (payload.record.name ?? "") + "،\n" +
         (stage === "pre"
-          ? "قبل أن تبدأ الجلسات، أجب عن أسئلة قصيرة لقياس معرفتك الحالية بالإنتان."
+          ? "قبل أن تبدأ الجلسات، أجب عن أسئلة قصيرة لقياس معرفتك الحالية بالتسمم الدموي."
           : "قبل أن ينتهي المؤتمر، أجب عن الأسئلة نفسها لنقيس ما تعلّمته."),
       footer: "دقيقة واحدة — إجابة واحدة لكل سؤال",
       // One button: this message invites one stage, not both.
@@ -566,8 +567,8 @@ Deno.serve(async (req) => {
       if (payload.record.email) {
         const mail = await sendMail(
           String(payload.record.email),
-          "تم قبول تسجيلك في مؤتمر كسلا للإنتان — تذكرتك",
-          layout(approvalEmail(payload.record), "تذكرتك لمؤتمر كسلا للإنتان")
+          "تم قبول تسجيلك في مؤتمر كسلا للتسمم الدموي — تذكرتك",
+          layout(approvalEmail(payload.record), "تذكرتك لمؤتمر كسلا للتسمم الدموي")
         );
         await logSends(payload.table, payload.record, { email: mail });
       }

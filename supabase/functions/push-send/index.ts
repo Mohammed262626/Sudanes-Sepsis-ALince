@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 
   const payload = await req.json().catch(() => null);
   const body = String(payload?.body ?? "").trim().slice(0, 300);
-  const title = String(payload?.title ?? "التحالف السوداني للإنتان").slice(0, 60);
+  const title = String(payload?.title ?? "التحالف السوداني للتسمم الدموي").slice(0, 60);
   if (!body) return json({ error: "bad body" }, 400);
 
   const privateKey = (await getSecret("vapid_private"))?.trim();

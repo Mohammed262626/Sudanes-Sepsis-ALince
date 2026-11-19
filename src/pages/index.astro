@@ -2,59 +2,192 @@
 import Base from "../layouts/Base.astro";
 import { url } from "../lib/url";
 import ConferenceBand from "../components/ConferenceBand.svelte";
+import Countdown from "../components/Countdown.svelte";
+import ConferenceForm from "../components/ConferenceForm.svelte";
+import EventDates from "../components/EventDates.svelte";
 import ContactForm from "../components/ContactForm.svelte";
-import SupportForm from "../components/SupportForm.svelte";
 ---
 
-<Base>
-  <ConferenceBand client:load />
+<Base home>
+  <ConferenceBand client:idle />
 
-  <section class="hero wrap" id="top">
-    <div>
-      <p class="kicker">التحالف السوداني للإنتان</p>
-      <h1>كل ساعة<br />تفرق.</h1>
-      <p class="lede">
-        الإنتان — المعروف بتعفن الدم — يقتل أكثر من أي مرض آخر يمكن الوقاية منه.
-        المعرفة هي أول خط دفاع.
-      </p>
-      <div class="actions">
-        <a class="btn" href="#symptoms">تعرّف على علامات الخطر</a>
-        <a class="btn btn--ghost" href="#sepsis">ما هو الإنتان؟</a>
+  <section class="hero-home" id="top">
+    <div class="hero-inner wrap">
+      <div>
+        <p class="kicker">التحالف السوداني للتسمم الدموي</p>
+        <h1>
+          <span>التسمم الدموي يقتل</span>
+          <span>11 مليون إنسان</span>
+          <span>كل عام حول العالم</span>
+        </h1>
       </div>
+      <aside class="hero-panel" aria-label="رسالتنا">
+        <h2>معاً يمكننا تغيير هذا.</h2>
+        <p>
+          المعرفة هي أول خط دفاع. تعلّم العلامات، وتصرّف بسرعة، وساعدنا في نشر
+          الوعي في كل بيت.
+        </p>
+        <div class="actions">
+          <a class="btn" href="#symptoms">تعرّف على علامات الخطر</a>
+          <a class="btn btn--ghost" href="#about">انضم إلينا</a>
+        </div>
+      </aside>
     </div>
-    <aside class="hero-fact" aria-label="إحصاءة رئيسية">
-      <span class="num">11</span>
-      <p>
-        مليون وفاة سنوياً بسبب الإنتان حول العالم — واحدة من كل خمس وفيات.
-      </p>
-    </aside>
+    <a class="scroll-cue" href="#sepsis" tabindex="-1" aria-hidden="true">↓</a>
+    <svg class="hero-cut" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,0 0,12 100,12" />
+    </svg>
   </section>
 
-  <section aria-label="أرقام عن الإنتان">
-    <div class="stats wrap">
-      <div class="stat">
-        <span class="num">49 <small>مليون</small></span>
-        <p>حالة إنتان تُسجَّل سنوياً في العالم.</p>
+  <section class="photo-grid wrap" aria-label="محاور رئيسية">
+    <a class="photo-card reveal" href="#amr">
+      <img
+        src={url("img/amr-pills.jpg")}
+        alt="شريط كبسولات مضاد حيوي"
+        loading="lazy"
+      />
+      <div class="photo-body">
+        <span class="kicker">المضادات الحيوية</span>
+        <h3>مقاومة المضادات الحيوية</h3>
+        <p>لماذا تصبح العدوى أصعب علاجاً، وما دورنا في إبقاء المضادات فعّالة؟</p>
+        <span class="more">اعرف المزيد ←</span>
       </div>
-      <div class="stat">
+    </a>
+    <a class="photo-card reveal" href="#symptoms">
+      <img
+        src={url("img/symptoms-child-care.jpg")}
+        alt="عامل صحي يفحص طفلاً عند والدته"
+        loading="lazy"
+      />
+      <div class="photo-body">
+        <span class="kicker"
+          ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M2 12h4l3-7 4 14 3-7h6" /></svg
+          >الأطفال</span
+        >
+        <h3>اعرف العلامات</h3>
+        <p>العلامات التحذيرية التي لا تنتظر — خاصة عند الرضّع وصغار الأطفال.</p>
+        <span class="more">اعرف المزيد ←</span>
+      </div>
+    </a>
+    <a class="photo-card reveal" href="#prevention">
+      <img
+        src={url("img/prevention-handwash.jpg")}
+        alt="غسل اليدين بالماء والصابون"
+        loading="lazy"
+      />
+      <div class="photo-body">
+        <span class="kicker"
+          ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z" /><path
+              d="M9 12l2 2 4-4"
+            /></svg
+          >الوقاية</span
+        >
+        <h3>الوقاية تبدأ بخطوة</h3>
+        <p>خطوات بسيطة تحميك وتحمي أسرتك من العدوى التي قد تتحول إلى تسمم دموي.</p>
+        <span class="more">اعرف المزيد ←</span>
+      </div>
+    </a>
+  </section>
+
+  <section class="section wrap reveal" id="about">
+    <div class="what-grid">
+      <h2 class="three-tone">
+        <span>التوعية</span>
+        <span>والتدريب</span>
+        <span>والسياسات</span>
+      </h2>
+      <div class="what-body">
+        <p>
+          التحالف السوداني للتسمم الدموي تجمّع تطوعي من الأطباء والممرضين
+          والصيادلة والباحثين والناشطين الصحيين، يجمعهم هدف واحد: أن لا يموت أحد
+          في السودان بسبب تسمم دموي كان يمكن الوقاية منه أو علاجه.
+        </p>
+        <h3>رسالتنا</h3>
+        <p>
+          خفض الوفيات والإعاقات الناتجة عن التسمم الدموي في السودان من خلال
+          التوعية المجتمعية، تدريب الكوادر الصحية، دعم السياسات المستندة إلى
+          الأدلة، وبناء شبكة وطنية للاستجابة السريعة.
+        </p>
+        <h3>رؤيتنا</h3>
+        <p>
+          سودان يعرف فيه كل فرد علامات التسمم الدموي، ويجد فيه كل مريض رعاية عاجلة
+          وفعّالة، أينما كان.
+        </p>
+        <h3>قيمنا</h3>
+        <p>
+          العلم والدليل في كل مادة ننشرها، السرعة في كل خطوة، العدالة في الوصول
+          إلى المدينة والريف، والشراكة مع المؤسسات الصحية والمجتمعية.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="stories reveal" aria-labelledby="story-heading">
+    <div class="wrap">
+      <div class="carousel">
+        <article class="sscontainer">
+          <div class="text-section">
+            <p class="kicker">قصص من الميدان</p>
+            <h2 id="story-heading">لكل مريض قصة تستحق أن تُروى.</h2>
+            <p class="excerpt">
+              نعمل على توثيق تجارب حقيقية من السودان، بموافقة أصحابها.
+            </p>
+            <p class="note">
+              قبل أي نشر تخضع التفاصيل الطبية لمراجعة سريرية.
+            </p>
+            <button class="btn btn--light" type="button" disabled>
+              اقرأ القصة
+            </button>
+          </div>
+          <div class="image-section">
+            <span class="placeholder">قريباً</span>
+          </div>
+        </article>
+        <div class="carousel-nav">
+          <button type="button" disabled aria-label="الشريحة السابقة">›</button>
+          <button type="button" disabled aria-label="الشريحة التالية">‹</button>
+        </div>
+        <div class="dots" aria-hidden="true"><span class="active"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap reveal" id="impact">
+    <div class="split">
+      <h2>أثر التسمم الدموي</h2>
+      <p>
+        أرقام عالمية تعكس حجم المشكلة التي نعمل على مواجهتها في السودان.
+      </p>
+    </div>
+    <div class="impact-grid">
+      <div class="impact-item">
+        <span class="arrow" aria-hidden="true">↑</span>
+        <span class="num">49 <small>مليون</small></span>
+        <p>حالة تسمم دموي تُسجَّل سنوياً في العالم.</p>
+      </div>
+      <div class="impact-item">
+        <span class="arrow" aria-hidden="true">↑</span>
         <span class="num">11 <small>مليون</small></span>
         <p>وفاة سنوياً، كثير منها كان يمكن منعه.</p>
       </div>
-      <div class="stat">
+      <div class="impact-item">
+        <span class="arrow" aria-hidden="true">↑</span>
         <span class="num">20<small>%</small></span>
-        <p>من إجمالي الوفيات في العالم مرتبطة بالإنتان.</p>
+        <p>من إجمالي الوفيات في العالم مرتبطة بالتسمم الدموي.</p>
       </div>
     </div>
-    <div class="wrap source">
+    <div class="source">
       المصدر: منظمة الصحة العالمية، دراسة العبء العالمي للأمراض 2020.
     </div>
   </section>
 
-  <section class="section wrap lazy" id="sepsis">
+  <section class="section wrap reveal" id="sepsis">
     <div class="split">
-      <h2>ما هو الإنتان؟</h2>
+      <h2>ما هو التسمم الدموي؟</h2>
       <p>
-        الإنتان استجابة خطيرة للجسم تجاه عدوى. بدلاً من أن يهاجم الجهاز المناعي
+        التسمم الدموي استجابة خطيرة للجسم تجاه عدوى. بدلاً من أن يهاجم الجهاز المناعي
         الميكروب فقط، يبدأ بمهاجمة أنسجة الجسم نفسه، ما قد يؤدي إلى فشل أعضاء
         متعددة والوفاة خلال ساعات. لا يفرّق بين صغير أو كبير، ولا بين مدينة
         وريف — لكن سرعة التصرف تصنع الفرق كله.
@@ -63,14 +196,14 @@ import SupportForm from "../components/SupportForm.svelte";
     <div class="prose">
       <h3>كيف يحدث؟</h3>
       <p>
-        غالباً يبدأ الإنتان بعدوى بكتيرية، وأحياناً فيروسية أو فطرية. أكثر
+        غالباً يبدأ التسمم الدموي بعدوى بكتيرية، وأحياناً فيروسية أو فطرية. أكثر
         مصادر العدوى شيوعاً هي الرئة، المسالك البولية، البطن، والجلد. عند دخول
         الميكروب إلى الدم أو انتشاره في الجسم، تطلق الاستجابة المناعية مواد
         التهابية تؤثر على الأوعية الدموية وضغط الدم ووظائف الأعضاء.
       </p>
       <div class="callout">
         <p>
-          الإنتان حالة طارئة. كل ساعة تأخير في التشخيص والعلاج ترفع خطر الوفاة.
+          التسمم الدموي حالة طارئة. كل ساعة تأخير في التشخيص والعلاج ترفع خطر الوفاة.
         </p>
       </div>
       <h3>من هم الأكثر عرضة للخطر؟</h3>
@@ -86,13 +219,13 @@ import SupportForm from "../components/SupportForm.svelte";
       <p>
         يواجه نظامنا الصحي تحديات في الوصول المبكر إلى الرعاية، ونقصاً في أسرّة
         العناية المركزة والمضادات الحيوية المناسبة، إضافة إلى ضعف الوعي
-        المجتمعي بعلامات الخطر. هذه العوامل تجعل سرعة التعرّف على الإنتان
+        المجتمعي بعلامات الخطر. هذه العوامل تجعل سرعة التعرّف على التسمم الدموي
         والتصرف حياله أمراً حاسماً.
       </p>
     </div>
   </section>
 
-  <section class="section wrap lazy" id="symptoms">
+  <section class="section wrap reveal" id="symptoms">
     <div class="split">
       <h2>اعرف العلامات. تصرّف بسرعة.</h2>
       <p>
@@ -118,7 +251,7 @@ import SupportForm from "../components/SupportForm.svelte";
       ))}
     </div>
 
-    <div class="split" style="margin-top: clamp(2.5rem, 6vw, 4rem);">
+    <div class="split" style="margin-top: clamp(1.5rem, 4vw, 2.5rem);">
       <h2>عند الأطفال</h2>
       <p>
         الأطفال قد لا يستطيعون وصف ما يشعرون به. راقب هذه العلامات، خاصة عند
@@ -136,10 +269,10 @@ import SupportForm from "../components/SupportForm.svelte";
       </ul>
     </div>
 
-    <div class="split" style="margin-top: clamp(2.5rem, 6vw, 4rem);">
+    <div class="split" id="prevention" style="margin-top: clamp(1.5rem, 4vw, 2.5rem);">
       <h2>الوقاية</h2>
       <p>
-        لا يوجد لقاح للإنتان نفسه، لكن الوقاية من العدوى والتصرف السريع عند
+        لا يوجد لقاح للتسمم الدموي نفسه، لكن الوقاية من العدوى والتصرف السريع عند
         ظهورها يقللان الخطر بشكل كبير.
       </p>
     </div>
@@ -162,7 +295,7 @@ import SupportForm from "../components/SupportForm.svelte";
       <h3>4. التطعيمات</h3>
       <p>
         احرص على تطعيمات الأطفال والحوامل الموصى بها، فهي تقلل من العدوى التي
-        قد تؤدي إلى الإنتان.
+        قد تؤدي إلى التسمم الدموي.
       </p>
       <h3>5. راقب الفئات الأكثر عرضة</h3>
       <p>
@@ -171,7 +304,7 @@ import SupportForm from "../components/SupportForm.svelte";
       </p>
       <div class="callout">
         <p>
-          عند الشك في الإنتان، اذهب إلى أقرب مستشفى أو مركز طوارئ فوراً. لا
+          عند الشك في التسمم الدموي، اذهب إلى أقرب مستشفى أو مركز طوارئ فوراً. لا
           تنتظر موعداً عادياً.
         </p>
       </div>
@@ -181,57 +314,72 @@ import SupportForm from "../components/SupportForm.svelte";
     </div>
   </section>
 
-  <section class="section wrap lazy" id="conference">
+  <!-- shortcut: AMR content needs clinician review before publish -->
+  <section class="section wrap reveal" id="amr">
     <div class="split">
-      <h2>مؤتمر كسلا للإنتان</h2>
+      <h2>مقاومة المضادات الحيوية وخطر التسمم الدموي</h2>
+      <p>
+        مقاومة المضادات الحيوية تجعل علاج التسمم الدموي أكثر صعوبة. الميكروبات التي
+        تسبب العدوى تتطور وتصبح مقاومة للأدوية، مما يؤخر العلاج الفعّال ويرفع
+        خطر الوفاة.
+      </p>
+    </div>
+    <div class="prose">
+      <p>
+        منظمة الصحة العالمية تصف مقاومة المضادات الحيوية بأنها أحد أكبر التهديدات
+        الصحية العالمية. كل عام يموت ما لا يقل عن 1.2 مليون شخص حول العالم بسبب
+        العدوى المقاومة للمضادات الحيوية.
+      </p>
+      <h3>كيف تحمي فعالية المضادات الحيوية؟</h3>
+      <ul>
+        <li>لا تتناول المضادات الحيوية إلا بوصفة طبية.</li>
+        <li>أكمل الجرعة الموصوفة كاملة حتى لو تحسنت الأعراض.</li>
+        <li>لا تطلب مضادات حيوية لعلاج نزلات البرد أو الإنفلونزا — فهي فيروسية ولا تستجيب.</li>
+        <li>احرص على التطعيمات للوقاية من العدوى من الأساس.</li>
+        <li>اغسل يديك بانتظام واعتنِ بنظافة الجروح.</li>
+      </ul>
+      <div class="callout">
+        <p>المضادات الحيوية ليست دواءً لجميع الأمراض. استخدامها الخاطئ يهدد قدرتها على إنقاذ الأرواح عند الحاجة الحقيقية.</p>
+      </div>
+      <p style="font-size: .875rem; color: var(--muted);">
+        هذه المعلومات للتوعية العامة وتحتاج مراجعة سريرية قبل النشر. المصادر: منظمة الصحة العالمية، التحالف العالمي للإنتان.
+      </p>
+    </div>
+  </section>
+
+
+  <section class="section wrap reveal" id="conference">
+    <div class="split">
+      <h2>مؤتمر كسلا للتسمم الدموي</h2>
       <p>
         لقاء وطني يجمع الكوادر الصحية وصنّاع القرار لمناقشة الكشف المبكر عن
-        الإنتان والاستجابة السريعة له في السودان.
+        التسمم الدموي والاستجابة السريعة له في السودان.
       </p>
     </div>
-    <div class="rows">
-      <div class="row" style="grid-template-columns: 8rem 1fr;">
-        <span class="idx">التفاصيل</span>
-        <h3>التفاصيل والتسجيل قريباً — سنعلن هنا أولاً.</h3>
+    <div class="contact-grid">
+      <div>
+<EventDates client:visible />
+        <div style="margin-top: 1.5rem;">
+          <Countdown client:visible />
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size: 1.25rem; margin-bottom: .75rem;">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+            ><rect x="3" y="5" width="18" height="16" rx="1" /><path
+              d="M3 9h18M8 3v4M16 3v4"
+            /></svg
+          >سجّل حضورك
+        </h3>
+        <p style="color: var(--muted); margin-bottom: 1.5rem;">
+          بعد إتمام التسجيل سنرسل تفاصيل الحضور والبرنامج إلى بريدك الإلكتروني.
+        </p>
+        <ConferenceForm client:visible />
       </div>
     </div>
-    <a class="btn btn--ghost" href={url("conference")}>تفاصيل المؤتمر</a>
   </section>
 
-  <section class="section wrap lazy" id="about">
-    <div class="split">
-      <h2>من نحن</h2>
-      <p>
-        التحالف السوداني للإنتان تجمّع تطوعي من الأطباء والممرضين والصيادلة
-        والباحثين والناشطين الصحيين، يجمعهم هدف واحد: أن لا يموت أحد في السودان
-        بسبب إنتان كان يمكن الوقاية منه أو علاجه.
-      </p>
-    </div>
-    <div class="split">
-      <h3 style="font-size: 1.25rem;">رسالتنا</h3>
-      <p>
-        خفض الوفيات والإعاقات الناتجة عن الإنتان في السودان من خلال التوعية
-        المجتمعية، تدريب الكوادر الصحية، دعم السياسات المستندة إلى الأدلة،
-        وبناء شبكة وطنية للاستجابة السريعة.
-      </p>
-    </div>
-    <div class="split">
-      <h3 style="font-size: 1.25rem;">رؤيتنا</h3>
-      <p>
-        سودان يعرف فيه كل فرد علامات الإنتان، ويجد فيه كل مريض رعاية عاجلة
-        وفعّالة، أينما كان.
-      </p>
-    </div>
-    <div class="split">
-      <h3 style="font-size: 1.25rem;">قيمنا</h3>
-      <p>
-        العلم والدليل في كل مادة ننشرها، السرعة في كل خطوة، العدالة في الوصول
-        إلى المدينة والريف، والشراكة مع المؤسسات الصحية والمجتمعية.
-      </p>
-    </div>
-  </section>
-
-  <section class="section wrap lazy" id="contact">
+  <section class="section wrap reveal" id="contact">
     <div class="contact-grid">
       <div class="prose">
         <h2>اتصل بنا</h2>
@@ -242,7 +390,7 @@ import SupportForm from "../components/SupportForm.svelte";
         </p>
         <p>
           ملاحظة: هذه الصفحة ليست قناة طوارئ طبية. إذا كنت تشك في إصابة شخص
-          بالإنتان، فاتجه فوراً إلى أقرب مستشفى.
+          بالتسمم الدموي، فاتجه فوراً إلى أقرب مستشفى.
         </p>
         <p>
           تفاصيل المؤتمر على <a href={url("conference")}>صفحة مؤتمر كسلا</a>.

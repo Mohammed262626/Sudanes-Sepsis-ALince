@@ -1,8 +1,13 @@
 <script lang="ts">
   import { supabase } from "../lib/supabase";
   import { url } from "../lib/url";
+  import { fetchEventConfig } from "../lib/event";
 
-  const DEADLINE = new Date("2026-11-16T23:59:59+02:00").getTime();
+  let cfg = $state<Awaited<ReturnType<typeof fetchEventConfig>> | null>(null);
+
+  $effect(() => {
+    fetchEventConfig().then((c) => (cfg = c));
+  });
 
   let now = $state(Date.now());
   $effect(() => {
@@ -10,7 +15,7 @@
     return () => clearInterval(id);
   });
 
-  const open = $derived(now < DEADLINE);
+  const open = $derived(cfg && !cfg.soon && now < cfg.regDeadline);
   let state = $state<"idle" | "sending" | "ok" | "error" | "closed">("idle");
 
   async function submit(event: SubmitEvent) {
@@ -39,7 +44,9 @@
   }
 </script>
 
-{#if open}
+{#if cfg && cfg.soon}
+  <p>قريباً — يُفتح باب التسجيل عند الإعلان عن الموعد النهائي. للمزيد من المعلومات، <a href={url("#contact")}>تواصل معنا</a>.</p>
+{:else if open}
   <form class="form" onsubmit={submit}>
     <div class="field">
       <label for="k-name">الاسم الكامل</label>
@@ -64,8 +71,7 @@
         name="phone"
         type="tel"
         required
-        minlength="6"
-        maxlength="30"
+        maxlength="20"
         autocomplete="tel"
         dir="ltr"
       />
@@ -73,37 +79,39 @@
     <div class="field">
       <label for="k-role">الصفة</label>
       <select id="k-role" name="role" required>
-        <option value="طبيب">طبيب</option>
-        <option value="ممرض">ممرض</option>
-        <option value="صيدلي">صيدلي</option>
-        <option value="طالب">طالب</option>
-        <option value="إدارة صحية">إدارة صحية</option>
-        <option value="أخرى">أخرى</option>
+        <option value="">— اختر —</option>
+        <option value="طبيب">طبيب/طبيبة</option>
+        <option value="ممرض">ممرض/ممرضة</option>
+        <option value="صيدلي">صيدلي/صيدلانية</option>
+        <option value="طالب">طالب/طالبة طب</option>
+        <option value="باحث">باحث/باحثة</option>
+        <option value="إعلامي">إعلامي/إعلامية</option>
+        <option value="صانع قرار">صانع/صانعة قرار</option>
+        <option value="منظمة">منظمة غير حكومية</option>
+        <option value="مهتم">مهتم/مهتمة</option>
       </select>
     </div>
     <div class="field">
-      <label for="k-org">الجهة / المؤسسة (اختياري)</label>
-      <input id="k-org" name="organization" maxlength="200" />
+      <label for="k-org">الجهة (اختياري)</label>
+      <input id="k-org" name="organization" maxlength="300" autocomplete="organization" />
     </div>
     <div class="field">
       <label for="k-note">ملاحظات (اختياري)</label>
       <textarea id="k-note" name="note" maxlength="2000"></textarea>
     </div>
-    <button class="btn" type="submit" disabled={state === "sending"}>
-      {state === "sending" ? "جارٍ التسجيل…" : "سجّل حضورك"}
+    <button class="btn" type="submit">
+      {state === "sending" ? "جارٍ التسجيل…" : "تسجيل"}
     </button>
-    <p
-      class="form-status"
-      data-state={state === "ok" || state === "error" ? state : undefined}
-      aria-live="polite"
-    >
-      {state === "ok" ? "تم تسجيلك. سنرسل لك تفاصيل الحضور قريباً." : ""}
-      {state === "error" ? "تعذّر التسجيل. تحقق من بياناتك وحاول مرة أخرى." : ""}
-    </p>
+    {#if state === "ok"}
+      <p class="form-status" data-state="ok">
+        تم التسجيل بنجاح. سنرسل تفاصيل الحضور والتذكرة إلى بريدك قريباً.
+      </p>
+    {:else if state === "error" || state === "closed"}
+      <p class="form-status" data-state="error">
+        {state === "closed" ? "انتهت فترة التسجيل." : "تعذّر التسجيل. حاول مرة أخرى."}
+      </p>
+    {/if}
   </form>
 {:else}
-  <p>
-    انتهت فترة التسجيل في 16 نوفمبر 2026. للاستفسار،
-    <a href={url("#contact")}>تواصل معنا</a>.
-  </p>
+  <p>انتهت فترة التسجيل. للاستفسار، <a href={url("#contact")}>تواصل معنا</a>.</p>
 {/if}
