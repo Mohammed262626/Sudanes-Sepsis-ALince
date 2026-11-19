@@ -1,0 +1,30 @@
+<script lang="ts">
+  import { fetchEventConfig } from "../lib/event";
+
+  let cfg = $state<Awaited<ReturnType<typeof fetchEventConfig>> | null>(null);
+
+  $effect(() => {
+    fetchEventConfig().then((c) => (cfg = c));
+  });
+</script>
+
+<div class="rows" role="list">
+  {#if cfg}
+    <div class="row" style="grid-template-columns: 8rem 1fr;" role="listitem">
+      <span class="idx">التاريخ</span>
+      <h3>{cfg.soon ? "يُحدد لاحقاً" : new Date(cfg.eventDate).toLocaleDateString("ar", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</h3>
+    </div>
+    <div class="row" style="grid-template-columns: 8rem 1fr;" role="listitem">
+      <span class="idx">الوقت</span>
+      <h3>{cfg.soon ? "يُعلن قريباً" : cfg.eventTime}</h3>
+    </div>
+    <div class="row" style="grid-template-columns: 8rem 1fr;" role="listitem">
+      <span class="idx">المكان</span>
+      <h3>كسلا — يُعلن الموقع الدقيق قريباً</h3>
+    </div>
+    <div class="row" style="grid-template-columns: 8rem 1fr;" role="listitem">
+      <span class="idx">التسجيل</span>
+      <h3>{cfg.soon ? "سيُفتح قريباً" : `مفتوح حتى ${new Date(cfg.regDeadline).toLocaleDateString("ar")}`}</h3>
+    </div>
+  {/if}
+</div>

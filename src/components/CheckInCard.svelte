@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from "svelte";
   import { supabase } from "../lib/supabase";
   import { url } from "../lib/url";
+  import { fetchEventConfig } from "../lib/event";
 
   type State =
     | "loading"
@@ -15,7 +16,16 @@
     | "done"
     | "error";
 
-  const EVENT = "الاثنين 30 نوفمبر 2026";
+  let cfg = $state<Awaited<ReturnType<typeof fetchEventConfig>> | null>(null);
+
+  $effect(() => {
+    fetchEventConfig().then((c) => (cfg = c));
+  });
+
+  const eventLabel = $derived(
+    cfg?.soon ? "قريباً" : new Intl.DateTimeFormat("ar", { weekday: "long", year: "numeric", month: "long", day: "numeric" }).format(cfg?.eventDate ?? Date.now()),
+  );
+
   const dateFmt = new Intl.DateTimeFormat("ar", { dateStyle: "medium", timeStyle: "short" });
   const reduced = () =>
     typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -372,7 +382,7 @@
         <p class="note">اضغط زر «تأكيد الحضور» في رسالة الواتساب التي وصلتك بعد اعتماد تسجيلك.</p>
       {:else if state === "closed"}
         <h1>صفحة الحضور مغلقة</h1>
-        <p class="note">تُفتح يوم المؤتمر: {EVENT}.</p>
+        <p class="note">تُفتح يوم المؤتمر: {eventLabel}.</p>
       {:else if state === "notfound"}
         <h1>رمز غير معروف</h1>
         <p class="note">افتح الصفحة من زر «تأكيد الحضور» في رسالتك.</p>
@@ -383,7 +393,7 @@
         <h1>أهلاً {name}</h1>
         <div class="facts">
           <span class="ticket" dir="ltr">{ticket}</span>
-          <span>{EVENT}</span>
+          <span>{eventLabel}</span>
         </div>
 
         {#if doorOk}
@@ -459,7 +469,7 @@
         </p>
         <div class="facts">
           <span class="ticket" dir="ltr">{ticket}</span>
-          <span>{EVENT}</span>
+          <span>{eventLabel}</span>
         </div>
         <button class="btn btn--ghost" type="button" disabled={busy} onclick={doDecline}>
           {#if busy}
