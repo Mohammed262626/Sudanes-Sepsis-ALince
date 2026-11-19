@@ -2,6 +2,8 @@
 import "@fontsource/ibm-plex-sans-arabic/400.css";
 import "@fontsource/ibm-plex-sans-arabic/600.css";
 import "@fontsource/ibm-plex-sans-arabic/700.css";
+import arabic400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2?url";
+import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
 import "../styles/global.css";
 import { url } from "../lib/url";
 import ConsentBar from "../components/ConsentBar.astro";
@@ -23,6 +25,10 @@ const {
 // The GitHub Pages build sets PUBLIC_PREVIEW; keep that mirror out of search.
 const preview = import.meta.env.PUBLIC_PREVIEW === "true";
 
+// Canonical/OG need absolute URLs; Astro.url.pathname already carries the base.
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).href;
+const ogImage = new URL(url("og.jpg"), Astro.site ?? Astro.url.origin).href;
+
 const nav = [
   { href: url("#sepsis"), label: "ما هو التسمم الدموي" },
   { href: url("#symptoms"), label: "الأعراض والوقاية" },
@@ -42,8 +48,24 @@ const nav = [
     <meta name="theme-color" content="#f7f5f0" />
     <meta name="supabase-url" content={import.meta.env.PUBLIC_SUPABASE_URL} />
     <meta name="supabase-key" content={import.meta.env.PUBLIC_SUPABASE_ANON_KEY} />
+    {
+      import.meta.env.PUBLIC_SUPABASE_URL && (
+        <link rel="preconnect" href={import.meta.env.PUBLIC_SUPABASE_URL} crossorigin />
+      )
+    }
     <title>{title}</title>
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="التحالف السوداني للتسمم الدموي" />
+    <meta property="og:locale" content="ar_SD" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
+    <link rel="preload" href={arabic700} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={arabic400} as="font" type="font/woff2" crossorigin />
     <link rel="apple-touch-icon" href={url("icon-192.png")} />
     <link rel="manifest" href={url("manifest.webmanifest")} />
     <script is:inline src={url("push-client.js")} defer></script>
