@@ -1,49 +1,14 @@
 ---
 import Base from "../layouts/Base.astro";
 import { url } from "../lib/url";
-import { supabase } from "../lib/supabase";
 import ConferenceBand from "../components/ConferenceBand.svelte";
 import Countdown from "../components/Countdown.svelte";
 import ConferenceForm from "../components/ConferenceForm.svelte";
 import ContactForm from "../components/ContactForm.svelte";
-import SupportForm from "../components/SupportForm.svelte";
-
-const activitiesData = supabase
-  ? ((await supabase.from("activities").select("title, excerpt, cover_url, published_at").order("published_at", { ascending: false }).limit(3)).data ?? [])
-  : [];
-
-const showFacts = activitiesData.length === 0;
-
-const fallbackFacts = [
-  "التسمم الدموي يسبب 11 مليون وفاة سنوياً — واحدة من كل خمس وفيات في العالم.",
-  "كل ساعة تأخير في علاج التسمم الدموي تزيد خطر الوفاة بنسبة تصل إلى 8%.",
-  "أكثر من 40% من حالات التسمم الدموي تحدث عند الأطفال دون سن الخامسة.",
-  "التسمم الدموي هو السبب الرئيسي لوفيات الأمهات وحديثي الولادة حول العالم.",
-  "الكشف المبكر عن التسمم الدموي يقلل الوفيات بنسبة تصل إلى 50%.",
-  "85% من حالات التسمم الدموي تحدث في المجتمعات خارج المستشفيات — راقب العلامات في المنزل.",
-];
-
-const facts = [...fallbackFacts].sort(() => Math.random() - 0.5).slice(0, 3);
-
-const fmtDate = (d: string | null) =>
-  d
-    ? new Date(d + "T00:00:00").toLocaleDateString("ar", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : null;
 ---
 
 <Base home>
   <ConferenceBand client:load />
-
-  <a class="symptom-band" href="#symptoms">
-    <span class="wrap band-inner">
-      افحص علامات التسمم الدموي
-      <span class="arrow" aria-hidden="true">←</span>
-    </span>
-  </a>
 
   <section class="hero-home" id="top">
     <div class="hero-inner wrap">
@@ -272,7 +237,7 @@ const fmtDate = (d: string | null) =>
       ))}
     </div>
 
-    <div class="split" style="margin-top: clamp(2.5rem, 6vw, 4rem);">
+    <div class="split" style="margin-top: clamp(1.5rem, 4vw, 2.5rem);">
       <h2>عند الأطفال</h2>
       <p>
         الأطفال قد لا يستطيعون وصف ما يشعرون به. راقب هذه العلامات، خاصة عند
@@ -290,7 +255,7 @@ const fmtDate = (d: string | null) =>
       </ul>
     </div>
 
-    <div class="split" id="prevention" style="margin-top: clamp(2.5rem, 6vw, 4rem);">
+    <div class="split" id="prevention" style="margin-top: clamp(1.5rem, 4vw, 2.5rem);">
       <h2>الوقاية</h2>
       <p>
         لا يوجد لقاح للتسمم الدموي نفسه، لكن الوقاية من العدوى والتصرف السريع عند
@@ -368,50 +333,6 @@ const fmtDate = (d: string | null) =>
     </div>
   </section>
 
-  <section class="section wrap lazy reveal" id="news">
-    <div class="split">
-      <h2>آخر الأنشطة</h2>
-      <p>أحدث فعاليات وأنشطة التحالف السوداني للتسمم الدموي.</p>
-    </div>
-    {showFacts ? (
-      <div class="activity-grid">
-        {facts.map((f) => (
-          <div class="activity">
-            <h3 style="font-size: 1rem;">{f}</h3>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <>
-        <div class="news-float">
-          <div
-            class="news-img"
-            style={
-              activitiesData[0].cover_url
-                ? `background-image: url(${activitiesData[0].cover_url});`
-                : "background: var(--tint-pink);"
-            }
-          />
-          <div class="news-text">
-            {fmtDate(activitiesData[0].published_at) && (
-              <time>{fmtDate(activitiesData[0].published_at)}</time>
-            )}
-            <h3>{activitiesData[0].title}</h3>
-            {activitiesData[0].excerpt && <p>{activitiesData[0].excerpt}</p>}
-          </div>
-        </div>
-        {activitiesData.slice(1).map((a) => (
-          <div class="news-row">
-            {a.cover_url && <img src={a.cover_url} alt="" loading="lazy" />}
-            <div class="news-row-body">
-              {fmtDate(a.published_at) && <time>{fmtDate(a.published_at)}</time>}
-              <h3>{a.title}</h3>
-            </div>
-          </div>
-        ))}
-      </>
-    )}
-  </section>
 
   <section class="section wrap lazy reveal" id="conference">
     <div class="split">
