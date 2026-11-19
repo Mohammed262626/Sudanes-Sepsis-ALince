@@ -33,10 +33,13 @@ import ContactForm from "../components/ContactForm.svelte";
       </aside>
     </div>
     <a class="scroll-cue" href="#sepsis" tabindex="-1" aria-hidden="true">↓</a>
+    <svg class="hero-cut" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,0 0,12 100,12" />
+    </svg>
   </section>
 
-  <section class="photo-grid wrap reveal" aria-label="محاور رئيسية">
-    <a class="photo-card" href="#amr">
+  <section class="photo-grid wrap" aria-label="محاور رئيسية">
+    <a class="photo-card reveal" href="#amr">
       <img
         src={url("img/amr-pills.jpg")}
         alt="شريط كبسولات مضاد حيوي"
@@ -49,27 +52,37 @@ import ContactForm from "../components/ContactForm.svelte";
         <span class="more">اعرف المزيد ←</span>
       </div>
     </a>
-    <a class="photo-card" href="#symptoms">
+    <a class="photo-card reveal" href="#symptoms">
       <img
         src={url("img/symptoms-child-care.jpg")}
         alt="عامل صحي يفحص طفلاً عند والدته"
         loading="lazy"
       />
       <div class="photo-body">
-        <span class="kicker">الأطفال</span>
+        <span class="kicker"
+          ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M2 12h4l3-7 4 14 3-7h6" /></svg
+          >الأطفال</span
+        >
         <h3>اعرف العلامات</h3>
         <p>العلامات التحذيرية التي لا تنتظر — خاصة عند الرضّع وصغار الأطفال.</p>
         <span class="more">اعرف المزيد ←</span>
       </div>
     </a>
-    <a class="photo-card" href="#prevention">
+    <a class="photo-card reveal" href="#prevention">
       <img
         src={url("img/prevention-handwash.jpg")}
         alt="غسل اليدين بالماء والصابون"
         loading="lazy"
       />
       <div class="photo-body">
-        <span class="kicker">الوقاية</span>
+        <span class="kicker"
+          ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M12 3l7 3v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6z" /><path
+              d="M9 12l2 2 4-4"
+            /></svg
+          >الوقاية</span
+        >
         <h3>الوقاية تبدأ بخطوة</h3>
         <p>خطوات بسيطة تحميك وتحمي أسرتك من العدوى التي قد تتحول إلى تسمم دموي.</p>
         <span class="more">اعرف المزيد ←</span>
@@ -367,7 +380,13 @@ import ContactForm from "../components/ContactForm.svelte";
         </div>
       </div>
       <div>
-        <h3 style="font-size: 1.25rem; margin-bottom: .75rem;">سجّل حضورك</h3>
+        <h3 style="font-size: 1.25rem; margin-bottom: .75rem;">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"
+            ><rect x="3" y="5" width="18" height="16" rx="1" /><path
+              d="M3 9h18M8 3v4M16 3v4"
+            /></svg
+          >سجّل حضورك
+        </h3>
         <p style="color: var(--muted); margin-bottom: 1.5rem;">
           بعد إتمام التسجيل سنرسل تفاصيل الحضور والبرنامج إلى بريدك الإلكتروني.
         </p>
