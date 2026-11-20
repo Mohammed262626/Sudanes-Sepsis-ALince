@@ -1596,6 +1596,195 @@ section[id],
   gap: 1rem;
 }
 
+/* Conference settings: live summary, switch rows, grouped timing fields */
+.conf {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 52rem;
+}
+
+.conf-now {
+  border-inline-start: 6px solid var(--accent);
+  background: var(--tint-pink);
+  padding: 0.9rem 1.1rem;
+}
+
+.conf-now-label {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--ink);
+  opacity: 0.7;
+  margin-block-end: 0.4rem;
+}
+
+.conf-now-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  color: var(--ink);
+}
+
+.conf-group {
+  border: 2px solid var(--ink);
+}
+
+.conf-group h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border-block-end: 2px solid var(--ink);
+}
+
+.conf-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  inline-size: 100%;
+  padding: 0.9rem 1rem;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.conf-switch + .conf-switch {
+  border-block-start: 2px solid var(--line);
+}
+
+.conf-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.conf-switch:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.conf-switch-text {
+  display: grid;
+  gap: 0.15rem;
+  text-align: start;
+}
+
+.conf-switch-text strong {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.conf-switch-text small {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.conf-toggle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  inline-size: 2.6rem;
+  block-size: 1.4rem;
+  padding: 2px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+}
+
+.conf-toggle::before {
+  content: "";
+  inline-size: 0.9rem;
+  block-size: 0.9rem;
+  background: var(--line);
+  transition: margin-inline-start 0.16s ease, background-color 0.16s ease;
+}
+
+.conf-switch[aria-checked="true"] .conf-toggle {
+  background: var(--ink);
+}
+
+.conf-switch[aria-checked="true"] .conf-toggle::before {
+  margin-inline-start: auto;
+  background: var(--tint-pink);
+}
+
+.conf-fields {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.conf-fields--two {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .conf-fields--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.conf-fields--deadline {
+  border-block-start: 2px solid var(--line);
+}
+
+.conf-fields label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.conf-fields label > span {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.conf-fields small {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.conf-fields input {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.conf-fields input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.conf-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.conf-foot .form-status {
+  margin: 0;
+}
+
+.conf-dirty {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--accent);
+}
+
 /* Day program (admin) */
 .program-add {
   display: grid;

@@ -524,6 +524,19 @@
   let savingConfig = $state(false);
   let configNote = $state("");
   let waitlistCount = $state(0);
+  // What is live on the site now: drives the summary strip and the unsaved hint.
+  let savedConf = $state({ band: true, soon: false, open: false, deadline: "" });
+  let confBaseline = $state("");
+  const confSignature = $derived(
+    [bandEnabled, confSoon, regOpen, confEventDate, confEventTime, confRegDeadline].join("|"),
+  );
+  const confDirty = $derived(confBaseline !== "" && confSignature !== confBaseline);
+
+  const deadlineFmt = new Intl.DateTimeFormat("ar-SD", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Khartoum",
+  });
 
   // Khartoum is fixed at UTC+2 (no DST), so convert by a constant offset rather
   // than the browser's zone. DB stores an instant; datetime-local needs local text.
@@ -555,6 +568,10 @@
     });
     savingConfig = false;
     configNote = error ? "تعذّر الحفظ. حاول مرة أخرى." : "تم الحفظ.";
+    if (!error) {
+      confBaseline = confSignature;
+      savedConf = { band: bandEnabled, soon: confSoon, open: regOpen, deadline: confRegDeadline };
+    }
   }
 
   // Emails everyone who asked to be told when registration opens. Only makes
@@ -1105,6 +1122,8 @@
       confEventDate = String(c.event_date ?? "");
       confEventTime = String(c.event_time ?? "9:00 صباحاً بتوقيت الخرطوم");
       confRegDeadline = toDeadlineInput(c.reg_deadline);
+      savedConf = { band: bandEnabled, soon: confSoon, open: regOpen, deadline: confRegDeadline };
+      confBaseline = confSignature;
     }
 
     const waitlist = await supabase
@@ -1560,54 +1579,104 @@
       {/if}
     </div>
   {:else if tab === "settings"}
-    <div class="templates">
-      <div class="filters">
+    <div class="conf">
+      <div class="conf-now" aria-live="polite">
+        <span class="conf-now-label">على الموقع الآن</span>
+        <div class="conf-now-values">
+          <span>{savedConf.soon ? "قريباً" : "مجدول"}</span>
+          <span>التسجيل {savedConf.open ? "مفتوح" : "مغلق"}</span>
+          {#if savedConf.band}<span>الشريط ظاهر</span>{:else}<span>الشريط مخفي</span>{/if}
+          {#if savedConf.deadline}
+            <span>
+              آخر موعد {deadlineFmt.format(new Date(toDeadlineInstant(savedConf.deadline)!))}
+            </span>
+          {/if}
+        </div>
+      </div>
+
+      <section class="conf-group">
+        <h2>الحالة</h2>
         <button
+          class="conf-switch"
           type="button"
-          aria-pressed={bandEnabled}
+          role="switch"
+          aria-checked={bandEnabled}
           disabled={savingConfig}
           onclick={() => { bandEnabled = !bandEnabled; }}
         >
-          شريط المؤتمر: {bandEnabled ? "ظاهر" : "مخفي"}
+          <span class="conf-switch-text">
+            <strong>شريط المؤتمر</strong>
+            <small>يظهر أعلى الصفحة الرئيسية</small>
+          </span>
+          <span class="conf-toggle" aria-hidden="true"></span>
         </button>
         <button
+          class="conf-switch"
           type="button"
-          aria-pressed={confSoon}
+          role="switch"
+          aria-checked={confSoon}
           disabled={savingConfig}
           onclick={() => { confSoon = !confSoon; }}
         >
-          الحالة: {confSoon ? "قريباً" : "مجدول"}
+          <span class="conf-switch-text">
+            <strong>حالة المؤتمر</strong>
+            <small>صفحة «قريباً» بدل الصفحة الكاملة</small>
+          </span>
+          <span class="conf-toggle" aria-hidden="true"></span>
         </button>
         <button
+          class="conf-switch"
           type="button"
-          aria-pressed={regOpen}
+          role="switch"
+          aria-checked={regOpen}
           disabled={savingConfig}
           onclick={() => { regOpen = !regOpen; }}
         >
-          التسجيل: {regOpen ? "مفتوح" : "مغلق"}
+          <span class="conf-switch-text">
+            <strong>التسجيل</strong>
+            <small>يفتح نموذج التسجيل للزوار</small>
+          </span>
+          <span class="conf-toggle" aria-hidden="true"></span>
         </button>
-        <button type="button" onclick={() => void openWaitlist()} disabled={waitlistCount === 0}>
-          أبلغ المهتمين ({waitlistCount})
-        </button>
-      </div>
-      <label>
-        <span>تاريخ المؤتمر</span>
-        <input type="date" bind:value={confEventDate} />
-      </label>
-      <label>
-        <span>وقت المؤتمر</span>
-        <input type="text" bind:value={confEventTime} dir="rtl" />
-      </label>
-      <label>
-        <span>آخر موعد للتسجيل</span>
-        <input type="datetime-local" bind:value={confRegDeadline} />
-      </label>
-      <div class="templates-foot">
+      </section>
+
+      <section class="conf-group">
+        <h2>التوقيت</h2>
+        <div class="conf-fields conf-fields--two">
+          <label>
+            <span>تاريخ المؤتمر</span>
+            <input type="date" bind:value={confEventDate} />
+          </label>
+          <label>
+            <span>وقت المؤتمر</span>
+            <input type="text" bind:value={confEventTime} dir="rtl" />
+          </label>
+        </div>
+        <div class="conf-fields conf-fields--deadline">
+          <label>
+            <span>آخر موعد للتسجيل</span>
+            <input type="datetime-local" bind:value={confRegDeadline} />
+            <small>بتوقيت الخرطوم.</small>
+          </label>
+        </div>
+      </section>
+
+      <div class="conf-foot">
         <button class="btn" type="button" onclick={saveConferenceConfig} disabled={savingConfig}>
           {savingConfig ? "جارٍ الحفظ…" : "حفظ الإعدادات"}
         </button>
+        <button
+          class="btn btn--ghost"
+          type="button"
+          onclick={() => void openWaitlist()}
+          disabled={waitlistCount === 0}
+        >
+          أبلغ المهتمين ({waitlistCount})
+        </button>
         {#if configNote}
           <p class="form-status">{configNote}</p>
+        {:else if confDirty}
+          <p class="conf-dirty">لديك تغييرات غير محفوظة.</p>
         {/if}
       </div>
     </div>
