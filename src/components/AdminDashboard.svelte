@@ -1321,29 +1321,31 @@
     تعذّر تحميل البيانات. تحقق من صلاحيات الحساب.
   </p>
 {:else}
-  <div class="tabs">
-    {#each groups as g, i (g.label)}
-      <div class="tab-group">
-        <span class="tab-group-label" id={`tabgroup-${i}`}>{g.label}</span>
-        <div class="tab-group-tabs" role="tablist" aria-labelledby={`tabgroup-${i}`}>
-          {#each g.tabs as t (t.id)}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === t.id}
-              class:active={tab === t.id}
-              onclick={() => {
-                tab = t.id;
-                if (t.id === "push") void refreshSubscribers();
-              }}
-            >
-              {t.label} <span class="tab-count">{count(t.id)}</span>
-            </button>
-          {/each}
+  <div class="admin-layout">
+    <aside class="admin-side">
+      {#each groups as g, i (g.label)}
+        <div class="side-group">
+          <span class="side-group-label" id={`tabgroup-${i}`}>{g.label}</span>
+          <div class="side-tabs" role="tablist" aria-labelledby={`tabgroup-${i}`}>
+            {#each g.tabs as t (t.id)}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                class:active={tab === t.id}
+                onclick={() => {
+                  tab = t.id;
+                  if (t.id === "push") void refreshSubscribers();
+                }}
+              >
+                {t.label} <span class="tab-count">{count(t.id)}</span>
+              </button>
+            {/each}
+          </div>
         </div>
-      </div>
-    {/each}
-  </div>
+      {/each}
+    </aside>
+    <div class="admin-main">
 
   {#if tab === "scan"}
     <div class="scan">
@@ -1929,4 +1931,6 @@
       </div>
     {/key}
   {/if}
+    </div>
+  </div>
 {/if}
