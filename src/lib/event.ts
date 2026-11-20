@@ -13,7 +13,15 @@ export type EventConfig = {
 };
 
 // Fetch the live config from the database, falling back to build-time constants.
-export async function fetchEventConfig(): Promise<EventConfig> {
+// Several islands mount on one page (band, countdown, dates, form), so the
+// promise is memoised: one request per pageview, not one per island.
+let pending: Promise<EventConfig> | null = null;
+
+export function fetchEventConfig(): Promise<EventConfig> {
+  return (pending ??= loadEventConfig());
+}
+
+async function loadEventConfig(): Promise<EventConfig> {
   try {
     const { supabase } = await import("../lib/supabase");
     if (!supabase) throw new Error("no supabase");
