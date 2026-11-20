@@ -1607,7 +1607,30 @@ section[id],
   font-size: 0.8125rem;
 }
 
+/* Waitlist add row: fields and the icon button share one line */
+.waitlist-add {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+.waitlist-add .btn--icon {
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+}
+
+.waitlist-add--edit {
+  grid-template-columns: 1fr 1fr auto auto;
+}
+
 @media (max-width: 720px) {
+  .waitlist-add {
+    grid-template-columns: 1fr;
+  }
+
+  .waitlist-add .btn--icon {
+    inline-size: 100%;
+  }
+
   .program-add {
     grid-template-columns: 1fr;
   }

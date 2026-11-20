@@ -1573,7 +1573,7 @@
   {:else}
     {#if tab === "registration_notify"}
       <div class="templates">
-        <div class="program-add">
+        <div class="program-add waitlist-add" class:waitlist-add--edit={waitEditId}>
           <label>
             <span>الاسم</span>
             <input type="text" maxlength="200" bind:value={waitDraft.name} autocomplete="off" />
@@ -1588,28 +1588,44 @@
               autocomplete="off"
             />
           </label>
-        </div>
-        <div class="templates-foot">
-          <button class="btn" type="button" onclick={() => void saveWait(waitDraft, waitEditId)}>
-            {waitEditId ? "حفظ التعديل" : "إضافة مهتم"}
-          </button>
           {#if waitEditId}
             <button
-              class="btn btn--ghost"
+              class="btn btn--icon"
               type="button"
+              title="حفظ التعديل"
+              aria-label="حفظ التعديل"
+              onclick={() => void saveWait(waitDraft, waitEditId)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+            </button>
+            <button
+              class="btn btn--ghost btn--icon"
+              type="button"
+              title="إلغاء"
+              aria-label="إلغاء"
               onclick={() => {
                 waitEditId = 0;
                 waitDraft = { name: "", email: "" };
                 waitNote = "";
               }}
             >
-              إلغاء
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          {:else}
+            <button
+              class="btn btn--icon"
+              type="button"
+              title="إضافة مهتم"
+              aria-label="إضافة مهتم"
+              onclick={() => void saveWait(waitDraft)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
             </button>
           {/if}
-          <p class="admin-note">
-            {waitNote || "من يضيف نفسه للقائمة يصله إشعار فور فتح باب التسجيل."}
-          </p>
         </div>
+        <p class="admin-note">
+          {waitNote || "من يضيف نفسه للقائمة يصله إشعار فور فتح باب التسجيل."}
+        </p>
       </div>
     {/if}
     {#if tab === "conference_registrations"}
