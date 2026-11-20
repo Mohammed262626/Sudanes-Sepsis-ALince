@@ -7,12 +7,13 @@
   type Guest = {
     id: number;
     name: string;
+    email: string | null;
     status: string;
     attended_at: string | null;
     ticket_code: string | null;
   };
 
-  const COLS = "id,name,status,attended_at,ticket_code";
+  const COLS = "id,name,email,status,attended_at,ticket_code";
   const POLL_MS = 5000;
 
   let rows = $state<Guest[]>([]);
@@ -367,9 +368,15 @@
       <ul>
         {#each rows as row (row.id)}
           <li class:is-fresh={fresh.includes(row.id)}>
-            <span class="door-name">{row.name}</span>
-            <span class="door-time">
-              {row.attended_at ? timeFmt.format(new Date(row.attended_at)) : ""}
+            <span class="door-who">
+              <span class="door-name">{row.name}</span>
+              {#if row.email}<span class="door-email" dir="ltr">{row.email}</span>{/if}
+            </span>
+            <span class="door-facts">
+              <span class="door-code" dir="ltr">{row.ticket_code}</span>
+              <span class="door-time">
+                {row.attended_at ? timeFmt.format(new Date(row.attended_at)) : ""}
+              </span>
             </span>
           </li>
         {/each}
@@ -565,8 +572,34 @@
     background: var(--tint-pink);
   }
 
+  .door-who {
+    display: grid;
+    gap: 0.1rem;
+    min-inline-size: 0;
+  }
+
   .door-name {
     font-weight: 600;
+  }
+
+  .door-email {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .door-facts {
+    flex: none;
+    display: grid;
+    gap: 0.1rem;
+    justify-items: end;
+  }
+
+  .door-code {
+    font-size: 0.8125rem;
+    color: var(--ink);
   }
 
   .door-time {
