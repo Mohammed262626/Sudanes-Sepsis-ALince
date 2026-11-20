@@ -6,18 +6,31 @@
   type Row = Record<string, string | number>;
   type Template = { key: string; label: string; body: string };
 
-  const tabs = [
-    { id: "conference_registrations", label: "التسجيلات" },
-    { id: "scan", label: "الحضور" },
-    { id: "assessments", label: "الاستبانات" },
-    { id: "program", label: "البرنامج" },
-    { id: "push", label: "إشعارات" },
-    { id: "settings", label: "المؤتمر" },
-    { id: "contact_messages", label: "الرسائل" },
-    { id: "donation_interests", label: "الدعم" },
-    { id: "registration_notify", label: "المهتمين" },
-    { id: "templates", label: "قوالب واتساب" },
+  // Grouped by function: one group per row of related work.
+  const groups = [
+    {
+      label: "إدارة المؤتمر",
+      tabs: [
+        { id: "conference_registrations", label: "التسجيلات" },
+        { id: "scan", label: "الحضور" },
+        { id: "assessments", label: "الاستبانات" },
+        { id: "program", label: "البرنامج" },
+        { id: "settings", label: "المؤتمر" },
+      ],
+    },
+    {
+      label: "التواصل",
+      tabs: [
+        { id: "contact_messages", label: "الرسائل" },
+        { id: "donation_interests", label: "الدعم" },
+        { id: "registration_notify", label: "المهتمين" },
+        { id: "push", label: "إشعارات" },
+        { id: "templates", label: "قوالب واتساب" },
+      ],
+    },
   ];
+
+  const tabs = groups.flatMap((g) => g.tabs);
 
   const dataTabs = tabs.filter(
     (t) => !["templates", "scan", "assessments", "push", "program", "settings"].includes(t.id),
@@ -1308,20 +1321,27 @@
     تعذّر تحميل البيانات. تحقق من صلاحيات الحساب.
   </p>
 {:else}
-  <div class="tabs" role="tablist">
-    {#each tabs as t (t.id)}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={tab === t.id}
-        class:active={tab === t.id}
-        onclick={() => {
-          tab = t.id;
-          if (t.id === "push") void refreshSubscribers();
-        }}
-      >
-        {t.label} <span class="tab-count">{count(t.id)}</span>
-      </button>
+  <div class="tabs">
+    {#each groups as g, i (g.label)}
+      <div class="tab-group">
+        <span class="tab-group-label" id={`tabgroup-${i}`}>{g.label}</span>
+        <div class="tab-group-tabs" role="tablist" aria-labelledby={`tabgroup-${i}`}>
+          {#each g.tabs as t (t.id)}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              class:active={tab === t.id}
+              onclick={() => {
+                tab = t.id;
+                if (t.id === "push") void refreshSubscribers();
+              }}
+            >
+              {t.label} <span class="tab-count">{count(t.id)}</span>
+            </button>
+          {/each}
+        </div>
+      </div>
     {/each}
   </div>
 
