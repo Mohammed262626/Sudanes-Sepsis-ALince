@@ -1,51 +1,32 @@
-name: Deploy dev preview to GitHub Pages
-
+name: deploy
 on:
   push:
     branches: [dev]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-      - run: npm ci
-      - name: Build
-        run: npm run build
+      - name: write .env from secrets
+        run: printf 'PUBLIC_SUPABASE_URL=%s\nPUBLIC_SUPABASE_ANON_KEY=%s\n' "$PUBLIC_SUPABASE_URL" "$PUBLIC_SUPABASE_ANON_KEY" > .env
         env:
-          SITE_BASE: /Sudanes-Sepsis-ALince
-          SITE_URL: https://mohammed262626.github.io
-          PUBLIC_PREVIEW: "true"
-          # Publishable values are already in the browser bundle; secrets can override them.
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL || 'https://hdoylixxljkimdypfomp.supabase.co' }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_ULV57VKYbZqJOc9nqj_yrg_ShaVf0z9' }}
-      - uses: actions/configure-pages@v5
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      - run: npm ci --no-audit --no-fund && npm run build
+      - uses: webfactory/ssh-agent@v0.9.1
         with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+      - name: rsync dist to server
+        run: |
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          rsync -az --delete dist/ root@"$DEPLOY_HOST":/srv/www/
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
