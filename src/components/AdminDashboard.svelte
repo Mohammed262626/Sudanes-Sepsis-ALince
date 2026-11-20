@@ -2,7 +2,6 @@
   import { onMount, tick } from "svelte";
   import { supabase } from "../lib/supabase";
   import { url } from "../lib/url";
-  import { buzz, ensureAudio, jsQrDecoder, parseCode, tone } from "../lib/scan";
 
   type Row = Record<string, string | number>;
   type Template = { key: string; label: string; body: string };
@@ -13,7 +12,6 @@
       label: "إدارة المؤتمر",
       tabs: [
         { id: "conference_registrations", label: "التسجيلات" },
-        { id: "scan", label: "الحضور" },
         { id: "assessments", label: "الاستبانات" },
         { id: "program", label: "البرنامج" },
         { id: "settings", label: "المؤتمر" },
@@ -34,7 +32,7 @@
   const tabs = groups.flatMap((g) => g.tabs);
 
   const dataTabs = tabs.filter(
-    (t) => !["templates", "scan", "assessments", "push", "program", "settings"].includes(t.id),
+    (t) => !["templates", "assessments", "push", "program", "settings"].includes(t.id),
   );
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
@@ -137,16 +135,6 @@
     setTimeout(() => {
       if (flashId === id) flashId = 0;
     }, 900);
-  };
-
-  // Beeps are synthesised, so there are no audio files and nothing to load:
-  // one tone when a code is read, two when attendance is confirmed, one low
-  // tone when the code is unknown or not approved. Shared with the door screen.
-  let hit = $state(false);
-  let resultTimer = 0;
-  const pulse = () => {
-    hit = true;
-    setTimeout(() => (hit = false), 260);
   };
 
   // Admin-only: RLS lets only allowlisted emails update; the DB trigger sends the
@@ -727,219 +715,6 @@
     flash(id);
   }
 
-  let video = $state<HTMLVideoElement | null>(null);
-  let scanning = $state(false);
-  let manualCode = $state("");
-  let pending = $state<Row | null>(null);
-  let scanResult = $state<{ ok: boolean; title: string; note: string } | null>(null);
-  let stream: MediaStream | null = null;
-  let loop = 0;
-  let scanHint = $state(false);
-  let hintTimer = 0;
-  // ?debug prints what the camera actually delivers; harmless otherwise.
-  const showDebug = typeof location !== "undefined" && location.search.includes("debug");
-  let debug = $state("");
-
-  let input = $state<HTMLInputElement | null>(null);
-  let confirmEl = $state<HTMLElement | null>(null);
-
-  async function startScan() {
-    scanResult = null;
-    // The tap that opens the camera is also the gesture that unlocks audio.
-    ensureAudio();
-    if (!window.isSecureContext) {
-      scanResult = {
-        ok: false,
-        title: "الكاميرا تحتاج رابط HTTPS",
-        note: "افتح الموقع المنشور (https)، أو استخدم قارئ QR، أو أدخل الرمز يدويًا.",
-      };
-      return;
-    }
-    if (!navigator.mediaDevices?.getUserMedia) {
-      scanResult = {
-        ok: false,
-        title: "هذا المتصفح لا يسمح بالكاميرا",
-        note: "استخدم قارئ QR أو أدخل الرمز يدويًا.",
-      };
-      return;
-    }
-
-    let decode: (v: HTMLVideoElement) => string | null;
-    try {
-      decode = await jsQrDecoder();
-    } catch {
-      scanResult = {
-        ok: false,
-        title: "تعذّر تحميل قارئ QR",
-        note: "تحقق من الاتصال أو أدخل الرمز يدويًا.",
-      };
-      return;
-    }
-
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          // Ignored where unsupported; low-res, soft frames are the usual
-          // reason a phone cannot resolve QR modules at arm's length.
-          advanced: [{ focusMode: "continuous" }],
-        } as MediaTrackConstraints,
-      });
-    } catch {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-      } catch {
-        scanResult = {
-          ok: false,
-          title: "تعذّر فتح الكاميرا",
-          note: "اسمح بالوصول إلى الكاميرا، أو استخدم قارئ QR أو أدخل الرمز يدويًا.",
-        };
-        return;
-      }
-    }
-    scanning = true;
-    scanHint = false;
-    await tick();
-    if (video) {
-      video.srcObject = stream;
-      await video.play().catch(() => {});
-    }
-    armHint();
-
-    let frames = 0;
-    const poll = () => {
-      if (!scanning) return;
-      loop = requestAnimationFrame(poll);
-      // A read is waiting for confirmation: keep the loop alive, skip decoding.
-      if (pending || !video) return;
-      // ~15 fps is plenty for a QR and keeps a phone from heating up.
-      if (++frames % 4) return;
-      if (showDebug) debug = `${video.videoWidth}×${video.videoHeight} · ${frames}`;
-      let raw: string | null;
-      try {
-        raw = decode(video);
-      } catch {
-        return;
-      }
-      if (!raw) return;
-      clearTimeout(hintTimer);
-      scanHint = false;
-      checkIn(raw);
-    };
-    poll();
-  }
-
-  function armHint() {
-    // If nothing decodes in 8s, say so instead of a silent live preview.
-    clearTimeout(hintTimer);
-    hintTimer = setTimeout(() => {
-      if (scanning && !pending) scanHint = true;
-    }, 8000);
-  }
-
-  function stopScan() {
-    scanning = false;
-    pending = null;
-    scanHint = false;
-    clearTimeout(hintTimer);
-    cancelAnimationFrame(loop);
-    stream?.getTracks().forEach((t) => t.stop());
-    stream = null;
-  }
-
-  // Camera and typed/USB codes both land here: nothing is written yet, the card
-  // shows who it is and the confirm button records attendance.
-  function checkIn(raw: string) {
-    const code = parseCode(raw);
-    if (!code || !supabase) return;
-    clearTimeout(resultTimer);
-    pending = null;
-    const row = registrations.find(
-      (r) => String(r.ticket_code ?? "").toUpperCase() === code,
-    );
-    if (!row) {
-      tone([200], "triangle");
-      buzz(80);
-      scanResult = { ok: false, title: "رمز غير معروف", note: code };
-      return;
-    }
-    if (row.attended_at) {
-      tone([600, 480]);
-      scanResult = {
-        ok: true,
-        title: `سبق تسجيل ${row.name}`,
-        note: "الحضور: " + dateFmt.format(new Date(row.attended_at)),
-      };
-      return;
-    }
-    if (row.status !== "approved") {
-      tone([200], "triangle");
-      buzz(80);
-      scanResult = { ok: false, title: `${row.name} — لم يُقبل بعد`, note: code };
-      return;
-    }
-    tone([880]);
-    buzz(40);
-    pulse();
-    scanResult = null;
-    pending = row;
-    // The card sits at the bottom of the tab; keep it in view on a phone.
-    void tick().then(() => confirmEl?.scrollIntoView({ block: "nearest" }));
-  }
-
-  function cancelPending() {
-    pending = null;
-    manualCode = "";
-    input?.focus();
-  }
-
-  function confirmAttend() {
-    if (pending) void markAttended(pending);
-  }
-
-  async function markAttended(row: Row) {
-    if (!supabase || busyId) return;
-    busyId = row.id;
-    scanResult = null;
-    const at = new Date().toISOString();
-    const { error } = await supabase
-      .from("conference_registrations")
-      .update({ attended_at: at })
-      .eq("id", row.id);
-    busyId = 0;
-    if (error) {
-      tone([200], "triangle");
-      scanResult = { ok: false, title: "تعذّر تسجيل الحضور", note: "حاول مرة أخرى." };
-      return;
-    }
-    data.conference_registrations = (data.conference_registrations ?? []).map((r) =>
-      r.id === row.id ? { ...r, attended_at: at } : r,
-    );
-    data = { ...data };
-    manualCode = "";
-    pending = null;
-    // The camera keeps running between guests: only the card resets.
-    armHint();
-    // Keep the field ready so a USB QR gun's next scan lands here.
-    input?.focus();
-    tone([880, 1320]);
-    buzz(60);
-    pulse();
-    scanResult = {
-      ok: true,
-      title: `${row.name} — حاضر`,
-      note: String(row.ticket_code ?? ""),
-    };
-    // Clears itself so the next guest starts from a clean card.
-    clearTimeout(resultTimer);
-    resultTimer = setTimeout(() => (scanResult = null), 4000);
-    void showSends([row.id]);
-  }
-
   async function load() {
     if (!supabase) return;
     const { data: session } = await supabase.auth.getSession();
@@ -1081,12 +856,6 @@
 
   const registrations = $derived(data.conference_registrations ?? []);
   const present = $derived(registrations.filter((r) => r.attended_at).length);
-  const recent = $derived(
-    registrations
-      .filter((r) => r.attended_at)
-      .sort((a, b) => String(b.attended_at).localeCompare(String(a.attended_at)))
-      .slice(0, 5),
-  );
   const filterOptions = $derived([
     { id: "all", label: "الكل", n: registrations.length },
     { id: "pending", label: "بانتظار القبول", n: registrations.filter((r) => r.status === "pending").length },
@@ -1159,27 +928,10 @@
         phoneHit(r.phone),
     );
   });
-  // From the registrations table: jump to the attendance tab with that guest's
-  // card already open, so one tap confirms.
-  function openCheckIn(row: Row) {
-    tab = "scan";
-    checkIn(String(row.ticket_code ?? ""));
-    input?.focus();
-  }
-
-  // Enter in the search box jumps straight to that guest's check-in card.
-  function openMatch() {
-    if (shown.length !== 1) return;
-    tab = "scan";
-    checkIn(String(shown[0].ticket_code ?? ""));
-  }
-
   const count = (id: string) =>
     id === "templates"
       ? templates.length
-      : id === "scan"
-        ? present
-        : id === "assessments"
+      : id === "assessments"
           ? answeredPeople
           : id === "program"
             ? program.length
@@ -1187,12 +939,6 @@
               ? pushCount
               : (data[id]?.length ?? 0);
 
-  // Release the camera when leaving the attendance tab; focus the code field when
-  // arriving so a USB/keyboard QR gun types straight into it.
-  $effect(() => {
-    if (tab !== "scan") stopScan();
-    else input?.focus();
-  });
 </script>
 
 <header class="admin-head">
@@ -1264,13 +1010,11 @@
 {#if loading}
   <div
     class="admin-loading"
-    data-shape={tab === "scan" ? "scan" : tab === "templates" ? "templates" : "table"}
+    data-shape={tab === "templates" ? "templates" : "table"}
     aria-busy="true"
     aria-label="جارٍ التحميل"
   >
-    {#if tab === "scan"}
-      <span></span><span></span>
-    {:else if tab === "templates"}
+    {#if tab === "templates"}
       {#each [0, 1, 2, 3] as i (i)}<span></span>{/each}
     {:else}
       {#each [0, 1, 2, 3, 4, 5] as i (i)}<span></span>{/each}
@@ -1307,110 +1051,7 @@
     </aside>
     <div class="admin-main">
 
-  {#if tab === "scan"}
-    <div class="scan">
-      <p
-        class="scan-status"
-        data-state={pending ? "wait" : scanning ? "live" : "ready"}
-      >
-        <span class="dot" aria-hidden="true"></span>
-        {pending ? "بانتظار التأكيد" : scanning ? "جاري المسح…" : "جاهز للمسح"}
-      </p>
-
-      <div class="scan-card">
-        <div class="scan-stage">
-          {#if scanning}
-            <video bind:this={video} class:hit={hit} playsinline muted></video>
-            <div class="scan-stage-bar">
-              <span>وجّه الكاميرا إلى رمز التذكرة</span>
-              <button class="btn btn--ghost btn--sm" type="button" onclick={stopScan}>
-                إيقاف
-              </button>
-            </div>
-          {:else}
-            <button class="btn scan-open" type="button" onclick={startScan}>
-              افتح الكاميرا
-            </button>
-            <span class="scan-tip">أو استخدم قارئ QR أو أدخل الرمز بالأسفل</span>
-          {/if}
-        </div>
-
-        <div class="scan-manual">
-          <label>
-            <span>امسح بقارئ QR أو اكتب الرمز</span>
-            <input
-              bind:this={input}
-              dir="ltr"
-              spellcheck="false"
-              placeholder="SX-XXXXXX"
-              bind:value={manualCode}
-              onkeydown={(e) => e.key === "Enter" && checkIn(manualCode)}
-            />
-          </label>
-          <button class="btn" type="button" onclick={() => checkIn(manualCode)}>
-            تحقق
-          </button>
-        </div>
-      </div>
-
-      {#if scanning && showDebug && debug}
-        <p class="scan-hint" dir="ltr">{debug}</p>
-      {/if}
-      {#if scanning && scanHint && !pending}
-        <p class="scan-hint" role="status">
-          لم يُقرأ الرمز — قرّب الكاميرا أكثر، أو استخدم الرقم أدناه.
-        </p>
-      {/if}
-
-      {#if scanResult}
-        <p class="scan-result" data-ok={scanResult.ok} role="status">
-          <span class="scan-result-icon" aria-hidden="true">
-            {scanResult.ok ? "✓" : "!"}
-          </span>
-          <span class="scan-result-body">
-            <strong>{scanResult.title}</strong>
-            <span>{scanResult.note}</span>
-          </span>
-        </p>
-      {/if}
-
-      {#if recent.length}
-        <p class="scan-divider">آخر الحضوض</p>
-        <ul class="scan-recent">
-          {#each recent as r (r.id)}
-            <li>
-              <span>{r.name}</span>
-              <span dir="ltr">{r.ticket_code}</span>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-
-      {#if pending}
-        <div class="scan-confirm" bind:this={confirmEl}>
-          <span class="scan-confirm-kicker">بطاقة الضيف</span>
-          <strong>{pending.name}</strong>
-          <div class="scan-confirm-facts">
-            <span dir="ltr">{pending.ticket_code}</span>
-            <span dir="ltr">{pending.phone}</span>
-          </div>
-          <div class="scan-actions">
-            <button
-              class="btn"
-              type="button"
-              disabled={busyId === pending.id}
-              onclick={confirmAttend}
-            >
-              تأكيد الحضور
-            </button>
-            <button class="btn btn--ghost" type="button" onclick={cancelPending}>
-              إلغاء
-            </button>
-          </div>
-        </div>
-      {/if}
-    </div>
-  {:else if tab === "program"}
+  {#if tab === "program"}
     <div class="templates">
       <div class="program-add">
         <label>
@@ -1671,7 +1312,6 @@
           bind:value={query}
           placeholder="ابحث بالاسم أو الهاتف أو البريد أو رمز التذكرة"
           aria-label="ابحث بالاسم أو الهاتف أو البريد أو رمز التذكرة"
-          onkeydown={(e) => e.key === "Enter" && openMatch()}
         />
         <div class="filters">
           {#each filterOptions as f (f.id)}
@@ -1846,15 +1486,6 @@
                               onclick={() => resend(row.id)}
                             >
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
-                            </button>
-                            <button
-                              class="btn btn--icon"
-                              type="button"
-                              title="تأكيد الحضور"
-                              aria-label="تأكيد الحضور"
-                              onclick={() => openCheckIn(row)}
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="m17 11 2 2 4-4" /></svg>
                             </button>
                           {/if}
                           {#if !row.attended_at && !row.declined_at}

@@ -294,41 +294,35 @@
       <strong>{total}</strong>
       <span>حضروا</span>
     </div>
-    <div class="door-actions">
-      {#if scanning}
-        <button class="btn btn--ghost" type="button" onclick={stopScan}>إيقاف الكاميرا</button>
-      {:else}
-        <button class="btn" type="button" onclick={startScan}>بدء الكاميرا</button>
-      {/if}
-      <a class="btn btn--ghost" href={url("admin/")}>لوحة التحكم</a>
-    </div>
+    {#if scanning}
+      <button class="btn btn--ghost" type="button" onclick={stopScan}>إيقاف الكاميرا</button>
+    {:else}
+      <button class="btn" type="button" onclick={startScan}>بدء الكاميرا</button>
+    {/if}
   </header>
 
   {#if problem}
     <p class="door-alert">{problem}</p>
   {/if}
 
-  <section class="door-scan" class:door-scan--hit={hit}>
+  <section class="door-scan" class:is-hit={hit}>
     {#if scanning}
       <video bind:this={video} playsinline muted></video>
-      {#if hint}
-        <p class="door-hint">وجّه التذكرة إلى الكاميرا — أو أدخل الرمز أدناه.</p>
-      {/if}
     {:else}
-      <p class="door-idle">ابدأ الكاميرا أو اكتب رمز التذكرة.</p>
+      <p class="door-idle">ابدأ الكاميرا، أو اكتب رمز التذكرة أدناه.</p>
     {/if}
 
-    <form class="door-manual" onsubmit={(e) => { e.preventDefault(); submitManual(); }}>
-      <input
-        bind:this={input}
-        bind:value={manualCode}
-        placeholder="SX-XXXX"
-        dir="ltr"
-        autocomplete="off"
-        aria-label="رمز التذكرة"
-      />
-      <button class="btn" type="submit" disabled={!manualCode.trim()}>تحقّق</button>
-    </form>
+    <p class="door-status" role="status">
+      {#if pending}
+        بانتظار التأكيد
+      {:else if scanning && hint}
+        لم يُقرأ الرمز — قرّب التذكرة أو أدخل الرمز.
+      {:else if scanning}
+        وجّه التذكرة إلى الكاميرا.
+      {:else}
+        اكتب رمز التذكرة أدناه.
+      {/if}
+    </p>
 
     {#if pending}
       <div class="door-confirm" bind:this={confirmEl}>
@@ -349,6 +343,18 @@
         <span>{result.note}</span>
       </p>
     {/if}
+
+    <form class="door-manual" onsubmit={(e) => { e.preventDefault(); submitManual(); }}>
+      <input
+        bind:this={input}
+        bind:value={manualCode}
+        placeholder="SX-XXXX"
+        dir="ltr"
+        autocomplete="off"
+        aria-label="رمز التذكرة"
+      />
+      <button class="btn" type="submit" disabled={!manualCode.trim()}>تحقّق</button>
+    </form>
   </section>
 
   <section class="door-list">
@@ -369,6 +375,7 @@
         {/each}
       </ul>
     {/if}
+    <p class="door-foot"><a href={url("admin/")}>لوحة التحكم</a></p>
   </section>
 </div>
 
@@ -411,12 +418,6 @@
     color: var(--muted);
   }
 
-  .door-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
   .door-alert {
     margin: 0;
     padding: 0.75rem 1rem;
@@ -433,7 +434,7 @@
     transition: background-color 0.2s ease;
   }
 
-  .door-scan--hit {
+  .door-scan.is-hit {
     background: var(--tint-pink);
   }
 
@@ -444,11 +445,22 @@
     background: var(--ink);
   }
 
-  .door-idle,
-  .door-hint {
+  .door-idle {
     margin: 0;
-    font-size: 0.9375rem;
+    padding-block: 2.5rem;
+    text-align: center;
+    font-size: 1.0625rem;
     color: var(--muted);
+  }
+
+  .door-status {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--muted);
+    border-block-start: 2px solid var(--line);
+    padding-block-start: 0.75rem;
   }
 
   .door-manual {
@@ -560,6 +572,15 @@
   .door-time {
     flex: none;
     font-size: 0.875rem;
+    color: var(--muted);
+  }
+
+  .door-foot {
+    margin: 1rem 0 0;
+    font-size: 0.875rem;
+  }
+
+  .door-foot a {
     color: var(--muted);
   }
 

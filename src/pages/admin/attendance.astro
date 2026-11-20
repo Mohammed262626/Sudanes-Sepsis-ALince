@@ -6,3 +6,10 @@ import AttendanceDoor from "../../components/AttendanceDoor.svelte";
 <AdminLayout title="الحضور">
   <AttendanceDoor client:load />
 </AdminLayout>
+
+<style is:global>
+  /* Kiosk screen: the deploy version belongs to the dashboard, not the door. */
+  .admin-version {
+    display: none;
+  }
+</style>

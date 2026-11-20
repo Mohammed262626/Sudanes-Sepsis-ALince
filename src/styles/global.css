@@ -1901,232 +1901,6 @@ section[id],
 }
 
 
-/* Attendance scanner */
-.scan {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.scan-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.scan-status .dot {
-  inline-size: 0.5rem;
-  block-size: 0.5rem;
-  border-radius: 50%;
-  background: var(--line);
-}
-
-.scan-status[data-state="live"] .dot {
-  background: var(--accent);
-  animation: blink 2s ease-in-out infinite;
-}
-
-.scan-status[data-state="wait"] .dot {
-  background: var(--ink);
-}
-
-/* One stage for both states: idle sits where the video will be, so the page
-   does not jump when the camera opens. */
-/* Camera and the manual field share one frame: it reads as one scanner. */
-.scan-card {
-  display: grid;
-  border: 2px solid var(--ink);
-}
-
-.scan-stage {
-  display: grid;
-  gap: 0.6rem;
-  place-content: center;
-  justify-items: stretch;
-  min-block-size: 9rem;
-  padding: 0.6rem;
-}
-
-.scan-stage-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-
-.scan-open {
-  min-block-size: 3rem;
-}
-
-.scan-tip {
-  font-size: 0.8125rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-.scan video {
-  inline-size: 100%;
-  max-block-size: 24rem;
-  aspect-ratio: 4 / 3;
-  background: var(--ink);
-  border: 0;
-  object-fit: cover;
-}
-
-.scan-actions {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.scan-actions .btn {
-  flex: 1;
-}
-
-.scan-divider {
-  margin: 0.35rem 0 0;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.scan-manual {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding: 0.6rem;
-  border-block-start: 2px solid var(--line);
-}
-
-.scan-manual label {
-  display: grid;
-  gap: 0.35rem;
-  flex: 1 1 12rem;
-  font-size: 0.875rem;
-}
-
-.scan-manual input {
-  font-family: var(--font-body);
-  font-size: 1rem;
-  block-size: 2.75rem;
-  padding: 0 0.7rem;
-  border: 2px solid var(--ink);
-  border-radius: 0;
-  background: var(--paper);
-  color: var(--ink);
-}
-
-.scan-manual .btn {
-  block-size: 2.75rem;
-  padding-block: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scan-manual input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.scan-result {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.9rem 1rem;
-  border: 2px solid var(--ink);
-}
-
-.scan-result[data-ok="false"] {
-  border-style: dashed;
-}
-
-.scan-result-icon {
-  flex: none;
-  display: grid;
-  place-items: center;
-  inline-size: 1.75rem;
-  block-size: 1.75rem;
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  font-size: 0.9375rem;
-  font-weight: 700;
-}
-
-.scan-result-body {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.scan-result strong {
-  font-family: var(--font-display);
-  font-size: 1.0625rem;
-}
-
-.scan-result-body span {
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.scan-confirm {
-  display: grid;
-  gap: 0.3rem;
-  padding: 1rem;
-  border: 2px solid var(--ink);
-}
-
-.scan-confirm-kicker {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.scan-confirm strong {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  line-height: 1.2;
-}
-
-.scan-confirm-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.scan-confirm .scan-actions {
-  margin-top: 0.75rem;
-}
-
-.scan-hint {
-  margin: 0;
-  padding: 0.6rem 0.75rem;
-  border: 2px dashed var(--line);
-  font-size: 0.875rem;
-  color: var(--muted);
-}
-
-.scan-recent {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.25rem;
-}
-
-.scan-recent li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-block: 0.4rem;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.875rem;
-}
-
 /* Tablet & phone: the dashboard runs at the door, so keep targets big and drop
    the columns nobody reads on a small screen. */
 /* Nine columns need ~1100px; below that the date, role and organisation go,
@@ -2303,7 +2077,6 @@ section[id],
     overflow: visible;
   }
 
-  .scan,
   .templates {
     max-width: none;
   }
@@ -2321,25 +2094,11 @@ section[id],
     padding: 0 0.35rem;
   }
 
-  .scan-actions {
-    flex-wrap: wrap;
-  }
-
-  .scan-actions .btn,
   .templates-foot .btn {
     flex: 1 1 auto;
     min-height: 2.75rem;
   }
 
-  .scan-manual {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .scan-manual .btn {
-    inline-size: 100%;
-    min-height: 2.75rem;
-  }
 }
 
 /* Phones: the email truncates instead of squeezing the header buttons, and
@@ -2354,7 +2113,6 @@ section[id],
   }
 
   .admin-search,
-  .scan-manual input,
   .templates textarea,
   .templates input {
     font-size: 16px;
@@ -2388,7 +2146,7 @@ body:has(#consent:not([hidden])) {
 }
 
 /* The placeholder copies the shape of the tab it stands in for: a table with a
-   dark header bar, the scanner's camera frame, or template cards. */
+   dark header bar or template cards. */
 .admin-loading[data-shape="table"] span {
   block-size: 2.6rem;
 }
@@ -2396,14 +2154,6 @@ body:has(#consent:not([hidden])) {
 .admin-loading[data-shape="table"] span:first-child {
   block-size: 2.9rem;
   background: rgba(21, 19, 15, 0.16);
-}
-
-.admin-loading[data-shape="scan"] span:first-child {
-  block-size: 11rem;
-}
-
-.admin-loading[data-shape="scan"] span:last-child {
-  block-size: 1.8rem;
 }
 
 .admin-loading[data-shape="templates"] span {
@@ -2440,27 +2190,9 @@ body:has(#consent:not([hidden])) {
   }
 }
 
-/* Settles instantly; the frame tints briefly after a read. */
-@keyframes hit {
-  from {
-    box-shadow: inset 0 0 0 4px var(--accent);
-  }
-}
-
-.scan-confirm {
-  animation: fade 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.scan video.hit {
-  animation: hit 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 .table-wrap,
-.scan,
 .templates,
 .form-status,
-.scan-result,
-.scan-hint,
 .admin-note {
   animation: fade 0.24s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
