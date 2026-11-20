@@ -212,7 +212,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<Mail
 
 // The QR points at the guest's own check-in page. The pass (checkin_token) is
 // what opens it; the readable code rides along for the door scanner.
-const SITE = "https://mohammed262626.github.io/Sudanes-Sepsis-ALince";
+const SITE = "https://sudansepsisalliance.com";
 
 // HTML-escape a string for use in email HTML attribute values.
 function esc(s: string): string {
