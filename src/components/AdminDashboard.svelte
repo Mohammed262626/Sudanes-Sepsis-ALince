@@ -47,6 +47,7 @@
       { key: "name", label: "الاسم", cls: "wrap" },
       { key: "email", label: "البريد", cls: "ltr wrap" },
       { key: "message", label: "الرسالة", cls: "wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
     donation_interests: [
       { key: "created_at", label: "التاريخ", cls: "nw" },
@@ -54,11 +55,13 @@
       { key: "email", label: "البريد", cls: "ltr wrap" },
       { key: "support_type", label: "نوع الدعم", cls: "nw" },
       { key: "note", label: "ملاحظات", cls: "wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
     registration_notify: [
       { key: "created_at", label: "التاريخ", cls: "nw" },
       { key: "name", label: "الاسم", cls: "wrap" },
       { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
   };
 
