@@ -410,6 +410,20 @@ function waitlistEmail(r: Record_): string {
   );
 }
 
+// Confirmation to the person who asked to be told when registration opens.
+function waitlistConfirmEmail(r: Record_): string {
+  return (
+    '<h1 style="font-size:22px;margin:0 0 16px">سجّلنا اهتمامك</h1>' +
+    "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
+    '<p style="margin:0 0 4px">سجّلنا بريدك بنجاح لتصلك رسالة فور فتح باب التسجيل في مؤتمر <strong>كسلا للتسمم الدموي</strong>.</p>' +
+    "<p>لا حاجة لأي إجراء آخر — سنخبرك بأنفسنا.</p>" +
+    '<div style="margin:24px 0 8px">' +
+    cta("تفاصيل المؤتمر", SITE + "/conference") +
+    "</div>" +
+    "<p>شكراً لاهتمامك، ونراك قريباً.</p>"
+  );
+}
+
 function attended(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
@@ -682,6 +696,18 @@ Deno.serve(async (req) => {
           String(payload.record.email),
           "تم استلام طلب تسجيلك في مؤتمر كسلا للتسمم الدموي",
           layout(confirmationEmail(payload.record), "طلب تسجيل مؤتمر كسلا للتسمم الدموي")
+        );
+        await logSends(payload.table, payload.record, { email: mail });
+      }
+    })(),
+    (async () => {
+      // Waitlist signup: confirm to the person that we saved their address and
+      // will tell them when registration opens.
+      if (payload.table === "registration_notify" && payload.record.email) {
+        const mail = await sendMail(
+          String(payload.record.email),
+          "سجّلنا اهتمامك — سنخبرك عند فتح باب التسجيل",
+          layout(waitlistConfirmEmail(payload.record), "تأكيد تسجيل اهتمامك")
         );
         await logSends(payload.table, payload.record, { email: mail });
       }

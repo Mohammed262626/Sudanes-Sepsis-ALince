@@ -143,7 +143,7 @@
       {cfg.soon
         ? "قريباً — يُفتح باب التسجيل عند الإعلان عن الموعد النهائي."
         : "باب التسجيل مغلق الآن."}
-      خبّرنا بالبريد وسنرسل إليك فور فتحه.
+      أعلمنا بتسجيلك وسنخبرك فور بدء التسجيل.
     </p>
     <form class="form" onsubmit={submitWait}>
       <div class="field">
@@ -162,16 +162,16 @@
           dir="ltr"
         />
       </div>
-      <button class="btn btn--ghost" type="submit" disabled={waitState === "sending"}>
-        {waitState === "sending" ? "جارٍ الحفظ…" : "خبّرني عند فتح التسجيل"}
+      <button class="btn" type="submit" disabled={waitState === "sending"}>
+        {waitState === "sending" ? "جارٍ الحفظ…" : "أعلمني عند بدء التسجيل"}
       </button>
       {#if waitState === "ok"}
         <p class="form-status" data-state="ok">
-          سجّلنا بريدك — سنرسل لك رسالة فور فتح باب التسجيل.
+          سجّلنا بريدك — سنرسل لك رسالة فور بدء التسجيل.
         </p>
       {:else if waitState === "exists"}
         <p class="form-status" data-state="ok">
-          بريدك مسجّل لدينا مسبقاً — سنخبرك فور فتح باب التسجيل.
+          بريدك مسجّل لدينا مسبقاً — سنخبرك فور بدء التسجيل.
         </p>
       {:else if waitState === "error"}
         <p class="form-status" data-state="error">
