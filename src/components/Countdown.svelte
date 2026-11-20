@@ -15,10 +15,11 @@
   });
 </script>
 
-<div class="count" aria-label="الوقت المتبقي حتى بدء المؤتمر">
+<div class="count" aria-label="ميعاد المؤتمر">
   {#if cfg}
     {#if cfg.soon}
       <p class="count-live">قريباً</p>
+      <p class="count-deadline">نُعلن الموعد النهائي وتفاصيل التسجيل قريباً.</p>
     {:else if cfg.eventDate <= now}
       <p class="count-live">بدأ المؤتمر</p>
     {:else}
@@ -31,15 +32,13 @@
         {String(Math.floor((cfg.eventDate - now) / 60_000) % 60).padStart(2, "0")}:
         {String(Math.floor((cfg.eventDate - now) / 1_000) % 60).padStart(2, "0")}
       </p>
+      <p class="count-deadline">
+        {#if now < cfg.regDeadline}
+          التسجيل مفتوح حتى {new Date(cfg.regDeadline).toLocaleDateString("ar")}
+        {:else}
+          انتهت فترة التسجيل
+        {/if}
+      </p>
     {/if}
-    <p class="count-deadline">
-      {#if cfg.soon}
-        يُعلن موعد التسجيل قريباً
-      {:else if now < cfg.regDeadline}
-        التسجيل مفتوح حتى {new Date(cfg.regDeadline).toLocaleDateString("ar")}
-      {:else}
-        انتهت فترة التسجيل
-      {/if}
-    </p>
   {/if}
 </div>

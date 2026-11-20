@@ -1,7 +1,8 @@
 <script lang="ts">
   import { supabase } from "../lib/supabase";
-  import { url } from "../lib/url";
   import { fetchEventConfig } from "../lib/event";
+
+  const contactEmail = "mailto:info@sudansepsisalliance.com";
 
   let cfg = $state<Awaited<ReturnType<typeof fetchEventConfig>> | null>(null);
 
@@ -15,8 +16,10 @@
     return () => clearInterval(id);
   });
 
-  const open = $derived(cfg && !cfg.soon && now < cfg.regDeadline);
+  // Registration opens on the admin toggle (reg_open), not the soon flag.
+  const open = $derived(cfg && cfg.regOpen && now < cfg.regDeadline);
   let state = $state<"idle" | "sending" | "ok" | "error" | "closed">("idle");
+  let waitState = $state<"idle" | "sending" | "ok" | "error" | "exists">("idle");
 
   async function submit(event: SubmitEvent) {
     event.preventDefault();
@@ -42,11 +45,32 @@
       state = "ok";
     }
   }
+
+  // Waitlist while registration is closed: name + email only. Duplicates are
+  // dropped by the unique email constraint inside register_notify.
+  async function submitWait(event: SubmitEvent) {
+    event.preventDefault();
+    if (!supabase) {
+      waitState = "error";
+      return;
+    }
+    const form = event.currentTarget as HTMLFormElement;
+    const data = new FormData(form);
+    waitState = "sending";
+    const { data: res, error } = await supabase.rpc("register_notify", {
+      p_name: String(data.get("n-name") ?? "").trim(),
+      p_email: String(data.get("n-email") ?? "").trim(),
+    });
+    if (error || !res?.ok) {
+      waitState = "error";
+      return;
+    }
+    form.reset();
+    waitState = res.inserted ? "ok" : "exists";
+  }
 </script>
 
-{#if cfg && cfg.soon}
-  <p>قريباً — يُفتح باب التسجيل عند الإعلان عن الموعد النهائي. للمزيد من المعلومات، <a href={url("#contact")}>تواصل معنا</a>.</p>
-{:else if open}
+{#if cfg && open}
   <form class="form" onsubmit={submit}>
     <div class="field">
       <label for="k-name">الاسم الكامل</label>
@@ -104,7 +128,7 @@
     </button>
     {#if state === "ok"}
       <p class="form-status" data-state="ok">
-        تم التسجيل بنجاح. سنرسل تفاصيل الحضور والتذكرة إلى بريدك قريباً.
+        وصلنا طلبك. بعد الاعتماد تصلك تذكرة الدخول برمز QR عبر واتساب.
       </p>
     {:else if state === "error" || state === "closed"}
       <p class="form-status" data-state="error">
@@ -112,6 +136,50 @@
       </p>
     {/if}
   </form>
-{:else}
-  <p>انتهت فترة التسجيل. للاستفسار، <a href={url("#contact")}>تواصل معنا</a>.</p>
+{:else if cfg && now < cfg.regDeadline}
+  <!-- Registration not open yet, deadline not passed: capture a waitlist. -->
+  <div class="waitlist">
+    <p>
+      {cfg.soon
+        ? "قريباً — يُفتح باب التسجيل عند الإعلان عن الموعد النهائي."
+        : "باب التسجيل مغلق الآن."}
+      خبّرنا بالبريد وسنرسل إليك فور فتحه.
+    </p>
+    <form class="form" onsubmit={submitWait}>
+      <div class="field">
+        <label for="n-name">الاسم</label>
+        <input id="n-name" name="n-name" required maxlength="200" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="n-email">البريد الإلكتروني</label>
+        <input
+          id="n-email"
+          name="n-email"
+          type="email"
+          required
+          maxlength="320"
+          autocomplete="email"
+          dir="ltr"
+        />
+      </div>
+      <button class="btn btn--ghost" type="submit" disabled={waitState === "sending"}>
+        {waitState === "sending" ? "جارٍ الحفظ…" : "خبّرني عند فتح التسجيل"}
+      </button>
+      {#if waitState === "ok"}
+        <p class="form-status" data-state="ok">
+          سجّلنا بريدك — سنرسل لك رسالة فور فتح باب التسجيل.
+        </p>
+      {:else if waitState === "exists"}
+        <p class="form-status" data-state="ok">
+          بريدك مسجّل لدينا مسبقاً — سنخبرك فور فتح باب التسجيل.
+        </p>
+      {:else if waitState === "error"}
+        <p class="form-status" data-state="error">
+          تعذّر الحفظ. تحقق من البريد وحاول مرة أخرى.
+        </p>
+      {/if}
+    </form>
+  </div>
+{:else if cfg !== null}
+  <p>انتهت فترة التسجيل. للاستفسار، <a href={contactEmail}>تواصل معنا</a>.</p>
 {/if}

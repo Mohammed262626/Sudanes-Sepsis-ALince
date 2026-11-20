@@ -8,6 +8,7 @@ export type EventConfig = {
   regDeadline: number;
   eventTime: string;
   bandEnabled: boolean;
+  regOpen: boolean;
   soon: boolean;
 };
 
@@ -24,9 +25,10 @@ export async function fetchEventConfig(): Promise<EventConfig> {
       regDeadline: d.reg_deadline ? new Date(String(d.reg_deadline)).getTime() : DEADLINE,
       eventTime: String(d.event_time ?? "9:00 صباحاً بتوقيت الخرطوم"),
       bandEnabled: d.band_enabled !== false,
+      regOpen: d.reg_open === true,
       soon: d.soon === true,
     };
   } catch {
-    return { eventDate: EVENT, regDeadline: DEADLINE, eventTime: "9:00 صباحاً بتوقيت الخرطوم", bandEnabled: true, soon: false };
+    return { eventDate: EVENT, regDeadline: DEADLINE, eventTime: "9:00 صباحاً بتوقيت الخرطوم", bandEnabled: true, regOpen: false, soon: false };
   }
 }

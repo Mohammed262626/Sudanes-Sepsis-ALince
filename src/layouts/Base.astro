@@ -6,6 +6,19 @@ import latin400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabi
 import latin600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-600-normal.woff2?url";
 import latin700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-700-normal.woff2?url";
 import "../styles/global.css";
+
+// Build-time font CSS: Astro does not interpolate {} inside <style>, so the
+// @font-face URLs are joined here (where the ?url imports resolve) and injected
+// via set:html. Without this the site falls back to system-ui.
+const LATIN_RANGE = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";
+const fontCSS = `
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:400; font-display:optional; src:url(${arabic400}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:600; font-display:optional; src:url(${arabic600}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:700; font-display:optional; src:url(${arabic700}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:400; font-display:optional; src:url(${latin400}) format("woff2"); unicode-range:${LATIN_RANGE}; }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:600; font-display:optional; src:url(${latin600}) format("woff2"); unicode-range:${LATIN_RANGE}; }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:700; font-display:optional; src:url(${latin700}) format("woff2"); unicode-range:${LATIN_RANGE}; }
+`;
 import { url } from "../lib/url";
 import ConsentBar from "../components/ConsentBar.astro";
 
@@ -31,12 +44,27 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url.origin).hr
 const ogImage = new URL(url("og.jpg"), Astro.site ?? Astro.url.origin).href;
 
 const nav = [
-  { href: url("#sepsis"), label: "ما هو التسمم الدموي" },
-  { href: url("#symptoms"), label: "الأعراض والوقاية" },
-  { href: url("#conference"), label: "المؤتمر" },
-  
+  {
+    href: url("#symptoms"),
+    label: "الأعراض والوقاية",
+    children: [
+      { href: url("#symptoms"), label: "علامات الخطر" },
+      { href: url("#support"), label: "الدعم ورعاية الناجين" },
+      { href: url("#about"), label: "ما نقوم به" },
+    ],
+  },
+  {
+    label: "المؤتمر",
+    href: url("conference"),
+    children: [
+      { href: url("conference#program"), label: "برنامج المؤتمر" },
+      { href: url("conference#register"), label: "التسجيل" },
+      { href: url("conference#faq"), label: "الأسئلة الشائعة" },
+    ],
+  },
+  { href: url("#impact"), label: "أثرنا" },
   { href: url("#about"), label: "من نحن" },
-  ];
+];
 ---
 
 <!doctype html>
@@ -71,53 +99,7 @@ const nav = [
     <link rel="apple-touch-icon" href={url("icon-192.png")} />
     <link rel="manifest" href={url("manifest.webmanifest")} />
     <script is:inline src={url("push-client.js")} defer></script>
-    <style is:inline>
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 400;
-        font-display: optional;
-        src: url({arabic400}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 600;
-        font-display: optional;
-        src: url({arabic600}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 700;
-        font-display: optional;
-        src: url({arabic700}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 400;
-        font-display: optional;
-        src: url({latin400}) format("woff2");
-        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 600;
-        font-display: optional;
-        src: url({latin600}) format("woff2");
-        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 700;
-        font-display: optional;
-        src: url({latin700}) format("woff2");
-        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
-      }
-    </style>
+    <style is:inline set:html={fontCSS} />
   </head>
   <body class={home ? "home" : undefined}>
     <a class="skip" href="#main">تجاوز إلى المحتوى</a>
@@ -128,19 +110,72 @@ const nav = [
           <img src={url("logo-mark.png")} alt="" width="34" height="34" />
           <span>التحالف السوداني للتسمم الدموي</span>
         </a>
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-drawer"
+        >
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="sr-only">القائمة</span>
+        </button>
         <ul class="nav-links">
-          <li class="nav-special"><a href={url("conference")}>مؤتمر كسلا</a></li>
           {
-            nav.map((item) => (
+            nav.map((item) =>
+              item.children ? (
+                <li class="nav-drop">
+                  <button class="nav-drop-toggle" type="button" aria-expanded="false">
+                    {item.label}
+                  </button>
+                  <ul class="nav-drop-menu">
+                    {item.children.map((c) => (
+                      <li>
+                        <a href={c.href}>{c.label}</a>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ) : (
+                <li>
+                  <a href={item.href}>{item.label}</a>
+                </li>
+              ),
+            )
+          }
+        </ul>
+        <a class="btn btn--accent nav-cta" href={url("conference")}>مؤتمر كسلا</a>
+      </nav>
+    </header>
+
+    <!-- Mobile drawer -->
+    <div class="drawer" id="site-drawer" hidden>
+      <ul class="drawer-links">
+        {
+          nav.map((item) =>
+            item.children ? (
+              <li class="drawer-group">
+                <span class="drawer-group-label">{item.label}</span>
+                <ul>
+                  {item.children.map((c) => (
+                    <li>
+                      <a href={c.href}>{c.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ) : (
               <li>
                 <a href={item.href}>{item.label}</a>
               </li>
-            ))
-          }
-        </ul>
-        <a class="btn btn--accent" href={url("conference")}>سجّل في المؤتمر</a>
-      </nav>
-    </header>
+            ),
+          )
+        }
+        <li><a class="btn btn--accent" href={url("conference")}>مؤتمر كسلا</a></li>
+      </ul>
+    </div>
+    <div class="drawer-backdrop" hidden></div>
 
     <main id="main" style="padding-bottom: 3rem;">
       <slot />
@@ -151,26 +186,146 @@ const nav = [
     <footer class="footer">
       <div class="wrap">
         <div class="footer-top">
-          <a class="brand" href={url()}>
-            <img src={url("logo-mark.png")} alt="" width="28" height="28" />
-            <span>التحالف السوداني للتسمم الدموي</span>
-          </a>
-          <ul class="footer-links">
-            <li><a href={url("#sepsis")}>ما هو التسمم الدموي</a></li>
-            <li><a href={url("#symptoms")}>الأعراض والوقاية</a></li>
-            <li><a href={url("#conference")}>المؤتمر</a></li>
-            <li><a href={url("#about")}>من نحن</a></li>
-            <li><a href={url("#contact")}>اتصل بنا</a></li>
-          </ul>
+          <div class="footer-profile">
+            <a class="brand" href={url()}>
+              <img src={url("logo-mark.png")} alt="" width="28" height="28" />
+              <span>التحالف السوداني للتسمم الدموي</span>
+            </a>
+            <p>
+              مبادرة وطنية إنسانية مستقلة تسعى للحد من الوفيات الناتجة عن تسمم
+              الدم (الإنتان) في السودان، ودعم المرضى والناجين، وتمكين الكوادر
+              الصحية بأحدث البروتوكولات السريرية.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h3>عن الإنتان والوقاية</h3>
+            <ul>
+              <li><a href={url("#symptoms")}>علامات الخطر</a></li>
+              <li><a href={url("#about")}>حزمة Sepsis Six السريرية</a></li>
+              <li><a href={url("#support")}>الدعم ورعاية الناجين</a></li>
+              <li><a href={url("#impact")}>أثرنا الميداني</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h3>المؤتمر</h3>
+            <ul>
+              <li><a href={url("conference#program")}>برنامج المؤتمر</a></li>
+              <li><a href={url("conference#register")}>التسجيل</a></li>
+              <li><a href={url("conference#faq")}>الأسئلة الشائعة</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h3>تواصل وشارك</h3>
+            <ul class="footer-socials">
+              <li>
+                <a
+                  href="mailto:info@sudansepsisalliance.com"
+                  class="footer-social"
+                  title="البريد الإلكتروني"
+                  aria-label="البريد الإلكتروني"
+                >
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16a2 2 0 0 0 2 2v8a2 2 0 0 0-2 2H4a2 2 0 0 0-2-2V9a2 2 0 0 0 2-2z" /><path d="m2 9 10 5 10-5" /></svg>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://web.facebook.com/SudanSepsisAlliance"
+                  class="footer-social"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  title="فيسبوك"
+                  aria-label="فيسبوك"
+                >
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://x.com/sdsepsis"
+                  class="footer-social"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  title="منصة إكس"
+                  aria-label="منصة إكس"
+                >
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4l16 16" /><path d="M20 4L4 20" /></svg>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.instagram.com/sudan_sepsis_alliance/"
+                  class="footer-social"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  title="إنستغرام"
+                  aria-label="إنستغرام"
+                >
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5" /><path d="M16 11.37A4 4 0 1 1 12.63 4 4 0 0 0 16 11.37z" /><line x1="17.5" x2="17.51" y1="6.5" y2="6.5" /></svg>
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
         <div class="footer-bottom">
-          <p>ملاحظة: هذه الصفحة ليست قناة طوارئ طبية. إذا كنت تشك في إصابة شخص بالتسمم الدموي، فتوجّه فوراً إلى أقرب مستشفى.</p>
           <p>© {new Date().getFullYear()} التحالف السوداني للتسمم الدموي</p>
         </div>
       </div>
     </footer>
 
     <script>
+      // Mobile drawer toggle + dropdown toggles
+      const toggle = document.querySelector<HTMLButtonElement>(".nav-toggle");
+      const drawer = document.getElementById("site-drawer");
+      const backdrop = document.querySelector<HTMLElement>(".drawer-backdrop");
+      const setDrawer = (open: boolean) => {
+        if (!drawer || !backdrop) return;
+        drawer.hidden = !open;
+        backdrop.hidden = !open;
+        if (toggle) toggle.setAttribute("aria-expanded", String(open));
+        document.body.classList.toggle("drawer-open", open);
+      };
+      toggle?.addEventListener("click", () => setDrawer(drawer?.hidden ?? true));
+      backdrop?.addEventListener("click", () => setDrawer(false));
+      // Escape closes the drawer and every open dropdown; picking a drawer link
+      // closes the drawer so the target content isn't left covered.
+      {
+        const drops = Array.from(document.querySelectorAll<HTMLElement>(".nav-drop"));
+        const closeDrops = () => {
+          for (const el of drops) {
+            el.classList.remove("open");
+            el
+              .querySelector<HTMLButtonElement>(".nav-drop-toggle")
+              ?.setAttribute("aria-expanded", "false");
+          }
+        };
+        drawer?.addEventListener("click", (e) => {
+          if ((e.target as HTMLElement).closest("a")) setDrawer(false);
+        });
+        document.addEventListener("click", (e) => {
+          for (const el of drops) {
+            if (!el.contains(e.target as Node)) {
+              el.classList.remove("open");
+              el
+                .querySelector<HTMLButtonElement>(".nav-drop-toggle")
+                ?.setAttribute("aria-expanded", "false");
+            }
+          }
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key !== "Escape") return;
+          setDrawer(false);
+          closeDrops();
+        });
+      }
+
+      document.querySelectorAll<HTMLButtonElement>(".nav-drop-toggle").forEach((b) => {
+        b.addEventListener("click", () => {
+          const open = b.getAttribute("aria-expanded") === "true";
+          b.setAttribute("aria-expanded", String(!open));
+          b.parentElement?.classList.toggle("open", !open);
+        });
+      });
+
       const links = Array.from(
         document.querySelectorAll<HTMLAnchorElement>(".nav-links a[href*='#']"),
       );
