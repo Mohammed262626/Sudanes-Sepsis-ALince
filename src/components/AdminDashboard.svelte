@@ -525,6 +525,22 @@
   let configNote = $state("");
   let waitlistCount = $state(0);
 
+  // Khartoum is fixed at UTC+2 (no DST), so convert by a constant offset rather
+  // than the browser's zone. DB stores an instant; datetime-local needs local text.
+  const KHARTOUM_OFFSET_MS = 2 * 3600_000;
+
+  function toDeadlineInput(iso: string | null): string {
+    if (!iso) return "";
+    // Accept both "+00:00" and the bare "+00" PostgREST used to emit.
+    const t = new Date(iso.replace(/([+-]\d{2})$/, "$1:00")).getTime();
+    if (Number.isNaN(t)) return "";
+    return new Date(t + KHARTOUM_OFFSET_MS).toISOString().slice(0, 16);
+  }
+
+  function toDeadlineInstant(local: string): string | null {
+    return local ? local + ":00+02:00" : null;
+  }
+
   async function saveConferenceConfig() {
     if (!supabase || savingConfig) return;
     savingConfig = true;
@@ -534,7 +550,7 @@
       p_soon: confSoon,
       p_event_date: confEventDate,
       p_event_time: confEventTime,
-      p_reg_deadline: confRegDeadline,
+      p_reg_deadline: toDeadlineInstant(confRegDeadline),
       p_reg_open: regOpen,
     });
     savingConfig = false;
@@ -1088,7 +1104,7 @@
       regOpen = c.reg_open === true;
       confEventDate = String(c.event_date ?? "");
       confEventTime = String(c.event_time ?? "9:00 صباحاً بتوقيت الخرطوم");
-      confRegDeadline = String(c.reg_deadline ?? "").replace(/\+00$/, "Z");
+      confRegDeadline = toDeadlineInput(c.reg_deadline);
     }
 
     const waitlist = await supabase
