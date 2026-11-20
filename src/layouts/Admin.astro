@@ -46,13 +46,10 @@ const sha = (() => {
   </head>
   <body>
     <main class="admin-shell">
-      <header class="admin-top">
-        <a class="admin-brand" href={url()}>التحالف السوداني للتسمم الدموي</a>
-        <span class="admin-top-link" dir="ltr">
-          v{pkg.version}{sha && <span class="sha"> · {sha}</span>}
-        </span>
-      </header>
       <slot />
     </main>
+    <p class="admin-version" dir="ltr">
+      v{pkg.version}{sha && <span> · {sha}</span>}
+    </p>
   </body>
 </html>

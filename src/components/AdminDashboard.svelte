@@ -6,17 +6,31 @@
   type Row = Record<string, string | number>;
   type Template = { key: string; label: string; body: string };
 
-  const tabs = [
-    { id: "conference_registrations", label: "التسجيلات" },
-    { id: "scan", label: "الحضور" },
-    { id: "assessments", label: "الاستبانات" },
-    { id: "program", label: "البرنامج" },
-    { id: "push", label: "إشعارات" },
-    { id: "settings", label: "المؤتمر" },
-    { id: "contact_messages", label: "الرسائل" },
-    { id: "donation_interests", label: "الدعم" },
-    { id: "templates", label: "قوالب واتساب" },
+  // Grouped by function: one group per row of related work.
+  const groups = [
+    {
+      label: "إدارة المؤتمر",
+      tabs: [
+        { id: "conference_registrations", label: "التسجيلات" },
+        { id: "scan", label: "الحضور" },
+        { id: "assessments", label: "الاستبانات" },
+        { id: "program", label: "البرنامج" },
+        { id: "settings", label: "المؤتمر" },
+      ],
+    },
+    {
+      label: "التواصل",
+      tabs: [
+        { id: "contact_messages", label: "الرسائل" },
+        { id: "donation_interests", label: "الدعم" },
+        { id: "registration_notify", label: "المهتمين" },
+        { id: "push", label: "إشعارات" },
+        { id: "templates", label: "قوالب واتساب" },
+      ],
+    },
   ];
+
+  const tabs = groups.flatMap((g) => g.tabs);
 
   const dataTabs = tabs.filter(
     (t) => !["templates", "scan", "assessments", "push", "program", "settings"].includes(t.id),
@@ -46,6 +60,7 @@
       { key: "name", label: "الاسم", cls: "wrap" },
       { key: "email", label: "البريد", cls: "ltr wrap" },
       { key: "message", label: "الرسالة", cls: "wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
     donation_interests: [
       { key: "created_at", label: "التاريخ", cls: "nw" },
@@ -53,6 +68,13 @@
       { key: "email", label: "البريد", cls: "ltr wrap" },
       { key: "support_type", label: "نوع الدعم", cls: "nw" },
       { key: "note", label: "ملاحظات", cls: "wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
+    ],
+    registration_notify: [
+      { key: "created_at", label: "التاريخ", cls: "nw" },
+      { key: "name", label: "الاسم", cls: "wrap" },
+      { key: "email", label: "البريد", cls: "ltr wrap" },
+      { key: "actions", label: "إجراء", cls: "nw" },
     ],
   };
 
@@ -284,21 +306,16 @@
   }
 
   async function remove(id: number) {
-    if (!supabase || busyId || !confirm("حذف هذا التسجيل نهائياً؟")) return;
+    if (!supabase || busyId || !confirm("حذف هذا السجل نهائياً؟")) return;
     busyId = id;
     actionError = "";
-    const { error } = await supabase
-      .from("conference_registrations")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from(tab).delete().eq("id", id);
     busyId = 0;
     if (error) {
       actionError = "تعذّر الحذف. حاول مرة أخرى.";
       return;
     }
-    data.conference_registrations = (data.conference_registrations ?? []).filter(
-      (r) => r.id !== id,
-    );
+    data[tab] = (data[tab] ?? []).filter((r) => r.id !== id);
     data = { ...data };
   }
 
@@ -535,6 +552,39 @@
       return;
     }
     configNote = `أُرسل ${Number(data ?? 0)} بريداً.`;
+  }
+
+  // Waitlist CRUD: add a person, or edit an existing name/email.
+  let waitDraft = $state({ name: "", email: "" });
+  let waitEditId = $state(0);
+  let waitNote = $state("");
+
+  async function saveWait(draft: { name: string; email: string }, id = 0) {
+    if (!supabase) return;
+    const name = draft.name.trim();
+    const email = draft.email.trim();
+    if (!name || !email) {
+      waitNote = "اكتب الاسم والبريد.";
+      return;
+    }
+    waitNote = "";
+    const { error } = id
+      ? await supabase.from("registration_notify").update({ name, email }).eq("id", id)
+      : await supabase.from("registration_notify").insert({ name, email });
+    if (error) {
+      waitNote = error.code === "23505" ? "هذا البريد مسجّل مسبقاً." : "تعذّر الحفظ. حاول مرة أخرى.";
+      return;
+    }
+    if (id) {
+      data.registration_notify = (data.registration_notify ?? []).map((r) =>
+        r.id === id ? { ...r, name, email } : r,
+      );
+      waitEditId = 0;
+    } else {
+      await load();
+    }
+    data = { ...data };
+    waitDraft = { name: "", email: "" };
   }
 
   const SEND_KINDS: Record<string, string> = {
@@ -1271,22 +1321,31 @@
     تعذّر تحميل البيانات. تحقق من صلاحيات الحساب.
   </p>
 {:else}
-  <div class="tabs" role="tablist">
-    {#each tabs as t (t.id)}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={tab === t.id}
-        class:active={tab === t.id}
-        onclick={() => {
-          tab = t.id;
-          if (t.id === "push") void refreshSubscribers();
-        }}
-      >
-        {t.label} <span class="tab-count">{count(t.id)}</span>
-      </button>
-    {/each}
-  </div>
+  <div class="admin-layout">
+    <aside class="admin-side">
+      {#each groups as g, i (g.label)}
+        <div class="side-group">
+          <span class="side-group-label" id={`tabgroup-${i}`}>{g.label}</span>
+          <div class="side-tabs" role="tablist" aria-labelledby={`tabgroup-${i}`}>
+            {#each g.tabs as t (t.id)}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                class:active={tab === t.id}
+                onclick={() => {
+                  tab = t.id;
+                  if (t.id === "push") void refreshSubscribers();
+                }}
+              >
+                {t.label} <span class="tab-count">{count(t.id)}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </aside>
+    <div class="admin-main">
 
   {#if tab === "scan"}
     <div class="scan">
@@ -1537,6 +1596,63 @@
       </div>
     </div>
   {:else}
+    {#if tab === "registration_notify"}
+      <div class="templates">
+        <div class="program-add waitlist-add" class:waitlist-add--edit={waitEditId}>
+          <label>
+            <span>الاسم</span>
+            <input type="text" maxlength="200" bind:value={waitDraft.name} autocomplete="off" />
+          </label>
+          <label>
+            <span>البريد الإلكتروني</span>
+            <input
+              type="email"
+              maxlength="320"
+              bind:value={waitDraft.email}
+              dir="ltr"
+              autocomplete="off"
+            />
+          </label>
+          {#if waitEditId}
+            <button
+              class="btn btn--icon"
+              type="button"
+              title="حفظ التعديل"
+              aria-label="حفظ التعديل"
+              onclick={() => void saveWait(waitDraft, waitEditId)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+            </button>
+            <button
+              class="btn btn--ghost btn--icon"
+              type="button"
+              title="إلغاء"
+              aria-label="إلغاء"
+              onclick={() => {
+                waitEditId = 0;
+                waitDraft = { name: "", email: "" };
+                waitNote = "";
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          {:else}
+            <button
+              class="btn btn--icon"
+              type="button"
+              title="إضافة مهتم"
+              aria-label="إضافة مهتم"
+              onclick={() => void saveWait(waitDraft)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+            </button>
+          {/if}
+        </div>
+        <p class="admin-note">
+          {waitNote || "من يضيف نفسه للقائمة يصله إشعار فور فتح باب التسجيل."}
+        </p>
+      </div>
+    {/if}
     {#if tab === "conference_registrations"}
       <div class="admin-toolbar">
         <input
@@ -1769,6 +1885,25 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></svg>
                           </button>
                         {/if}
+                        {#if tab === "registration_notify"}
+                          <button
+                            class="btn btn--ghost btn--icon"
+                            type="button"
+                            title="تعديل"
+                            aria-label="تعديل"
+                            disabled={busyId === row.id}
+                            onclick={() => {
+                              waitEditId = waitEditId === row.id ? 0 : Number(row.id);
+                              waitDraft = {
+                                name: String(row.name ?? ""),
+                                email: String(row.email ?? ""),
+                              };
+                              waitNote = "";
+                            }}
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></svg>
+                          </button>
+                        {/if}
                         {#if tab !== "assessments"}
                           <button
                             class="btn btn--ghost btn--icon"
@@ -1796,4 +1931,6 @@
       </div>
     {/key}
   {/if}
+    </div>
+  </div>
 {/if}

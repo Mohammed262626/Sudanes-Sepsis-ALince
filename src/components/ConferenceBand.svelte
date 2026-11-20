@@ -44,4 +44,11 @@
       {/if}
     </div>
   </section>
+{:else if cfg === null}
+  <section class="conf-band" aria-hidden="true">
+    <div class="wrap conf-band-inner">
+      <span class="skel skel--on-accent" style="inline-size: 14rem; block-size: 1.25rem;"></span>
+      <span class="skel skel--on-accent" style="inline-size: 7rem; block-size: 2.5rem;"></span>
+    </div>
+  </section>
 {/if}

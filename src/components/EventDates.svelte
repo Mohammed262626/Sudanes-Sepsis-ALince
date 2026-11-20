@@ -26,5 +26,12 @@
       <span class="idx">التسجيل</span>
       <h3>{cfg.soon ? "يُفتح قريباً" : `مفتوح حتى ${new Date(cfg.regDeadline).toLocaleDateString("ar")}`}</h3>
     </div>
+  {:else}
+    {#each ["التاريخ", "الوقت", "المكان", "التسجيل"] as label (label)}
+      <div class="row" style="grid-template-columns: 8rem 1fr;" role="listitem" aria-hidden="true">
+        <span class="idx">{label}</span>
+        <span class="skel" style="block-size: 1.25rem; inline-size: 60%;"></span>
+      </div>
+    {/each}
   {/if}
 </div>
