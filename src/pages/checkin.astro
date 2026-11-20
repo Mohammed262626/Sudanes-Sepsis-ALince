@@ -4,6 +4,13 @@ import arabic600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arab
 import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
 import "../styles/global.css";
 import CheckInCard from "../components/CheckInCard.svelte";
+
+// Astro does not interpolate {} inside <style>; join the real URLs here.
+const fontCSS = `
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:400; font-display:optional; src:url(${arabic400}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:600; font-display:optional; src:url(${arabic600}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:700; font-display:optional; src:url(${arabic700}) format("woff2"); }
+`;
 ---
 
 <!doctype html>
@@ -15,29 +22,7 @@ import CheckInCard from "../components/CheckInCard.svelte";
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#f7f5f0" />
     <title>تأكيد الحضور | التحالف السوداني للتسمم الدموي</title>
-    <style is:inline>
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 400;
-        font-display: optional;
-        src: url({arabic400}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 600;
-        font-display: optional;
-        src: url({arabic600}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 700;
-        font-display: optional;
-        src: url({arabic700}) format("woff2");
-      }
-    </style>
+    <style is:inline set:html={fontCSS} />
   </head>
   <body>
     <main>

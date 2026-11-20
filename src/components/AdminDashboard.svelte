@@ -500,11 +500,13 @@
   // Conference config.
   let bandEnabled = $state(true);
   let confSoon = $state(true);
+  let regOpen = $state(false);
   let confEventDate = $state("");
   let confEventTime = $state("9:00 صباحاً بتوقيت الخرطوم");
   let confRegDeadline = $state("");
   let savingConfig = $state(false);
   let configNote = $state("");
+  let waitlistCount = $state(0);
 
   async function saveConferenceConfig() {
     if (!supabase || savingConfig) return;
@@ -516,9 +518,23 @@
       p_event_date: confEventDate,
       p_event_time: confEventTime,
       p_reg_deadline: confRegDeadline,
+      p_reg_open: regOpen,
     });
     savingConfig = false;
     configNote = error ? "تعذّر الحفظ. حاول مرة أخرى." : "تم الحفظ.";
+  }
+
+  // Emails everyone who asked to be told when registration opens. Only makes
+  // sense while registration is actually open.
+  async function openWaitlist() {
+    if (!supabase || waitlistCount === 0) return;
+    if (!confirm(`إرسال «التسجيل مفتوح» إلى ${waitlistCount} مهتمّاً؟`)) return;
+    const { data, error } = await supabase.rpc("notify_waitlist");
+    if (error) {
+      configNote = "تعذّر الإرسال. حاول مرة أخرى.";
+      return;
+    }
+    configNote = `أُرسل ${Number(data ?? 0)} بريداً.`;
   }
 
   const SEND_KINDS: Record<string, string> = {
@@ -1012,17 +1028,23 @@
 
     const cfgRes = await supabase
       .from("event_config")
-      .select("band_enabled,soon,event_date,event_time,reg_deadline")
+      .select("band_enabled,soon,event_date,event_time,reg_deadline,reg_open")
       .eq("id", 1)
       .maybeSingle();
     if (!cfgRes.error && cfgRes.data) {
       const c = cfgRes.data;
       bandEnabled = c.band_enabled !== false;
       confSoon = c.soon === true;
+      regOpen = c.reg_open === true;
       confEventDate = String(c.event_date ?? "");
       confEventTime = String(c.event_time ?? "9:00 صباحاً بتوقيت الخرطوم");
       confRegDeadline = String(c.reg_deadline ?? "").replace(/\+00$/, "Z");
     }
+
+    const waitlist = await supabase
+      .from("registration_notify")
+      .select("id", { count: "exact", head: true });
+    waitlistCount = waitlist.count ?? 0;
 
     const subs = await supabase
       .from("push_subscriptions")
@@ -1480,6 +1502,17 @@
           onclick={() => { confSoon = !confSoon; }}
         >
           الحالة: {confSoon ? "قريباً" : "مجدول"}
+        </button>
+        <button
+          type="button"
+          aria-pressed={regOpen}
+          disabled={savingConfig}
+          onclick={() => { regOpen = !regOpen; }}
+        >
+          التسجيل: {regOpen ? "مفتوح" : "مغلق"}
+        </button>
+        <button type="button" onclick={() => void openWaitlist()} disabled={waitlistCount === 0}>
+          أبلغ المهتمين ({waitlistCount})
         </button>
       </div>
       <label>

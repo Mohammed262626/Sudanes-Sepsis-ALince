@@ -4,7 +4,7 @@
 // WhatsApp via Green API is the live channel (registrant confirmation + admin
 // alerts); email auto-replies are handled by database triggers directly.
 
-const FROM = "Sudan Sepsis Alliance <muhasalahsuliman@gmail.com>";
+const FROM = "التحالف السوداني للتسمم الدموي <noreply@sudansepsisalliance.com>";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -171,40 +171,40 @@ async function logSends(
 const sendWhats = (chatId: string, message: string) =>
   greenApi("sendMessage", { chatId, message });
 
-// Email goes through Brevo. Same contract as greenApi: a missing Vault secret or
+// Email goes through Resend. Same contract as greenApi: a missing Vault secret or
 // a rejected sender returns a status, so notify_log shows the failure instead of
 // the call pretending to succeed.
 type MailResult = { ok: boolean; status: number; chatId?: string; error?: string };
 
 async function sendMail(to: string, subject: string, html: string): Promise<MailResult> {
-  const apiKey = (await getSecret("brevo_api_key"))?.trim();
+  const apiKey = (await getSecret("resend_api_key"))?.trim();
   if (!apiKey) {
-    console.error("brevo: Vault secret missing", { brevo_api_key: !!apiKey });
-    return { ok: false, status: 0, chatId: to, error: "missing brevo_api_key in Vault" };
+    console.error("resend: Vault secret missing", { resend_api_key: !!apiKey });
+    return { ok: false, status: 0, chatId: to, error: "missing resend_api_key in Vault" };
   }
 
-  // Brevo wants the display name and the address separately.
   const fromMatch = FROM.match(/^(.*)<(.+)>$/);
   const senderName = (fromMatch?.[1] ?? "التحالف السوداني للتسمم الدموي").trim();
   const senderEmail = (fromMatch?.[2] ?? FROM).trim();
 
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+  const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      "api-key": apiKey,
-      accept: "application/json",
+      "Authorization": "Bearer " + apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      sender: { name: senderName, email: senderEmail },
-      to: [{ email: to }],
+      from: `"${senderName}" <${senderEmail}>`,
+      to: [to],
       subject,
-      htmlContent: html,
+      html,
     }),
   });
 
   const out = await res.text();
-  console.log("brevo", subject, res.status, out.slice(0, 300));
+  console.log("resend", subject, res.status, out.slice(0, 300));
+  let messageId = "";
+  try { const j = JSON.parse(out); messageId = j.id ?? ""; } catch {}
   return res.ok
     ? { ok: true, status: res.status, chatId: to }
     : { ok: false, status: res.status, chatId: to, error: out.slice(0, 300) };
@@ -213,6 +213,37 @@ async function sendMail(to: string, subject: string, html: string): Promise<Mail
 // The QR points at the guest's own check-in page. The pass (checkin_token) is
 // what opens it; the readable code rides along for the door scanner.
 const SITE = "https://mohammed262626.github.io/Sudanes-Sepsis-ALince";
+
+// HTML-escape a string for use in email HTML attribute values.
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// A bordered box for email key-value rows.
+function box(rows: string): string {
+  return (
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" ' +
+    'dir="rtl" style="margin:16px 0;border:2px solid ' + INK + ';border-collapse:collapse">' +
+    rows +
+    "</table>"
+  );
+}
+
+// A key-value row inside box().
+function row(k: string, v: string): string {
+  return (
+    '<tr><td style="padding:10px 12px;border-bottom:1px solid ' + LINE + ';color:' + MUTED + ';font-size:13px;vertical-align:top">' +
+    k +
+    '</td><td style="padding:10px 12px;border-bottom:1px solid ' + LINE + ';font-size:14px;font-weight:bold;vertical-align:top;text-align:left">' +
+    v +
+    "</td></tr>"
+  );
+}
 
 const checkinUrl = (code: string, pass: string) =>
   `${SITE}/checkin/?${pass ? "k=" + encodeURIComponent(pass) + "&" : ""}t=${encodeURIComponent(code)}`;
@@ -348,6 +379,37 @@ function approvalEmail(r: Record_): string {
   );
 }
 
+// Registration confirmation email (sent on INSERT, before approval).
+function confirmationEmail(r: Record_): string {
+  return (
+    '<h1 style="font-size:22px;margin:0 0 16px">استلمنا طلب تسجيلك</h1>' +
+    "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
+    '<p style="margin:0 0 4px">نشكر لك اهتمامك بمؤتمر <strong>كسلا للتسمم الدموي</strong>.</p>' +
+    box(
+      row("التاريخ", "الاثنين 30 نوفمبر 2026") +
+        row("الوقت", "9:00 صباحاً بتوقيت الخرطوم") +
+        row("المكان", "كسلا")
+    ) +
+    "<p>طلب تسجيلك قيد المراجعة. سنرسل لك تأكيد القبول والتذكرة فور الموافقة.</p>" +
+    "<p>إذا كان لديك أي استفسار، لا تتردد في التواصل معنا.</p>"
+  );
+}
+
+// Waitlist email (sent when the admin opens registration): the address was saved
+// on the conference form while registration was closed.
+function waitlistEmail(r: Record_): string {
+  return (
+    '<h1 style="font-size:22px;margin:0 0 16px">فتح باب التسجيل</h1>' +
+    "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
+    '<p style="margin:0 0 4px">باب التسجيل في مؤتمر <strong>كسلا للتسمم الدموي</strong> مفتوح الآن.</p>' +
+    "<p>سجّل قبل انتهاء الموعد لتأمين مقعدك:</p>" +
+    '<div style="margin:24px 0 8px">' +
+    cta("سجّل حضورك", SITE + "/conference#register", "primary") +
+    "</div>" +
+    "<p>شكراً لاهتمامك — إذا لم تجد مكاناً، تواصل معنا.</p>"
+  );
+}
+
 function attended(r: Record_): string {
   return (
     "أهلاً " + (r.name ?? "") + "،\n" +
@@ -400,6 +462,9 @@ function adminAlert(table: string, r: Record_): string | null {
       (r.support_type ? "\nنوع: " + r.support_type : "") +
       (r.note ? "\n" + r.note.slice(0, 200) : "")
     );
+  }
+  if (table === "registration_notify") {
+    return "طلب إشعار بفتح التسجيل:\n" + who;
   }
   return null;
 }
@@ -582,6 +647,19 @@ Deno.serve(async (req) => {
     return json({ whatsapp });
   }
 
+  // Registration opened: notify everyone on the waitlist. Called by the admin
+  // (notify_waitlist RPC) once reg_open flips.
+  if (payload.table === "registration_notify" && payload.event === "OPEN") {
+    if (!payload.record.email) return json({ skipped: true });
+    const mail = await sendMail(
+      String(payload.record.email),
+      "باب التسجيل مفتوح الآن — مؤتمر كسلا للتسمم الدموي",
+      layout(waitlistEmail(payload.record), "باب التسجيل مفتوح الآن")
+    );
+    await logSends(payload.table, payload.record, { email: mail });
+    return json({ email: mail });
+  }
+
   const adminChat = (await getSecret("green_api_admin"))?.trim();
   const alert = adminAlert(payload.table, payload.record);
   const whatsapp: Record<string, GreenResult> = {};
@@ -596,6 +674,16 @@ Deno.serve(async (req) => {
           toChatId(payload.record.phone),
           await template("registration_received", payload.record, confirmation(payload.record))
         );
+      }
+    })(),
+    (async () => {
+      if (payload.table === "conference_registrations" && payload.record.email) {
+        const mail = await sendMail(
+          String(payload.record.email),
+          "تم استلام طلب تسجيلك في مؤتمر كسلا للتسمم الدموي",
+          layout(confirmationEmail(payload.record), "طلب تسجيل مؤتمر كسلا للتسمم الدموي")
+        );
+        await logSends(payload.table, payload.record, { email: mail });
       }
     })(),
   ]);

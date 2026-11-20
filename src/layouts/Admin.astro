@@ -3,6 +3,13 @@ import arabic400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arab
 import arabic600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2?url";
 import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
 import "../styles/global.css";
+
+// Astro does not interpolate {} inside <style>; join the real URLs here.
+const fontCSS = `
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:400; font-display:optional; src:url(${arabic400}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:600; font-display:optional; src:url(${arabic600}) format("woff2"); }
+  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:700; font-display:optional; src:url(${arabic700}) format("woff2"); }
+`;
 import { url } from "../lib/url";
 import { execSync } from "node:child_process";
 import pkg from "../../package.json";
@@ -35,29 +42,7 @@ const sha = (() => {
     <link rel="apple-touch-icon" href={url("icon-192.png")} />
     <link rel="manifest" href={url("manifest.webmanifest")} />
     <script is:inline src={url("push-client.js")} defer></script>
-    <style is:inline>
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 400;
-        font-display: optional;
-        src: url({arabic400}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 600;
-        font-display: optional;
-        src: url({arabic600}) format("woff2");
-      }
-      @font-face {
-        font-family: "IBM Plex Sans Arabic";
-        font-style: normal;
-        font-weight: 700;
-        font-display: optional;
-        src: url({arabic700}) format("woff2");
-      }
-    </style>
+    <style is:inline set:html={fontCSS} />
   </head>
   <body>
     <main class="admin-shell">

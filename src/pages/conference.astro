@@ -4,52 +4,260 @@ import { url } from "../lib/url";
 import Countdown from "../components/Countdown.svelte";
 import ConferenceForm from "../components/ConferenceForm.svelte";
 import EventDates from "../components/EventDates.svelte";
+
+const tagline = "كل خطوة تتعلمها اليوم تنقذ حياة غداً";
+const taglineWords = tagline.split(" ");
+
+const benefits = [
+  {
+    h: "بروتوكولات جاهزة",
+    p: "ستخرج من المؤتمر بخطوات عملية لتطبيق الكشف المبكر عن التسمم الدموي في مناوبتك التالية.",
+  },
+  {
+    h: "تجارب ميدانية",
+    p: "استمع إلى زملاء من مستشفيات سودانية واجهوا التحدي وطبّقوا بروتوكولات الاستجابة السريعة.",
+  },
+  {
+    h: "خطط استجابة",
+    p: "تعرّف على كيفية بناء مسار استجابة سريع في مستشفاك مهما كانت إمكانياته.",
+  },
+  {
+    h: "شبكة مهنية",
+    p: "تعرّف على كوادر وصنّاع قرار يشاركونك الهم نفسه وتبادل الخبرات والتجارب.",
+  },
+];
+
+const roles = [
+  "طبيب",
+  "ممرض",
+  "صيدلي",
+  "طالب طب",
+  "باحث",
+  "إعلامي",
+  "صانع قرار",
+  "منظمة",
+  "مهتم",
+];
+
+const steps = [
+  {
+    h: "املأ الاستمارة",
+    p: "دقيقة واحدة فقط. الاسم والبريد الإلكتروني والصفة وجهة العمل.",
+  },
+  {
+    h: "نراجع ونعتمد",
+    p: "فريق المؤتمر يراجع طلبك ويعتمده ثم تصلك رسالة تأكيد عبر واتساب.",
+  },
+  {
+    h: "احضر المؤتمر",
+    p: "تصل تذكرتك برمز QR عبر واتساب بعد الاعتماد. قدّمها عند المدخل.",
+  },
+];
+
+const faq = [
+  {
+    q: "أين يُعقد المؤتمر؟",
+    a: "يُعقد في مدينة كسلا. يُعلن الموقع الدقيق قبل المؤتمر بوقت كاف.",
+  },
+  {
+    q: "متى موعد المؤتمر؟",
+    a: "يُعلن الموعد النهائي قريباً، تابع صفحة المؤتمر للحصول على التحديثات.",
+  },
+  {
+    q: "متى يُغلق باب التسجيل؟",
+    a: "يُعلن موعد إغلاق التسجيل قريباً. سجّل مبكراً لضمان مقعدك.",
+  },
+  {
+    q: "كيف أحصل على تذكرتي؟",
+    a: "بعد تسجيلك نراجع الطلب ونعتمده. تصلك التذكرة برمز QR عبر واتساب.",
+  },
+  {
+    q: "هل يمكنني تعديل بياناتي بعد التسجيل؟",
+    a: "نعم. تواصل معنا عبر صفحة اتصل بنا وسنقوم بالتعديل.",
+  },
+  {
+    q: "هل هذه الاستمارة قناة طوارئ طبية؟",
+    a: "لا. للطوارئ توجّه إلى أقرب مستشفى فوراً.",
+  },
+  {
+    q: "متى يُعلن البرنامج الكامل؟",
+    a: "قريباً. تابع صفحة المؤتمر للحصول على التحديثات.",
+  },
+];
 ---
 
 <Base
-  title="مؤتمر كسلا للتسمم الدموي 2026 | التحالف السوداني للتسمم الدموي"
-  description="مؤتمر كسلا للتسمم الدموي — 30 نوفمبر 2026، 9 صباحاً. لقاء وطني للكوادر الصحية حول الكشف المبكر والاستجابة السريعة للتسمم الدموي."
+  title="مؤتمر كسلا للتسمم الدموي | التحالف السوداني للتسمم الدموي"
+  description="مؤتمر كسلا للتسمم الدموي — لقاء وطني للكوادر الصحية حول الكشف المبكر والاستجابة السريعة للتسمم الدموي. يُعلن الموعد النهائي قريباً."
 >
-  <section class="hero wrap">
-    <div>
-      <p class="kicker">كسلا · السودان</p>
-      <h1>مؤتمر كسلا<br />للتسمم الدموي.</h1>
-      <p class="lede">
-        لقاء وطني يجمع الكوادر الصحية وصنّاع القرار لمناقشة الكشف المبكر عن
-        التسمم الدموي والاستجابة السريعة له في السودان.
-      </p>
-      <div class="actions">
-        <a class="btn" href="#register">سجّل حضورك</a>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: "مؤتمر كسلا للتسمم الدموي",
+    description: "مؤتمر وطني يجمع الكوادر الصحية وصنّاع القرار حول الكشف المبكر والاستجابة السريعة للتسمم الدموي في السودان.",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventStatus: "https://schema.org/EventScheduled",
+    location: {
+      "@type": "Place",
+      name: "كسلا",
+      address: { "@type": "PostalAddress", addressLocality: "كسلا", addressCountry: "SD" },
+    },
+    organizer: {
+      "@type": "Organization",
+      name: "التحالف السوداني للتسمم الدموي",
+    },
+  })} />
+
+  <!-- Hero -->
+  <section class="hero-home" id="top">
+    <div class="hero-inner wrap">
+      <div>
+        <p class="kicker">كسلا · السودان · قريباً</p>
+        <h1>
+          <span>ساعة واحدة قد تنقذ حياة</span>
+          <span>ابدأ بنفسك</span>
+          <span>وعلّم من حولك</span>
+        </h1>
       </div>
+      <aside class="hero-panel" aria-label="التسجيل وميعاد المؤتمر">
+        <Countdown client:load />
+        <div class="actions" style="margin-top: 1rem;">
+          <a class="btn" href="#register">سجّل حضورك</a>
+        </div>
+      </aside>
     </div>
-    <Countdown client:load />
+    <a class="scroll-cue" href="#facts" tabindex="-1" aria-hidden="true">↓</a>
+    <svg class="hero-cut" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+      <polygon points="0,0 0,12 100,12" />
+    </svg>
   </section>
 
-  <section class="section wrap">
-    <div class="split">
-      <h2>عن المؤتمر</h2>
-      <p>
-        يوم واحد يجمع الأطباء والممرضين والصيادلة والطلاب حول بروتوكولات
-        الكشف المبكر، تجارب الميدان، وخطط تحسين الاستجابة في المستشفيات
-        السودانية.
-      </p>
-    </div>
+  <!-- Facts -->
+  <section class="wrap" id="facts">
     <EventDates client:load />
   </section>
 
+  <!-- Benefits -->
+  <section class="section wrap reveal" id="benefits">
+    <div class="split">
+      <h2>لماذا تحضر؟</h2>
+      <p>هذا المؤتمر ليس محاضرات نظيفة من على منصات — بل يوم واحد يجهّزك للتصرف في اللحظة الحاسمة.</p>
+    </div>
+    <div class="benefits-grid">
+      {benefits.map((b) => (
+        <article class="benefit-item">
+          <h3>{b.h}</h3>
+          <p>{b.p}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- Tagline reveal (B11) -->
+  <section class="section tagline-reveal" id="tagline" aria-label="الرسالة الرئيسية">
+    <h2 class="tagline-heading heading-2">
+      {taglineWords.map((word) => <span class="tagline-word">{word} </span>)}
+    </h2>
+  </section>
+
+  <!-- Who should attend -->
+  <section class="section wrap reveal" id="audience">
+    <div class="split">
+      <h2>لمن هذا المؤتمر؟</h2>
+      <p>إذا كنت تعمل في المجال الصحي أو تؤثر في السياسات أو تنقل المعلومة — هذا اليوم لك.</p>
+    </div>
+    <div class="audience-grid">
+      {roles.map((role) => (
+        <div class="audience-item">{role}</div>
+      ))}
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section wrap reveal" id="steps">
+    <div class="split">
+      <h2>كيف تشارك؟</h2>
+      <p>ثلاث خطوات بسيطة تفصلك عن مقعدك في المؤتمر.</p>
+    </div>
+    <div class="steps">
+      {steps.map((s) => (
+        <article class="step">
+          <h3>{s.h}</h3>
+          <p>{s.p}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <!-- Program note -->
+  <section class="section wrap" id="program">
+    <div class="split">
+      <h2>البرنامج</h2>
+      <div>
+        <p>يُعلن البرنامج والمتحدثون قريباً. تابع صفحتنا للحصول على التحديثات.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section wrap reveal" id="faq">
+    <div class="split">
+      <h2>أسئلة شائعة</h2>
+      <p>أجوبة سريعة لأكثر ما يتبادر إلى ذهنك.</p>
+    </div>
+    <div class="faq-list">
+      {faq.map((item) => (
+        <details>
+          <summary>{item.q}</summary>
+          <p>{item.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+
+  <!-- Registration / final CTA -->
   <section class="section wrap" id="register">
     <div class="contact-grid">
       <div class="prose">
-        <h2>التسجيل</h2>
+        <h2>سجّل حضورك</h2>
         <p>
-          سجّل حضورك في مؤتمر كسلا للتسمم الدموي. بعد إتمام التسجيل سنرسل تفاصيل
-          الحضور والبرنامج إلى بريدك الإلكتروني.
+          بعد إتمام التسجيل، سيراجع فريق المؤتمر طلبك وتصلك تذكرة الدخول برمز QR عبر
+          واتساب بعد الاعتماد.
         </p>
         <p>
-          لأي استفسار، <a href={url("#contact")}>تواصل معنا</a>.
+          لأي استفسار، <a href="mailto:info@sudansepsisalliance.com">تواصل معنا</a>.
         </p>
       </div>
       <ConferenceForm client:load />
     </div>
   </section>
 </Base>
+
+<script>
+  /* Tagline reveal — word-by-word activation on scroll */
+  if (
+    !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+    "IntersectionObserver" in window
+  ) {
+    const section = document.querySelector(".tagline-reveal");
+    const words = document.querySelectorAll(".tagline-word");
+    if (section && words.length) {
+      let activated = false;
+      const obs = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting && !activated) {
+              activated = true;
+              obs.disconnect();
+              words.forEach((w, i) => {
+                setTimeout(() => w.classList.add("active"), i * 80);
+              });
+            }
+          }
+        },
+        { threshold: 0.2 },
+      );
+      obs.observe(section);
+    }
+  }
+</script>
