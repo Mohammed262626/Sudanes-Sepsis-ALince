@@ -70,7 +70,14 @@
   }
 </script>
 
-{#if cfg && open}
+{#if cfg === null}
+  <div class="form-skel" aria-hidden="true">
+    <span class="skel" style="block-size: 2.75rem;"></span>
+    <span class="skel" style="block-size: 2.75rem;"></span>
+    <span class="skel" style="block-size: 2.75rem;"></span>
+    <span class="skel" style="inline-size: 10rem; block-size: 3rem;"></span>
+  </div>
+{:else if cfg && open}
   <form class="form" onsubmit={submit}>
     <div class="field">
       <label for="k-name">الاسم الكامل</label>

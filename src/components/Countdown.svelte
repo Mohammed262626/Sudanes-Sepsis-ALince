@@ -40,5 +40,11 @@
         {/if}
       </p>
     {/if}
+  {:else}
+    <div aria-hidden="true">
+      <span class="skel skel--on-accent" style="inline-size: 9rem; block-size: 0.875rem;"></span>
+      <span class="skel skel--on-accent" style="inline-size: 12rem; block-size: 3rem; margin-block-start: 1rem;"></span>
+      <span class="skel skel--on-accent" style="inline-size: 8rem; block-size: 1rem; margin-block-start: 1rem;"></span>
+    </div>
   {/if}
 </div>

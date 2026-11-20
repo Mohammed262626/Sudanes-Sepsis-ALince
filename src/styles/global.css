@@ -1240,6 +1240,38 @@ section[id],
   opacity: 0.65;
 }
 
+/* Loading skeleton: quiet pulse, off under reduced motion */
+.skel {
+  display: block;
+  background: var(--tint-pink);
+  animation: skel-pulse 1.4s ease-in-out infinite;
+}
+
+.skel--on-accent {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.form-skel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@keyframes skel-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+  }
+}
+
 /* Table */
 .table-wrap {
   overflow: auto;
