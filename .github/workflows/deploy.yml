@@ -6,8 +6,13 @@ concurrency:
   group: deploy
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +26,10 @@ jobs:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
       - run: npm ci --no-audit --no-fund && npm run build
+      # Same build feeds both destinations: our server and GitHub Pages.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
       - uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.DEPLOY_KEY }}
@@ -30,3 +39,13 @@ jobs:
           rsync -az --delete dist/ root@"$DEPLOY_HOST":/srv/www/
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
