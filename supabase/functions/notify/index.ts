@@ -222,7 +222,10 @@ async function sendMail(to: string, subject: string, html: string): Promise<Mail
 
 // The QR points at the guest's own check-in page. The pass (checkin_token) is
 // what opens it; the readable code rides along for the door scanner.
-const SITE = "https://sudansepsisalliance.com";
+// Links inside messages follow the environment hosting this function: prod
+// keeps the public domain, dev overrides it with site_url in Vault. Resolved
+// per request in the handler below.
+let SITE = "https://sudansepsisalliance.com";
 
 // HTML-escape a string for use in email HTML attribute values.
 function esc(s: string): string {
@@ -256,11 +259,11 @@ function row(k: string, v: string): string {
 }
 
 const checkinUrl = (code: string, pass: string) =>
-  `${SITE}/checkin/?${pass ? "k=" + encodeURIComponent(pass) + "&" : ""}t=${encodeURIComponent(code)}`;
+  `${SITE}/conference/checkin/?${pass ? "k=" + encodeURIComponent(pass) + "&" : ""}t=${encodeURIComponent(code)}`;
 
 // The assessment link carries a hash of the door token, never the token itself.
 const assessmentUrl = (hash: string, stage: "pre" | "post") =>
-  `${SITE}/assessment/?t=${encodeURIComponent(hash)}&s=${stage}`;
+  `${SITE}/conference/assessment/?t=${encodeURIComponent(hash)}&s=${stage}`;
 
 // Which window is open right now. The button is only attached when it leads
 // somewhere, so a guest never lands on a dead "closed" page at the door.
@@ -302,7 +305,7 @@ const sendTicketButtons = (
       { buttonText: "تأكيد الحضور", url: target },
       {
         buttonText: "افتح لوحتك",
-        url: `${SITE}/guest/?s=${encodeURIComponent(token)}`,
+        url: `${SITE}/conference/guest/?s=${encodeURIComponent(token)}`,
       },
       { buttonText: "لا أستطيع الحضور", url: target + "&d=1" },
     ],
@@ -356,7 +359,7 @@ function approvalEmail(r: Record_): string {
   const target = checkinUrl(code, pass);
   // Same three intents as the WhatsApp buttons. Email clients cannot render
   // interactive buttons, so each becomes a full-width link in the same order.
-  const dashboard = SITE + "/guest/?s=" + encodeURIComponent(pass);
+  const dashboard = SITE + "/conference/guest/?s=" + encodeURIComponent(pass);
   return (
     '<h1 style="font-size:22px;margin:0 0 16px">تم قبول تسجيلك</h1>' +
     "<p>أهلاً " + esc(r.name ?? "") + "،</p>" +
@@ -406,7 +409,7 @@ function waitlistEmail(r: Record_): string {
     '<p style="margin:0 0 4px">باب التسجيل في مؤتمر <strong>كسلا للتسمم الدموي</strong> مفتوح الآن.</p>' +
     "<p>سجّل قبل انتهاء الموعد لتأمين مقعدك:</p>" +
     '<div style="margin:24px 0 8px">' +
-    cta("سجّل حضورك", SITE + "/conference#register", "primary") +
+    cta("سجّل حضورك", SITE + "/conference/register", "primary") +
     "</div>" +
     "<p>شكراً لاهتمامك — إذا لم تجد مكاناً، تواصل معنا.</p>"
   );
@@ -493,6 +496,9 @@ Deno.serve(async (req) => {
     console.error("notify: unauthorized", { secretInVault: !!expected });
     return json({ error: "unauthorized" }, 401);
   }
+
+  // Dev sets its own site URL in Vault; prod falls back to the domain above.
+  SITE = ((await getSecret("site_url")) ?? "").trim().replace(/\/+$/, "") || SITE;
 
   const payload = await req.json().catch(() => null);
   if (!payload?.table || !payload?.record) return json({ error: "bad payload" }, 400);

@@ -1,0 +1,37 @@
+---
+import Base from "../../layouts/Base.astro";
+import ConferenceForm from "../../components/ConferenceForm.svelte";
+import { fetchEventConfig, isEventDay } from "../../lib/event";
+---
+
+<Base
+  title="التسجيل | مؤتمر كسلا | التحالف السوداني للتسمم الدموي"
+  description="سجّل حضورك في مؤتمر كسلا للتسمم الدموي — التذاكر عبر واتساب بعد الاعتماد."
+>
+  <section class="section wrap" id="register">
+    <div class="contact-grid">
+      <div class="prose">
+        <h2 data-event-head>سجّل حضورك</h2>
+        <p>
+          بعد إتمام التسجيل، سيراجع فريق المؤتمر طلبك وتصلك تذكرة الدخول برمز QR عبر
+          واتساب بعد الاعتماد.
+        </p>
+        <p>
+          لأي استفسار، <a href="mailto:info@sudansepsisalliance.com">تواصل معنا</a>.
+        </p>
+      </div>
+      <ConferenceForm client:load />
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { fetchEventConfig, isEventDay } from "../../lib/event";
+
+  // On the event day the heading flips: registration is over, the door is /guest.
+  fetchEventConfig().then((cfg) => {
+    if (!isEventDay(cfg)) return;
+    const head = document.querySelector("[data-event-head]");
+    if (head) head.textContent = "ادخل إلى لوحتك";
+  });
+</script>

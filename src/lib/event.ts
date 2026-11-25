@@ -12,15 +12,34 @@ export type EventConfig = {
   soon: boolean;
 };
 
+// True from midnight Khartoum of the event date onward — the same Khartoum
+// calendar the check-in gate uses, so it holds on the day and ever after.
+export function isEventDay(cfg: EventConfig): boolean {
+  const day = (ms: number) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Khartoum" }).format(ms);
+  return day(Date.now()) >= day(cfg.eventDate);
+}
+
 // Fetch the live config from the database, falling back to build-time constants.
 // Several islands mount on one page (band, countdown, dates, form), so the
 // promise is memoised: one request per pageview, not one per island. The result
 // also survives navigation for five minutes, so a visitor costs one request per
 // session rather than one per page.
-const TTL_MS = 5 * 60_000;
+const TTL_MS = 60_000;
 const CACHE_KEY = "sep-event-config";
 
 let pending: Promise<EventConfig> | null = null;
+
+// A failed action (e.g. registration closed while the visitor's page still
+// said open) wipes the cache so the next fetch sees the fresh truth.
+export function invalidateEventConfig() {
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch {
+    // Nothing cached anyway in private mode.
+  }
+  pending = null;
+}
 
 export function fetchEventConfig(): Promise<EventConfig> {
   return (pending ??= loadEventConfig());

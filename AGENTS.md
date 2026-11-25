@@ -21,23 +21,47 @@ RTL. Stack: Astro 7 + Svelte 5 islands + Supabase. Static output (`npm run build
 
 ## Supabase
 
-Project ref `hdoylixxljkimdypfomp` (`supabase/config.toml`, `init.sql`, live REST URL). Tables: `activities` (public read),
+Two environments:
+
+- **Prod**: hosted project `hdoylixxljkimdypfomp` (`supabase/config.toml`) behind
+  `sudansepsisalliance.com`. Migrations via the Supabase MCP `apply_migration`.
+- **Dev**: self-hosted stack on the dev box behind caddy — site
+  `https://162.35.15.216.nip.io` (caddy serves `/srv/www`; rebuild + copy `dist/`),
+  Supabase `https://supabase.162.35.15.216.nip.io` (studio at `studio.…nip.io`).
+  Edge functions are bind-mounted read-only from `supabase/functions/`, so
+  deploying is edit + `docker restart supabase_edge_runtime_hdoylixxljkimdypfomp`;
+  DB migrations run via `docker exec supabase_db_hdoylixxljkimdypfomp psql -U postgres`.
+
+Both share the same schema and migrations. Tables: `activities` (public read),
 `contact_messages` and `donation_interests` (insert-only; no public reads).
 `admin_emails` lists the addresses allowed to read submissions; `/admin` is the
 submissions dashboard (Supabase Auth email+password, data access gated by RLS).
-Use migrations via the Supabase MCP `apply_migration`, never ad-hoc dashboard edits.
+Never make ad-hoc dashboard edits to schema or functions.
 Pages fetch at build time, so content changes require a rebuild.
+
+The dev database is not a sandbox — it holds real registrations. Do not approve
+or message real guests from dev.
 
 `.env` must be UTF-8 **without BOM** — a BOM silently breaks the first variable and
 the built site ships a null Supabase client.
 
-Email: inserts on the three tables fire `public.notify_email()` → Edge Function
-`notify` (`supabase/functions/notify/`) → Resend. Secrets live in Supabase Vault
-(`resend_api_key`, `webhook_secret`), never in the repo or client code.
+Messages are per-environment: every hook posts to its own environment's notify
+function via Vault `notify_url` (helper `public.notify_hook_url()`, fallback =
+prod URL), and the links inside messages/QR come from Vault `site_url` read by
+the notify function (fallback = prod domain). Prod needs neither key; dev has
+both set.
+
+Email: registration inserts/updates fire `public.notify_email()` → Edge Function
+`notify` (`supabase/functions/notify/`) → Resend. `contact_messages` and
+`donation_interests` auto-replies bypass the function — DB triggers
+(`send_auto_reply`) post straight to Brevo. Secrets live in Supabase Vault
+(`resend_api_key`, `brevo_api_key`, `webhook_secret`), never in the repo or
+client code.
 
 WhatsApp is the live channel: the same function sends registrant confirmations and
-admin alerts via Green API, using Vault secrets `green_api_instance`,
-`green_api_token`, `green_api_admin` (chat id, e.g. `2499…@c.us`).
+admin alerts via Wasender (`wasender_api_key`; results keep the old Green API
+shape for `notify_log`), using Vault secret `green_api_admin` for the admin chat
+id (e.g. `2499…@c.us`).
 
 Conference registration is two-stage: a new row is a *request* (`status` =
 `pending`, auto `ticket_code`) and gets only a "received" message. Approving it in
@@ -67,6 +91,9 @@ Medical copy must stay accurate; flag anything that needs clinician review.
 Do not invent Sudan-specific statistics, contact details, or donation channels.
 
 ## Documentation
+
+Every session appends its changes to `log.md` (newest first) — update it whenever
+you modify the repo.
 
 Full documentation: https://docs.astro.build
 

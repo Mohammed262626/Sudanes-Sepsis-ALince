@@ -38,7 +38,9 @@
           apikey: key,
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
-          Prefer: "return=minimal",
+          // Upsert on the endpoint primary key: a re-subscribe refreshes rotated
+          // keys instead of conflicting.
+          Prefer: "return=minimal, resolution=merge-duplicates",
         },
         body: JSON.stringify({ endpoint: sub.endpoint, keys: sub.toJSON().keys }),
       });

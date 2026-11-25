@@ -36,7 +36,7 @@
             {String(Math.max(0, Math.floor((cfg.eventDate - now) / 1_000) % 60)).padStart(2, "0")}
           </span>
         </p>
-        <a class="btn btn--light" href={url("conference")}>
+        <a class="btn btn--light" href={now < cfg.regDeadline ? url("conference/register") : url("conference")}>
           {now < cfg.regDeadline ? "سجّل حضورك" : "تفاصيل المؤتمر"}
         </a>
       {:else}

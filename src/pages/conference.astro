@@ -2,7 +2,6 @@
 import Base from "../layouts/Base.astro";
 import { url } from "../lib/url";
 import Countdown from "../components/Countdown.svelte";
-import ConferenceForm from "../components/ConferenceForm.svelte";
 import EventDates from "../components/EventDates.svelte";
 
 const tagline = "كل خطوة تتعلمها اليوم تنقذ حياة غداً";
@@ -122,7 +121,7 @@ const faq = [
       <aside class="hero-panel" aria-label="التسجيل وميعاد المؤتمر">
         <Countdown client:load />
         <div class="actions" style="margin-top: 1rem;">
-          <a class="btn" href="#register">سجّل حضورك</a>
+          <a class="btn" href={url("conference/register")} data-event-cta>سجّل حضورك</a>
         </div>
       </aside>
     </div>
@@ -214,24 +213,22 @@ const faq = [
       ))}
     </div>
   </section>
-
-  <!-- Registration / final CTA -->
-  <section class="section wrap" id="register">
-    <div class="contact-grid">
-      <div class="prose">
-        <h2>سجّل حضورك</h2>
-        <p>
-          بعد إتمام التسجيل، سيراجع فريق المؤتمر طلبك وتصلك تذكرة الدخول برمز QR عبر
-          واتساب بعد الاعتماد.
-        </p>
-        <p>
-          لأي استفسار، <a href="mailto:info@sudansepsisalliance.com">تواصل معنا</a>.
-        </p>
-      </div>
-      <ConferenceForm client:load />
-    </div>
-  </section>
 </Base>
+
+<script>
+  import { fetchEventConfig, isEventDay } from "../lib/event";
+  import { url } from "../lib/url";
+
+  // On the event day the register CTA becomes the login path.
+  fetchEventConfig().then((cfg) => {
+    if (!isEventDay(cfg)) return;
+    const cta = document.querySelector<HTMLAnchorElement>("[data-event-cta]");
+    if (cta) {
+      cta.href = url("conference/guest");
+      cta.textContent = "ادخل إلى لوحتك";
+    }
+  });
+</script>
 
 <script>
   /* Tagline reveal — word-by-word activation on scroll */

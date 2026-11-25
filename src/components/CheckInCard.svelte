@@ -99,6 +99,12 @@
         : wantsDecline
           ? "decline"
           : "ready";
+    // A poster QR opened in the phone's camera lands here with the door in the
+    // URL: verify it immediately so the guest goes straight to confirm.
+    if (state === "ready") {
+      const doorParam = params.get("door")?.trim();
+      if (doorParam) await acceptDoor(doorParam);
+    }
   });
 
   onDestroy(stopCamera);
@@ -262,10 +268,20 @@
   }
 
   async function acceptDoor(raw: string): Promise<boolean> {
-    const value = raw.trim();
+    let value = raw.trim();
     if (!value) return false;
+    // The poster QR is the door URL itself: open it in a browser or hand the
+    // code part to the verifier — both count as standing at the door.
+    if (/^https?:\/\//i.test(value)) {
+      const q = new URLSearchParams(value.split("?")[1] ?? "");
+      value = q.get("door")?.trim() ?? "";
+      if (!value) {
+        doorError = "هذا رمز تذكرتك — امسح رمز البوابة المعلّق عند المدخل.";
+        return false;
+      }
+    }
     // Scanning or typing your own ticket instead of the poster is the usual slip.
-    if (/checkin\/?\?/i.test(value) || /SX-[A-Z0-9]{4,}/i.test(value)) {
+    if (/SX-[A-Z0-9]{4,}/i.test(value)) {
       doorError = "هذا رمز تذكرتك — امسح رمز البوابة المعلّق عند المدخل.";
       return false;
     }
@@ -344,6 +360,13 @@
     attendedAt = r.attended_at ?? new Date().toISOString();
     fanfare();
     hum([40, 60, 40]);
+    // The check-in token IS the dashboard credential: cache it so «العودة إلى
+    // لوحتك» and every later dashboard visit open signed in.
+    try {
+      localStorage.setItem("sep-guest", token);
+    } catch {
+      // Private mode: the ?s= link below still carries it for this visit.
+    }
     state = "done";
   }
 
@@ -376,19 +399,27 @@
   {#key `${state}:${doorOk}`}
     <div class="block">
       {#if state === "loading"}
-        <h1 class="inline"><span class="spin" aria-hidden="true"></span> جارٍ التحقق...</h1>
+        <div class="skel-load" role="status" aria-label="جارٍ التحقق…">
+          <span class="skel skel-t" aria-hidden="true"></span>
+          <span class="skel skel-l" aria-hidden="true"></span>
+          <span class="skel skel-l skel-w60" aria-hidden="true"></span>
+          <span class="skel skel-btn" aria-hidden="true"></span>
+        </div>
       {:else if state === "nokey"}
         <h1>افتح الصفحة من تذكرتك</h1>
         <p class="note">اضغط زر «تأكيد الحضور» في رسالة الواتساب التي وصلتك بعد اعتماد تسجيلك.</p>
+        <a class="btn" href={url("conference/guest")}>العودة إلى لوحتك</a>
       {:else if state === "closed"}
         <h1>صفحة الحضور مغلقة</h1>
         <p class="note">تُفتح يوم المؤتمر: {eventLabel}.</p>
       {:else if state === "notfound"}
         <h1>رمز غير معروف</h1>
         <p class="note">افتح الصفحة من زر «تأكيد الحضور» في رسالتك.</p>
+        <a class="btn" href={url("conference/guest")}>العودة إلى لوحتك</a>
       {:else if state === "notapproved"}
         <h1>تذكرتك لم تُعتمد بعد</h1>
         <p class="note">تواصل مع فريق التنظيم إن كنت تعتقد أن هذا خطأ.</p>
+        <a class="btn" href={url("conference/guest")}>العودة إلى لوحتك</a>
       {:else if state === "ready"}
         <h1>أهلاً {name}</h1>
         <div class="facts">
@@ -495,6 +526,7 @@
           {name}{attendedAt ? " — " + dateFmt.format(new Date(attendedAt)) : ""}
         </p>
         <p class="note">أظهر هذه الشاشة عند الاستقبال إن طُلبت، وأرسلنا لك تأكيداً على الواتساب.</p>
+        <a class="btn" href={`${url("conference/guest")}/?s=${encodeURIComponent(token)}`}>العودة إلى لوحتك</a>
       {:else}
         <h1>تعذّر التحقق</h1>
         <p class="note">تحقق من اتصالك ثم أعد تحميل الصفحة.</p>

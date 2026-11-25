@@ -135,7 +135,13 @@
   {#key state}
     <div class="block">
       {#if state === "loading"}
-        <h1>جارٍ التحقق...</h1>
+        <div class="skel-load" role="status" aria-label="جارٍ التحقق…">
+          <span class="skel skel-t" aria-hidden="true"></span>
+          <span class="skel skel-l" aria-hidden="true"></span>
+          <span class="skel skel-l" aria-hidden="true"></span>
+          <span class="skel skel-l skel-w60" aria-hidden="true"></span>
+          <span class="skel skel-btn" aria-hidden="true"></span>
+        </div>
       {:else if state === "invalid"}
         <h1>رابط غير صالح</h1>
         <p class="note">افتح الصفحة من زر الاستبانة في رسالة الواتساب التي وصلتك.</p>
@@ -151,7 +157,7 @@
       {:else if state === "answered"}
         <h1>أجبت عن هذه الاستبانة</h1>
         <p class="note">{name} — شكراً لك، سُجّلت إجاباتك ولا يمكن تكرارها.</p>
-        <a class="btn" href={url("guest")}>العودة إلى لوحتك</a>
+        <a class="btn" href={url("conference/guest")}>العودة إلى لوحتك</a>
       {:else if state === "submitted"}
         <div class="done">
           <span class="mark" aria-hidden="true">✓</span>
@@ -161,7 +167,7 @@
         {#if stage === "pre"}
           <p class="note">ستصلك الاستبانة النهائية على الواتساب قبل نهاية المؤتمر.</p>
         {/if}
-        <a class="btn" href={url("guest")}>العودة إلى لوحتك</a>
+        <a class="btn" href={url("conference/guest")}>العودة إلى لوحتك</a>
       {:else if state === "error"}
         <h1>تعذّر الإرسال</h1>
         <p class="note">تحقق من اتصالك ثم أعد تحميل الصفحة.</p>

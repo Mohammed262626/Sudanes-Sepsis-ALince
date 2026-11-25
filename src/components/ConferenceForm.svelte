@@ -1,6 +1,7 @@
 <script lang="ts">
   import { supabase } from "../lib/supabase";
-  import { fetchEventConfig } from "../lib/event";
+  import { fetchEventConfig, invalidateEventConfig, isEventDay } from "../lib/event";
+  import { url } from "../lib/url";
 
   const contactEmail = "mailto:info@sudansepsisalliance.com";
 
@@ -39,7 +40,11 @@
       note: String(data.get("note")).trim() || null,
     });
     if (error) {
-      state = "error";
+      // The admin may have closed registration while this page still said
+      // open: drop the cached config and let the UI re-derive its state.
+      invalidateEventConfig();
+      await fetchEventConfig();
+      state = open ? "error" : "closed";
     } else {
       form.reset();
       state = "ok";
@@ -112,6 +117,7 @@
       <select id="k-role" name="role" required>
         <option value="">— اختر —</option>
         <option value="طبيب">طبيب/طبيبة</option>
+        <option value="طبيب مختبر">طبيب/طبيبة مختبر</option>
         <option value="ممرض">ممرض/ممرضة</option>
         <option value="صيدلي">صيدلي/صيدلانية</option>
         <option value="طالب">طالب/طالبة طب</option>
@@ -186,6 +192,16 @@
         </p>
       {/if}
     </form>
+  </div>
+{:else if cfg !== null && isEventDay(cfg)}
+  <!-- Event day: registration is over — the guest dashboard is the door. -->
+  <div class="eventday">
+    <p>
+      باب التسجيل مغلق — المؤتمر اليوم. تذكرتك وبرنامج اليوم وحضورك واستباناتك
+      في لوحتك: ادخل برقم هاتفك أو بريدك وآخر 6 أحرف من رمز التذكرة، أو من زر
+      «افتح لوحتك» في رسالة الواتساب.
+    </p>
+    <a class="btn" href={url("conference/guest")}>ادخل إلى لوحتك</a>
   </div>
 {:else if cfg !== null}
   <p>انتهت فترة التسجيل. للاستفسار، <a href={contactEmail}>تواصل معنا</a>.</p>

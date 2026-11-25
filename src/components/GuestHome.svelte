@@ -28,7 +28,6 @@
   let program = $state<Session[]>([]);
   let loading = $state(true);
   let failed = $state(false);
-  let copied = $state(false);
   let loginContact = $state("");
   let loginCode = $state("");
   let loginBusy = $state(false);
@@ -140,31 +139,25 @@
     loginBusy = false;
   }
 
-  async function copyTicketCode() {
-    if (!guest) return;
+  // Sign out: drop the remembered token; the login form takes over.
+  function logout() {
     try {
-      await navigator.clipboard.writeText(guest.ticket_code);
-      copied = true;
-      setTimeout(() => (copied = false), 2000);
+      localStorage.removeItem("sep-guest");
     } catch {
-      // fallback for older browsers
-      const textarea = document.createElement("textarea");
-      textarea.value = guest.ticket_code;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      copied = true;
-      setTimeout(() => (copied = false), 2000);
+      // Nothing remembered anyway in private mode.
     }
+    token = "";
+    guest = null;
+    program = [];
+    failed = false;
+    loginContact = "";
+    loginCode = "";
+    loginError = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const doorUrl = $derived(
-    guest ? `${url("checkin")}/?k=${encodeURIComponent(token)}&t=${encodeURIComponent(guest.ticket_code)}` : ""
-  );
-
   const assessmentHref = (stage: "pre" | "post") =>
-    `${url("assessment")}/?t=${encodeURIComponent(guest?.assessment_token ?? "")}&s=${stage}`;
+    `${url("conference/assessment")}/?t=${encodeURIComponent(guest?.assessment_token ?? "")}&s=${stage}`;
 
   // Certificate status is derived, not stored: attendance plus both assessments
   // is the promise made on the site. No PDF yet — the strip states readiness.
@@ -198,14 +191,59 @@
 </script>
 
 {#if loading}
-  <p class="note">جارٍ التحميل…</p>
+  <div class="guest-shell sk-shell" role="status" aria-label="جارٍ التحميل…">
+    <div class="pass" aria-hidden="true">
+      <p class="pass-band"></p>
+      <div class="pass-body">
+        <div>
+          <div class="pass-line">
+            <p class="skel sk-name"></p>
+            <div class="ticket-id">
+              <span class="skel sk-label"></span>
+              <p class="skel sk-ticket"></p>
+            </div>
+          </div>
+          <div class="sk-chip-row">
+            <span class="skel sk-chip"></span>
+            <span class="skel sk-chip sk-w2"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols" aria-hidden="true">
+      <section class="card">
+        <div class="skel sk-head"></div>
+        <div class="skel sk-line"></div>
+        <div class="skel sk-line sk-w2"></div>
+        <div class="skel sk-line"></div>
+      </section>
+      <section class="card">
+        <div class="skel sk-head"></div>
+        <div class="skel sk-line"></div>
+        <div class="skel sk-line"></div>
+        <div class="skel sk-line sk-w2"></div>
+      </section>
+    </div>
+
+    <section class="cert" aria-hidden="true">
+      <span class="dot"></span>
+      <span class="skel sk-cert"></span>
+    </section>
+  </div>
 {:else if guest}
   <div class="guest-shell" aria-labelledby="guest-title">
     <article class="pass">
       <p class="pass-band">مؤتمر كسلا للتسمم الدموي</p>
       <div class="pass-body">
         <div>
-          <h1 id="guest-title">{guest.name}</h1>
+          <div class="pass-line">
+            <h1 id="guest-title">{guest.name}</h1>
+            <div class="ticket-id">
+              <span class="pass-label">رقم التذكرة</span>
+              <p class="ticket" dir="ltr">{guest.ticket_code}</p>
+            </div>
+          </div>
           <div class="chips">
             <span class="chip" data-state={guest.status === "approved" ? "ok" : "wait"}>
               {STATUS[guest.status] ?? guest.status}
@@ -214,24 +252,6 @@
               <span class="chip" data-state="ok">حاضر</span>
             {/if}
           </div>
-        </div>
-
-        <div class="pass-ticket">
-          <div class="ticket-id">
-            <span class="pass-label">رقم التذكرة</span>
-            <p class="ticket" dir="ltr">{guest.ticket_code}</p>
-          </div>
-          <button
-            class="btn btn--ghost btn--sm"
-            type="button"
-            onclick={copyTicketCode}
-            aria-label={copied ? "Already copied" : "Copy ticket code"}
-          >
-            {copied ? "نُسخ" : "نسخ"}
-          </button>
-          {#if guest.status === "approved"}
-            <a class="btn btn--sm" href={doorUrl}>صفحة البوابة</a>
-          {/if}
         </div>
       </div>
     </article>
@@ -296,48 +316,58 @@
         <span><strong>{cert.label}</strong> — {cert.text}</span>
       </p>
     </section>
+
+    <div class="foot">
+      <button class="btn btn--ghost btn--sm" type="button" onclick={logout}>
+        تسجيل الخروج
+      </button>
+    </div>
   </div>
 {:else}
-  <div class="empty">
-    <h1>دخول لوحتك</h1>
-    <p class="note">
-      أدخل رقم هاتفك أو بريدك مع رمز تذكارتك، أو افتح زر «افتح لوحتك» في رسالة
-      القبول على واتساب.
-    </p>
-    <form
-      class="login"
-      onsubmit={(e) => {
-        e.preventDefault();
-        void login();
-      }}
-    >
-      <label>
-        <span>رقم الهاتف أو البريد</span>
-        <input bind:value={loginContact} autocomplete="username" required />
-      </label>
-      <label>
-        <span>آخر 6 أحرف من رمز التذكرة (بعد SX-)</span>
-        <input
-          bind:value={loginCode}
-          dir="ltr"
-          maxlength="6"
-          autocapitalize="characters"
-          autocomplete="one-time-code"
-          placeholder="A812DD"
-          required
-        />
-      </label>
-      <button class="btn" type="submit" disabled={loginBusy}>
-        {loginBusy ? "جارٍ الدخول…" : "دخول"}
-      </button>
-      {#if loginError}
-        <p class="note" role="alert">{loginError}</p>
-      {/if}
-    </form>
-    {#if failed}
-      <p class="note" role="alert">لم يُعرَف الرابط. افتح الزر من الرسالة الأصلية أو ادخل يدوياً.</p>
-    {/if}
-  </div>
+  <article class="login-card">
+    <p class="pass-band">مؤتمر كسلا للتسمم الدموي</p>
+    <div class="login-body">
+      <h1>دخول لوحتك</h1>
+      <p class="note">
+        بلا كلمة مرور — رقم هاتفك أو بريدك مع آخر 6 أحرف من رمز تذكارتك، أو زر
+        «افتح لوحتك» في رسالة القبول على واتساب.
+      </p>
+      <form
+        class="login"
+        onsubmit={(e) => {
+          e.preventDefault();
+          void login();
+        }}
+      >
+        <label>
+          <span>رقم الهاتف أو البريد</span>
+          <input bind:value={loginContact} autocomplete="username" required />
+        </label>
+        <label>
+          <span>آخر 6 أحرف من رمز التذكرة (بعد SX-)</span>
+          <input
+            class="code"
+            bind:value={loginCode}
+            dir="ltr"
+            maxlength="6"
+            autocapitalize="characters"
+            autocomplete="one-time-code"
+            placeholder="A812DD"
+            required
+          />
+        </label>
+        <button class="btn btn--accent" type="submit" disabled={loginBusy}>
+          {loginBusy ? "جارٍ الدخول…" : "دخول"}
+        </button>
+        {#if loginError}
+          <p class="alert" role="alert">{loginError}</p>
+        {/if}
+        {#if failed}
+          <p class="alert" role="alert">لم يُعرَف الرابط. افتح الزر من الرسالة الأصلية أو ادخل يدوياً.</p>
+        {/if}
+      </form>
+    </div>
+  </article>
 {/if}
 
 <style>
@@ -346,36 +376,122 @@
     gap: 1.5rem;
   }
 
-  .empty {
+  .sk-shell {
+    min-block-size: 55vh;
+  }
+
+  .sk-name {
+    block-size: 1.5rem;
+    inline-size: 38%;
+    margin: 0 0 0.75rem;
+  }
+
+  .sk-chip-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .sk-chip {
+    inline-size: 4.5rem;
+    block-size: 1.4rem;
+  }
+
+  .sk-label {
+    block-size: 0.75rem;
+    inline-size: 4.5rem;
+  }
+
+  .sk-ticket {
+    block-size: 1.4rem;
+    inline-size: 8rem;
+    margin: 0;
+  }
+
+  .sk-head {
+    block-size: 1rem;
+    inline-size: 40%;
+    padding-block-end: 0.6rem;
+    border-block-end: 2px solid var(--ink);
+  }
+
+  .sk-line {
+    block-size: 0.8rem;
+  }
+
+  .sk-w2 {
+    inline-size: 65%;
+  }
+
+  .sk-cert {
+    flex: 1 1 14rem;
+    block-size: 0.8rem;
+  }
+
+  .login-card {
+    inline-size: 100%;
+    max-inline-size: 26rem;
+    margin-inline: auto;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  .login-body {
     display: grid;
-    gap: 0.9rem;
-    max-inline-size: 24rem;
+    gap: 1rem;
+    padding: 1.5rem 1.25rem;
+  }
+
+  .login-body h1 {
+    font-size: clamp(1.6rem, 6vw, 2rem);
+    line-height: 1.15;
+    margin: 0 0 0.15rem;
   }
 
   .login {
     display: grid;
-    gap: 0.9rem;
+    gap: 1rem;
   }
 
   .login label {
     display: grid;
-    gap: 0.35rem;
+    gap: 0.4rem;
   }
 
   .login label span {
     font-size: 0.8125rem;
-    color: color-mix(in srgb, var(--ink) 65%, var(--paper));
+    font-weight: 600;
+    color: color-mix(in srgb, var(--ink) 75%, var(--paper));
   }
 
   .login input {
     font-family: var(--font-body);
     font-size: 1rem;
-    min-block-size: 2.75rem;
-    padding: 0.6rem 0.75rem;
+    block-size: 3rem;
+    padding: 0 0.75rem;
     border: 2px solid var(--ink);
     border-radius: 0;
     background: var(--paper);
     color: var(--ink);
+  }
+
+  .login input.code {
+    text-align: center;
+    text-transform: uppercase;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 0.2em;
+    padding-inline-end: 0.2em;
+  }
+
+  .alert {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border-inline-start: 3px solid var(--danger);
+    color: color-mix(in srgb, var(--danger) 85%, var(--ink));
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
 
   .login input:focus-visible {
@@ -385,6 +501,7 @@
 
   .login .btn {
     inline-size: 100%;
+    block-size: 3rem;
   }
 
   h1 {
@@ -396,6 +513,7 @@
   .pass {
     border: 2px solid var(--ink);
     background: var(--paper);
+    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
   }
 
   .pass-band {
@@ -438,18 +556,16 @@
     color: color-mix(in srgb, var(--ink) 60%, var(--paper));
   }
 
-  .pass-ticket {
+  .pass-line {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 0.6rem;
-    padding-block-start: 1.25rem;
-    border-block-start: 1px solid color-mix(in srgb, var(--ink) 15%, var(--paper));
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.4rem 1rem;
   }
 
   .ticket-id {
-    flex: 1 1 9rem;
-    min-inline-size: 0;
+    flex: 0 0 auto;
   }
 
   .pass-label {
@@ -471,6 +587,14 @@
     display: grid;
     gap: 1.25rem;
     align-items: start;
+  }
+
+  .cols > .card {
+    animation: rise 0.6s 0.08s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  .cols > .card:nth-child(2) {
+    animation-delay: 0.16s;
   }
 
   @media (min-width: 720px) {
@@ -560,6 +684,12 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
+    animation: rise 0.6s 0.24s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  .foot {
+    display: flex;
+    justify-content: flex-start;
   }
 
   .cert h2 {

@@ -1,49 +1,12 @@
 ---
-import arabic400 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2?url";
-import arabic600 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2?url";
-import arabic700 from "@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-700-normal.woff2?url";
-import "../styles/global.css";
-import AssessmentForm from "../components/AssessmentForm.svelte";
+// Legacy path: guests received /assessment links in already-delivered WhatsApp
+// messages. Preserve the query and send them to the moved page.
+import { url } from "../lib/url";
 
-// Astro does not interpolate {} inside <style>; join the real URLs here.
-const fontCSS = `
-  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:400; font-display:optional; src:url(${arabic400}) format("woff2"); }
-  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:600; font-display:optional; src:url(${arabic600}) format("woff2"); }
-  @font-face { font-family:"IBM Plex Sans Arabic"; font-style:normal; font-weight:700; font-display:optional; src:url(${arabic700}) format("woff2"); }
-`;
+const to = url("conference/assessment/");
 ---
 
-<!doctype html>
-<html lang="ar" dir="rtl">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <meta name="referrer" content="no-referrer" />
-    <meta name="theme-color" content="#f7f5f0" />
-    <title>استبانة المؤتمر | التحالف السوداني للتسمم الدموي</title>
-    <style is:inline set:html={fontCSS} />
-  </head>
-  <body>
-    <main>
-      <AssessmentForm client:only="svelte" />
-    </main>
-
-    <style is:global>
-      body {
-        display: grid;
-        place-items: center;
-        min-block-size: 100vh;
-        min-block-size: 100dvh;
-        padding: 1.25rem;
-        background: var(--paper);
-      }
-
-      main {
-        inline-size: 100%;
-        display: grid;
-        place-items: center;
-      }
-    </style>
-  </body>
-</html>
+<script is:inline define:vars={{ to }}>
+  location.replace(to + location.search + location.hash);
+</script>
+<meta http-equiv="refresh" content="0;url={to}" />

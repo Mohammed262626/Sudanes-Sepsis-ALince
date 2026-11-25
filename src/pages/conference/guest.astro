@@ -1,0 +1,21 @@
+---
+import Base from "../../layouts/Base.astro";
+import GuestHome from "../../components/GuestHome.svelte";
+import Skeleton from "../../components/Skeleton.astro";
+---
+
+<Base title="لوحتك | التحالف السوداني للتسمم الدموي" description="تذكرتك وحضورك واستباناتك في صفحة واحدة.">
+  <section class="wrap guest-shell">
+    <GuestHome client:only="svelte">
+      <Skeleton slot="fallback" />
+    </GuestHome>
+  </section>
+</Base>
+
+<style>
+  .guest-shell {
+    padding-block: 2rem 3.5rem;
+    max-inline-size: 48rem;
+    margin-inline: auto;
+  }
+</style>

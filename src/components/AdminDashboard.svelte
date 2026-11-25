@@ -5,6 +5,7 @@
 
   type Row = Record<string, string | number>;
   type Template = { key: string; label: string; body: string };
+  type Door = { id: number; label: string; code: string; created_at: string };
 
   // Grouped by function: one group per row of related work.
   const groups = [
@@ -15,6 +16,7 @@
         { id: "assessments", label: "الاستبانات" },
         { id: "program", label: "البرنامج" },
         { id: "settings", label: "المؤتمر" },
+        { id: "doors", label: "البوابات" },
       ],
     },
     {
@@ -32,7 +34,7 @@
   const tabs = groups.flatMap((g) => g.tabs);
 
   const dataTabs = tabs.filter(
-    (t) => !["templates", "assessments", "push", "program", "settings"].includes(t.id),
+    (t) => !["templates", "assessments", "push", "program", "settings", "doors"].includes(t.id),
   );
 
   const columns: Record<string, { key: string; label: string; cls?: string }[]> = {
@@ -82,6 +84,17 @@
   let data = $state<Record<string, Row[]>>({});
   let failed = $state(false);
   let userEmail = $state("");
+  let drawer = $state(false);
+
+  // While the drawer is open the page behind must not scroll.
+  $effect(() => {
+    if (!drawer) return;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = prev;
+    };
+  });
   let statusFilter = $state("all");
 
   let templates = $state<Template[]>([]);
@@ -282,41 +295,78 @@
 
   // CSV of what is on screen (search + status filter applied), BOM so Excel
   // keeps the Arabic.
-  function exportCsv() {
-    const extra =
-      tab === "assessments"
-        ? [
-            { key: "pre_answers", label: "إجابات الأولى" },
-            { key: "post_answers", label: "إجابات النهائية" },
-          ]
-        : [];
-    const keys = [...cols.filter((c) => c.key !== "actions"), ...extra];
-    if (!keys.length || !shown.length) return;
-    const cell = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
-    const head = keys.map((k) => cell(k.label)).join(",");
-    const body = shown
-      .map((r) =>
-        keys
-          .map((k) =>
-            cell(
-              k.key === "status"
-                ? (statusLabels[String(r.status)] ?? r.status)
-                : k.key === "created_at"
-                  ? new Date(String(r.created_at)).toISOString()
-                  : r[k.key],
-            ),
-          )
-          .join(","),
-      )
-      .join("\r\n");
-    const blob = new Blob(["\uFEFF" + head + "\r\n" + body], {
-      type: "text/csv;charset=utf-8",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${tab}-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+  let exporting = $state(false);
+
+  // The whole tab, straight from Supabase: every row (paginated past any row
+  // cap) and every column, no filters — the screen filters stay screen-only.
+  async function fetchAllRows(table: string): Promise<Row[]> {
+    const out: Row[] = [];
+    for (let from = 0; ; from += 1000) {
+      const r = await supabase!.from(table).select("*").range(from, from + 999);
+      if (r.error) throw r.error;
+      out.push(...((r.data ?? []) as Row[]));
+      if ((r.data?.length ?? 0) < 1000) break;
+    }
+    return out;
+  }
+
+  async function exportCsv() {
+    if (!supabase || exporting) return;
+    exporting = true;
+    try {
+      let rows: Row[];
+      if (tab === "assessments") {
+        const [regs, responses] = await Promise.all([
+          supabase.from("conference_registrations").select("*").order("created_at", { ascending: false }),
+          supabase
+            .from("assessment_responses")
+            .select("id,registration_id,stage,answers,created_at")
+            .order("created_at", { ascending: false }),
+        ]);
+        if (regs.error || responses.error) throw regs.error ?? responses.error;
+        rows = buildAssessmentRows(regs.data ?? [], responses.data ?? []);
+      } else {
+        rows = await fetchAllRows(tab);
+      }
+      if (!rows.length) {
+        pushToast("لا توجد سجلات للتصدير.", false);
+        return;
+      }
+      const known: Record<string, string> = Object.fromEntries(
+        cols.filter((c) => c.key !== "actions").map((c) => [c.key, c.label]),
+      );
+      const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
+      const cell = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+      const head = keys.map((k) => cell(known[k] ?? k)).join(",");
+      const body = rows
+        .map((r) =>
+          keys
+            .map((k) =>
+              cell(
+                k === "status"
+                  ? (statusLabels[String(r.status)] ?? r.status)
+                  : k === "created_at"
+                    ? new Date(String(r.created_at)).toISOString()
+                    : r[k],
+              ),
+            )
+            .join(","),
+        )
+        .join("\r\n");
+      const blob = new Blob(["\uFEFF" + head + "\r\n" + body], {
+        type: "text/csv;charset=utf-8",
+      });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${tab}-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      pushToast(`صُدِّر ${rows.length} سجلاً.`, true);
+    } catch (e) {
+      pushToast(`تعذّر التصدير: ${(e as Error).message}`, false);
+    } finally {
+      exporting = false;
+    }
   }
 
   // Evening-before nudge: one batch of 25, press again for the next. The RPC
@@ -340,7 +390,7 @@
     notice =
       `أُرسل ${sent} تذكيراً.` +
       (pendingReminders > sent ? " اضغط مرة أخرى للدفعة التالية." : "");
-    await load();
+    // A reminder touches no visible column; the log drawer re-reads notify_log.
     void showSends();
   }
 
@@ -427,7 +477,6 @@
     // Opening the final one sends its invites from inside the same call.
     const sent = Number((data as { sent?: number } | null)?.sent ?? 0);
     notice = open && stage === "post" ? `فُتحت النهائية وأُرسل ${sent} رابطاً.` : "";
-    if (stage === "post") await load();
     if (open && stage === "post") void showSends();
   }
 
@@ -448,7 +497,6 @@
       return;
     }
     notice = `أُرسل ${Number(n ?? 0)} رابطاً.`;
-    await load();
     void showSends();
   }
 
@@ -528,8 +576,16 @@
       p_reg_open: regOpen,
     });
     savingConfig = false;
-    configNote = error ? "تعذّر الحفظ. حاول مرة أخرى." : "تم الحفظ.";
-    if (!error) {
+    if (error) {
+      // An expired session is the usual culprit: the data loaded fine an hour
+      // ago, then the JWT died. Send them to sign in instead of retry-zombie.
+      if (error.code === "PGRST301" || error.status === 401 || /JWT/i.test(error.message)) {
+        location.replace(url("admin/login"));
+        return;
+      }
+      configNote = `تعذّر الحفظ: ${error.message}`;
+    } else {
+      configNote = "تم الحفظ.";
       confBaseline = confSignature;
       savedConf = { band: bandEnabled, soon: confSoon, open: regOpen, deadline: confRegDeadline };
     }
@@ -562,11 +618,11 @@
       return;
     }
     waitNote = "";
-    const { error } = id
+    const res = id
       ? await supabase.from("registration_notify").update({ name, email }).eq("id", id)
-      : await supabase.from("registration_notify").insert({ name, email });
-    if (error) {
-      waitNote = error.code === "23505" ? "هذا البريد مسجّل مسبقاً." : "تعذّر الحفظ. حاول مرة أخرى.";
+      : await supabase.from("registration_notify").insert({ name, email }).select().single();
+    if (res.error) {
+      waitNote = res.error.code === "23505" ? "هذا البريد مسجّل مسبقاً." : "تعذّر الحفظ. حاول مرة أخرى.";
       return;
     }
     if (id) {
@@ -574,8 +630,9 @@
         r.id === id ? { ...r, name, email } : r,
       );
       waitEditId = 0;
-    } else {
-      await load();
+    } else if (res.data) {
+      // In place: the row comes back from PostgREST, newest-first.
+      data.registration_notify = [res.data as Row, ...(data.registration_notify ?? [])];
     }
     data = { ...data };
     waitDraft = { name: "", email: "" };
@@ -601,6 +658,11 @@
   );
 
   let pushText = $state("");
+  let doors = $state<Door[]>([]);
+  let doorDraft = $state("");
+  let doorBusy = $state(false);
+  let doorNote = $state("");
+  let poster = $state<Door | null>(null);
   let pushNote = $state("");
   let pushing = $state(false);
   let pushCount = $state(0);
@@ -711,69 +773,76 @@
       actionError = "تعذّر حذف الإجابات. حاول مرة أخرى.";
       return;
     }
-    await load();
+    // In place: the row resets and the derived answered-counts follow it.
+    data.assessments = (data.assessments ?? []).map((r) =>
+      r.id === id
+        ? { ...r, pre: "—", post: "—", score: "— · —", has_pre: "", has_post: "", pre_answers: "", post_answers: "" }
+        : r,
+    );
+    data = { ...data };
     flash(id);
   }
 
-  async function load() {
-    if (!supabase) return;
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) {
-      location.replace(url("admin/login"));
+  // Doors: each entrance gets its own public code; the poster prints huge.
+  const doorUrl = (d: Door) =>
+    `${location.origin}${url("conference/checkin")}/?door=${encodeURIComponent(d.code)}`;
+
+  const qrUrl = (d: Door) =>
+    `https://api.qrserver.com/v1/create-qr-code/?size=1200x1200&margin=40&color=962567&bgcolor=FFFFFF&format=png&data=${encodeURIComponent(doorUrl(d))}`;
+
+  async function addDoor() {
+    if (!supabase || doorBusy) return;
+    const label = doorDraft.trim();
+    if (!label) {
+      doorNote = "أدخل اسم البوابة.";
       return;
     }
-    userEmail = session.session.user.email ?? "";
-    loading = true;
-    actionError = "";
-    saveNote = "";
+    doorBusy = true;
+    doorNote = "";
+    // Unambiguous alphabet, ticket-style ID: no I/L/O/0/1 confusion on posters.
+    const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    const rnd = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      .map((b) => alphabet[b % alphabet.length])
+      .join("");
+    const { data, error } = await supabase
+      .from("doors")
+      .insert({ label, code: `DOOR-${rnd}` })
+      .select()
+      .single();
+    doorBusy = false;
+    if (error || !data) {
+      doorNote = "تعذّر إنشاء البوابة. حاول مرة أخرى.";
+      return;
+    }
+    doorDraft = "";
+    // In place: no full reload, the row arrives straight from PostgREST.
+    doors = [...doors, data as Door];
+  }
 
-    const results = await Promise.all([
-      ...dataTabs.map((t) =>
-        supabase
-          .from(t.id)
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(200),
-      ),
-      supabase.from("message_templates").select("key,label,body").order("key"),
-    ]);
+  async function removeDoor(id: number) {
+    if (!supabase || doorBusy) return;
+    if (!confirm("حذف هذه البوابة؟ ملصقها لن يعمل بعد الحذف.")) return;
+    doorBusy = true;
+    const { error } = await supabase.from("doors").delete().eq("id", id);
+    doorBusy = false;
+    if (error) {
+      doorNote = "تعذّر الحذف. حاول مرة أخرى.";
+      return;
+    }
+    if (poster?.id === id) poster = null;
+    doors = doors.filter((d) => d.id !== id);
+  }
 
-    const next: Record<string, Row[]> = {};
-    results.slice(0, dataTabs.length).forEach((r, i) => {
-      if (r.error) failed = true;
-      next[dataTabs[i].id] = r.data ?? [];
-    });
-    const order = [
-      "registration_received",
-      "registration_approved",
-      "registration_attended",
-      "registration_rejected",
-    ];
-    templates = ((results[results.length - 1].data ?? []) as Template[]).sort(
-      (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
-    );
+  const loadedTabs = new Set<string>();
 
-    // Assessments ride along: name/ticket come from the registrations already
-    // loaded, so the join happens here instead of in the query.
-    const [responses, config] = await Promise.all([
-      supabase
-        .from("assessment_responses")
-        .select("id,registration_id,stage,answers,created_at")
-        .order("created_at", { ascending: false })
-        .limit(500),
-      supabase
-        .from("event_config")
-        .select("assessment_pre_open,assessment_post_open")
-        .eq("id", 1)
-        .maybeSingle(),
-    ]);
-    if (responses.error || config.error) failed = true;
-    // One card per person: pre and post answers meet on the registration.
+  // One card per person: pre and post answers meet on the registration. Shared
+  // by the tab view and the CSV export so both show the same join.
+  function buildAssessmentRows(regs: Row[], responses: { registration_id: number; stage: string; answers: Record<string, number>; created_at: string }[]): Row[] {
     const byReg = new Map<
       number,
       { pre?: { at: string; answers: Record<string, number> }; post?: { at: string; answers: Record<string, number> } }
     >();
-    for (const a of responses.data ?? []) {
+    for (const a of responses) {
       const entry = byReg.get(a.registration_id) ?? {};
       entry[a.stage as "pre" | "post"] = { at: a.created_at, answers: a.answers ?? {} };
       byReg.set(a.registration_id, entry);
@@ -784,12 +853,9 @@
             .map(([k, v]) => `${k}=${v}`)
             .join(" ")
         : "";
-    // Each stage line carries its own score, so a phone card is readable
-    // without the table header.
     const line = (e?: { at: string; answers: Record<string, number> }) =>
       e ? `${scoreOf(e.answers)} · ${dateFmt.format(new Date(e.at))}` : "—";
-
-    next.assessments = (next.conference_registrations ?? [])
+    return regs
       .filter((r) => r.attended_at)
       .map((r) => {
         const e = byReg.get(Number(r.id)) ?? {};
@@ -806,48 +872,136 @@
           post_answers: raw(e.post?.answers),
         };
       });
-    preOpen = !!config.data?.assessment_pre_open;
-    postOpen = !!config.data?.assessment_post_open;
-
-    const cfgRes = await supabase
-      .from("event_config")
-      .select("band_enabled,soon,event_date,event_time,reg_deadline,reg_open")
-      .eq("id", 1)
-      .maybeSingle();
-    if (!cfgRes.error && cfgRes.data) {
-      const c = cfgRes.data;
-      bandEnabled = c.band_enabled !== false;
-      confSoon = c.soon === true;
-      regOpen = c.reg_open === true;
-      confEventDate = String(c.event_date ?? "");
-      confEventTime = String(c.event_time ?? "9:00 صباحاً بتوقيت الخرطوم");
-      confRegDeadline = toDeadlineInput(c.reg_deadline);
-      savedConf = { band: bandEnabled, soon: confSoon, open: regOpen, deadline: confRegDeadline };
-      confBaseline = confSignature;
-    }
-
-    const waitlist = await supabase
-      .from("registration_notify")
-      .select("id", { count: "exact", head: true });
-    waitlistCount = waitlist.count ?? 0;
-
-    const subs = await supabase
-      .from("push_subscriptions")
-      .select("endpoint", { count: "exact", head: true });
-    pushCount = subs.count ?? 0;
-
-    const prog = await supabase
-      .from("conference_program")
-      .select("id,title,starts_at,notes")
-      .order("starts_at");
-    if (prog.error) failed = true;
-    program = (prog.data ?? []) as ProgramRow[];
-
-    data = next;
-    loading = false;
   }
 
-  onMount(load);
+  let tabLoading = $state(false);
+  let counts = $state<Record<string, number>>({});
+
+  // One tab at a time: the dashboard boots with the active tab's data and the
+  // rest streams in the first time its tab opens. Badges stay honest through
+  // cheap head counts.
+  async function loadTab(id: string, boot = false) {
+    if (!supabase) return;
+    if (boot) {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        location.replace(url("admin/login"));
+        return;
+      }
+      userEmail = session.session.user.email ?? "";
+      loading = true;
+    } else if (loadedTabs.has(id)) {
+      return;
+    } else {
+      tabLoading = true;
+    }
+    actionError = "";
+    saveNote = "";
+
+    const next = { ...data };
+    const plain = async (table: string) => {
+      const r = await supabase!
+        .from(table)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (r.error) failed = true;
+      return (r.data ?? []) as Row[];
+    };
+
+    if (id === "assessments") {
+      const [regs, responses, config] = await Promise.all([
+        plain("conference_registrations"),
+        supabase
+          .from("assessment_responses")
+          .select("id,registration_id,stage,answers,created_at")
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("event_config")
+          .select("assessment_pre_open,assessment_post_open")
+          .eq("id", 1)
+          .maybeSingle(),
+      ]);
+      if (responses.error || config.error) failed = true;
+      next.conference_registrations = regs;
+      loadedTabs.add("conference_registrations");
+      next.assessments = buildAssessmentRows(regs, responses.data ?? []);
+      preOpen = !!config.data?.assessment_pre_open;
+      postOpen = !!config.data?.assessment_post_open;
+    } else if (id === "templates") {
+      const { data: rows, error } = await supabase
+        .from("message_templates")
+        .select("key,label,body")
+        .order("key");
+      if (error) failed = true;
+      const order = [
+        "registration_received",
+        "registration_approved",
+        "registration_attended",
+        "registration_rejected",
+      ];
+      templates = ((rows ?? []) as Template[]).sort(
+        (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
+      );
+    } else if (id === "program") {
+      const { data, error } = await supabase
+        .from("conference_program")
+        .select("id,title,starts_at,notes")
+        .order("starts_at");
+      if (error) failed = true;
+      program = (data ?? []) as ProgramRow[];
+    } else if (id === "doors") {
+      const { data, error } = await supabase.from("doors").select("*").order("id");
+      if (error) failed = true;
+      doors = (data ?? []) as Door[];
+    } else if (id === "settings") {
+      const cfgRes = await supabase
+        .from("event_config")
+        .select("band_enabled,soon,event_date,event_time,reg_deadline,reg_open")
+        .eq("id", 1)
+        .maybeSingle();
+      if (!cfgRes.error && cfgRes.data) {
+        const c = cfgRes.data;
+        bandEnabled = c.band_enabled !== false;
+        confSoon = c.soon === true;
+        regOpen = c.reg_open === true;
+        confEventDate = String(c.event_date ?? "");
+        confEventTime = String(c.event_time ?? "9:00 صباحاً بتوقيت الخرطوم");
+        confRegDeadline = toDeadlineInput(c.reg_deadline);
+        savedConf = { band: bandEnabled, soon: confSoon, open: regOpen, deadline: confRegDeadline };
+        confBaseline = confSignature;
+      }
+      const waitlist = await supabase
+        .from("registration_notify")
+        .select("id", { count: "exact", head: true });
+      waitlistCount = waitlist.count ?? 0;
+    } else {
+      next[id] = await plain(id);
+    }
+
+    data = next;
+    loadedTabs.add(id);
+    loading = false;
+    tabLoading = false;
+  }
+
+  onMount(() => {
+    void loadTab(tab, true).then(() => {
+      // Cheap badge counts for tabs that have not been opened yet.
+      return Promise.all(
+        dataTabs
+          .filter((t) => !loadedTabs.has(t.id))
+          .map(async (t) => {
+            const r = await supabase!.from(t.id).select("id", { count: "exact", head: true });
+            if (!r.error) {
+              counts[t.id] = r.count ?? 0;
+              counts = { ...counts };
+            }
+          }),
+      );
+    });
+  });
 
   async function signOut() {
     await supabase?.auth.signOut();
@@ -932,19 +1086,37 @@
     id === "templates"
       ? templates.length
       : id === "assessments"
-          ? answeredPeople
+          ? (loadedTabs.has("assessments") ? answeredPeople : "")
           : id === "program"
             ? program.length
             : id === "push"
               ? pushCount
-              : (data[id]?.length ?? 0);
+              : id === "doors"
+                ? doors.length
+                : id === "settings"
+                  ? ""
+                  : (loadedTabs.has(id) ? data[id]?.length ?? "" : counts[id] ?? "");
 
 </script>
 
+<svelte:window onkeydown={(e) => { if (e.key === "Escape") drawer = false; }} />
+
 <header class="admin-head">
-  <div>
-    <p class="kicker">لوحة التحكم</p>
-    <h1>الطلبات والرسائل</h1>
+  <div class="admin-head-title">
+    <button
+      class="admin-menu-btn"
+      type="button"
+      aria-expanded={drawer}
+      aria-controls="admin-drawer"
+      aria-label="الأقسام"
+      onclick={() => (drawer = !drawer)}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>
+    </button>
+    <div>
+      <p class="kicker">لوحة التحكم</p>
+      <h1>الطلبات والرسائل</h1>
+    </div>
   </div>
   <div class="admin-user">
     <span dir="ltr">{userEmail}</span>
@@ -965,17 +1137,21 @@
         type="button"
         title="تحديث"
         aria-label="تحديث"
-        onclick={load}
+        disabled={tabLoading}
+        onclick={() => {
+          loadedTabs.delete(tab);
+          void loadTab(tab);
+        }}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.7-6.4" /><path d="M21 3v6h-6" /></svg>
       </button>
       <button
         class="btn btn--ghost btn--icon"
         type="button"
-        title="تنزيل CSV"
+        title="تنزيل CSV — كل السجلات"
         aria-label="تنزيل CSV"
-        disabled={shown.length === 0}
-        onclick={exportCsv}
+        disabled={exporting}
+        onclick={() => void exportCsv()}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 19h16" /></svg>
       </button>
@@ -1033,7 +1209,7 @@
   </p>
 {:else}
   <div class="admin-layout">
-    <aside class="admin-side">
+    <aside class="admin-side" id="admin-drawer" class:open={drawer}>
       {#each groups as g, i (g.label)}
         <div class="side-group">
           <span class="side-group-label" id={`tabgroup-${i}`}>{g.label}</span>
@@ -1046,7 +1222,9 @@
                 class:active={tab === t.id}
                 onclick={() => {
                   tab = t.id;
+                  drawer = false;
                   if (t.id === "push") void refreshSubscribers();
+                  else void loadTab(t.id);
                 }}
               >
                 {t.label} <span class="tab-count">{count(t.id)}</span>
@@ -1058,6 +1236,11 @@
     </aside>
     <div class="admin-main">
 
+  {#if tabLoading}
+    <div class="admin-loading" data-shape="table" aria-busy="true" aria-label="جارٍ التحميل">
+      {#each [0, 1, 2, 3, 4, 5] as i (i)}<span></span>{/each}
+    </div>
+  {:else}
   {#if tab === "program"}
     <div class="templates">
       <div class="program-add">
@@ -1253,6 +1436,42 @@
         {/if}
       </div>
     </div>
+  {:else if tab === "doors"}
+    <div class="templates">
+      <div class="program-add">
+        <label>
+          <span>اسم البوابة</span>
+          <input type="text" maxlength="80" bind:value={doorDraft} placeholder="مثال: بوابة القاعة الشرقية" />
+        </label>
+      </div>
+      <div class="templates-foot">
+        <button class="btn" type="button" onclick={() => void addDoor()} disabled={doorBusy}>
+          {doorBusy ? "جارٍ الإنشاء…" : "إنشاء بوابة"}
+        </button>
+        <p class="admin-note">
+          {doorNote ||
+            "كل بوابة تملك رمزاً وملصق QR يُمسح من صفحة الحضور — الرمز يثبت المكان فقط، والهوية من تذكرة الضيف."}
+        </p>
+      </div>
+    </div>
+    <ul class="program-list doors-list">
+      {#each doors as d (d.id)}
+        <li>
+          <span class="when">
+            <strong dir="ltr">{d.code}</strong>
+            <small class="hide-xs" dir="ltr">{doorUrl(d)}</small>
+          </span>
+          <span class="what">
+            {d.label}
+            <small>{dateFmt.format(new Date(d.created_at))}</small>
+          </span>
+          <button class="btn btn--sm" type="button" onclick={() => (poster = d)}>الملصق</button>
+          <button class="btn btn--ghost btn--sm" type="button" onclick={() => void removeDoor(d.id)} disabled={doorBusy}>
+            حذف
+          </button>
+        </li>
+      {/each}
+    </ul>
   {:else}
     {#if tab === "registration_notify"}
       <div class="templates">
@@ -1579,6 +1798,25 @@
       </div>
     {/key}
   {/if}
+  {/if}
     </div>
   </div>
+
+  {#if drawer}
+    <button class="admin-backdrop" type="button" aria-label="إغلاق القائمة" onclick={() => (drawer = false)}></button>
+  {/if}
+
+  {#if poster}
+    <!-- Door poster: wide QR for print/photograph, door ID under it. -->    <div class="poster" role="dialog" aria-modal="true" aria-label={`ملصق ${poster.label}`}>
+      <button class="poster-x" type="button" onclick={() => (poster = null)} aria-label="إغلاق">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" /></svg>
+      </button>
+      <div class="poster-card">
+        <img src={qrUrl(poster)} alt={`رمز QR للبوابة ${poster.code}`} width="420" height="420" />
+        <p class="poster-code" dir="ltr">{poster.code}</p>
+        <p class="poster-label">{poster.label}</p>
+        <p class="poster-note">امسح هذا الرمز عند البوابة — أو اطبع الملصق.</p>
+      </div>
+    </div>
+  {/if}
 {/if}
