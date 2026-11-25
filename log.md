@@ -44,3 +44,10 @@ One entry per session — newest first. Updated on every change.
   `supabase/.temp`/`supabase/.branches` CLI junk (now gitignored).
 - Committed `a0f2edd` on `dev` and pushed to `origin/dev` (deploys via
   Actions) and `origin/main`.
+- **Prod migrations applied** (`supabase db push --remote --yes`, token from
+  user): prod was missing FOUR — `20261120000002` (guest_me stable),
+  `20261120000003` (attended index), `20261125000000` (notify routing),
+  `20261125000001` (doors) — all applied and verified up to date. Prod's
+  `notify_url`/`site_url` Vault keys intentionally unset (fallbacks = current
+  behavior); prod edge function redeploy still optional (old paths covered by
+  the redirect stubs). Access token pasted in chat — rotate it in the dashboard.
