@@ -49,7 +49,9 @@ Messages are per-environment: every hook posts to its own environment's notify
 function via Vault `notify_url` (helper `public.notify_hook_url()`, fallback =
 prod URL), and the links inside messages/QR come from Vault `site_url` read by
 the notify function (fallback = prod domain). Prod needs neither key; dev has
-both set.
+both set. Prod's edge function has not been redeployed since the route
+re-org — old-path links it still builds are covered by the redirect stubs
+until its next deploy.
 
 Email: registration inserts/updates fire `public.notify_email()` → Edge Function
 `notify` (`supabase/functions/notify/`) → Resend. `contact_messages` and

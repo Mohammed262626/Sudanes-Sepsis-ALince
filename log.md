@@ -2,6 +2,15 @@
 
 One entry per session — newest first. Updated on every change.
 
+## Next (pick up here)
+
+- Rotate the Supabase access token pasted in chat (Account → Access Tokens).
+- Renew the dev Wasender trial — the dev WhatsApp leg returns `403 Your trial
+  has expired` until then (email leg works).
+- Optional prod follow-up: redeploy the `notify` edge function so prod messages
+  build `/conference/…` links directly; until then the redirect stubs cover the
+  old paths, so nothing is broken.
+
 ## 2026-11-25 — guest journey, doors, admin overhaul
 
 - **Routes**: conference flows moved under `/conference/` — `register` (sign-up
