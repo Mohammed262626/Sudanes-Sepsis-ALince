@@ -36,3 +36,11 @@ One entry per session — newest first. Updated on every change.
 - **Build note**: no node/npm on the host — the site builds in the `dev-site-1`
   docker container (`docker compose run --rm site npm run build`), then
   `rsync -az --delete dist/ /srv/www/`.
+
+## Session closed 2026-11-25
+
+- `log.md` compacted to the summary above; dropped `vercel.json`,
+  `wrangler.jsonc`, `public/fonts/` (Cairo), and the tracked
+  `supabase/.temp`/`supabase/.branches` CLI junk (now gitignored).
+- Committed `a0f2edd` on `dev` and pushed to `origin/dev` (deploys via
+  Actions) and `origin/main`.
